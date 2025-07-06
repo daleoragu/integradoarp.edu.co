@@ -126,17 +126,9 @@ def gestion_carrusel_vista(request):
         if form.is_valid():
             try:
                 instance = form.save()
-                print("✅ El formulario se guardó en la DB. Verificando URL del archivo...")
-                if instance.imagen and hasattr(instance.imagen, 'url') and instance.imagen.url:
-                    print(f"✅ URL generada por storages: {instance.imagen.url}")
-                    messages.success(request, 'Imagen añadida y subida correctamente.')
-                else:
-                    print("!!!!!!!!!! ERROR DE SUBIDA SILENCIOSO !!!!!!!!!!")
-                    print("El campo 'imagen' no tiene un atributo 'url' o la URL está vacía después de guardar.")
-                    messages.error(request, "Error: La imagen se guardó en la base de datos, pero falló la subida al almacenamiento externo.")
+                messages.success(request, 'Imagen añadida al carrusel.')
             except Exception as e:
                 print("!!!!!!!!!! ERROR DE SUBIDA CAPTURADO (EXCEPCIÓN) !!!!!!!!!!")
-                print(f"TIPO DE ERROR: {type(e)}")
                 print(f"MENSAJE DE ERROR: {e}")
                 traceback.print_exc()
                 messages.error(request, f"Ocurrió un error excepcional al subir la imagen: {e}")
