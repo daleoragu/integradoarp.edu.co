@@ -1,6 +1,6 @@
 # notas/views/portal_admin_views.py
 import os
-import traceback # Importamos el módulo para imprimir el error detallado
+import traceback
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
@@ -15,7 +15,7 @@ def es_admin_o_docente(user):
 def configuracion_portal_vista(request):
     return render(request, 'notas/admin_portal/configuracion_portal.html')
 
-# --- VISTAS PARA DOCUMENTOS ---
+# --- Vistas para Documentos ---
 @user_passes_test(es_admin_o_docente)
 def gestion_documentos_vista(request):
     if request.method == 'POST':
@@ -38,7 +38,7 @@ def eliminar_documento_vista(request, pk):
         messages.success(request, 'Documento eliminado exitosamente.')
     return redirect('gestion_documentos')
 
-# --- VISTAS PARA LA GALERÍA ---
+# --- Vistas para la Galería ---
 @user_passes_test(es_admin_o_docente)
 def gestion_galeria_vista(request):
     if request.method == 'POST':
@@ -61,7 +61,7 @@ def eliminar_foto_vista(request, pk):
         messages.success(request, 'Foto eliminada de la galería.')
     return redirect('gestion_galeria')
 
-# --- VISTAS PARA NOTICIAS ---
+# --- Vistas para Noticias ---
 @user_passes_test(es_admin_o_docente)
 def gestion_noticias_vista(request):
     noticias = Noticia.objects.all()
@@ -124,40 +124,43 @@ def gestion_carrusel_vista(request):
     if request.method == 'POST':
         form = ImagenCarruselForm(request.POST, request.FILES)
         if form.is_valid():
-            # --- INICIO DE LA CORRECCIÓN ---
-            # Envolvemos el guardado en un bloque try/except para capturar el error.
             try:
-                form.save()
-                messages.success(request, 'Imagen añadida al carrusel.')
-                print("✅ El formulario se guardó sin errores en la base de datos.")
+                # Guardamos la instancia del modelo que crea el formulario
+                instance = form.save()
+                print("✅ El formulario se guardó en la DB. Verificando URL del archivo...")
+
+                # Verificamos si la URL del archivo se generó correctamente.
+                # El campo de imagen en el modelo se llama 'imagen'.
+                if instance.imagen and hasattr(instance.imagen, 'url') and instance.imagen.url:
+                    print(f"✅ URL generada por storages: {instance.imagen.url}")
+                    messages.success(request, 'Imagen añadida y subida correctamente.')
+                else:
+                    # Este bloque se ejecutará si la subida falló silenciosamente.
+                    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                    print("!!!!!!!!!! ERROR DE SUBIDA SILENCIOSO !!!!!!!!!!")
+                    print("El campo 'imagen' no tiene un atributo 'url' o la URL está vacía después de guardar.")
+                    messages.error(request, "Error: La imagen se guardó en la base de datos, pero falló la subida al almacenamiento externo.")
+
             except Exception as e:
-                # Si ocurre cualquier error durante la subida, lo imprimiremos en los logs.
+                # Esto es por si hay otro tipo de error que no habíamos visto.
                 print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                print("!!!!!!!!!! ERROR DE SUBIDA CAPTURADO !!!!!!!!!!")
+                print("!!!!!!!!!! ERROR DE SUBIDA CAPTURADO (EXCEPCIÓN) !!!!!!!!!!")
                 print(f"TIPO DE ERROR: {type(e)}")
                 print(f"MENSAJE DE ERROR: {e}")
-                traceback.print_exc() # Imprime el error completo y detallado
+                traceback.print_exc()
                 print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                messages.error(request, f"Ocurrió un error al subir la imagen: {e}")
-            # --- FIN DE LA CORRECCIÓN ---
+                messages.error(request, f"Ocurrió un error excepcional al subir la imagen: {e}")
+            
             return redirect('gestion_carrusel')
     else:
         form = ImagenCarruselForm()
     
     imagenes = ImagenCarrusel.objects.all()
 
-    # Código de depuración para verificar variables de entorno
-    debug_context = {
-        'b2_bucket_name_in_view': os.getenv("B2_BUCKET_NAME"),
-        'b2_region_in_view': os.getenv("B2_REGION"),
-        'b2_key_id_in_view': os.getenv("B2_APPLICATION_KEY_ID"),
-    }
-
     context = { 
         'form': form, 
         'imagenes': imagenes, 
         'page_title': 'Gestionar Carrusel',
-        **debug_context
     }
     return render(request, 'notas/admin_portal/gestion_carrusel.html', context)
 
