@@ -16,6 +16,20 @@
                 <form method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     
+                    {# Muestra errores del formulario si los hay #}
+                    {% if form.errors %}
+                        <div class="alert alert-warning">
+                            <strong>El formulario no es válido:</strong>
+                            <ul class="mb-0">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}
+                                    <li>{{ field }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
                     {{ form.as_p }}
 
                     <button type="submit" class="btn btn-success w-100 mt-3">Guardar Imagen</button>
@@ -44,7 +58,7 @@
                         </div>
                         
                         <div class="ms-3">
-                            <a href="{% url 'editar_imagen_carrusel' img.pk %}" class="btn btn-warning btn-sm mb-1" title="Editar">
+                            <a href="#" class="btn btn-warning btn-sm mb-1" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </a>
                             
@@ -55,6 +69,7 @@
                                 </button>
                             </form>
                         </div>
+
                     </div>
                 {% empty %}
                     <p class="text-center text-muted">No hay imágenes en el carrusel.</p>
