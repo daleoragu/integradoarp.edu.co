@@ -1,0 +1,23 @@
+{% load static %}
+<div class="welcome-header" style="background: linear-gradient(135deg, #ffc107, #fd7e14);">
+    <div class="welcome-text">
+        <h1>Panel del Docente</h1>
+        <p>Acceso a todas las funcionalidades disponibles para este rol.</p>
+    </div>
+    <div class="welcome-illustration">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="currentColor"><path d="M352 128c0 70.7-57.3 128-128 128s-128-57.3-128-128S153.3 0 224 0s128 57.3 128 128zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3zM504 312V248H440c-13.3 0-24-10.7-24-24s10.7-24 24-24h64c13.3 0 24 10.7 24 24v136c0 13.3-10.7 24-24 24s-24-10.7-24-24v-22.1c-18.1 27.5-48.6 46.1-84 46.1c-61.9 0-112-50.1-112-112s50.1-112 112-112c35.5 0 66 16.6 86.8 42.4c5.8 7.2 15.6 8.5 22.8 2.7s8.5-15.6 2.7-22.8C531.3 145.4 484.5 128 432 128c-70.7 0-128 57.3-128 128s57.3 128 128 128c40.5 0 76-18.9 98.6-48.4c-2.3 2.7-4.4 5.5-6.3 8.4z"/></svg>
+    </div>
+</div>
+<div class="app-grid">
+    <a href="{% url 'ingresar_notas_periodo' %}" class="app-icon"><div class="icon-container bg-notas"><i class="fas fa-edit"></i></div><span class="app-label">Ingresar Notas</span></a>
+    <a href="{% url 'asistencia' %}" class="app-icon"><div class="icon-container bg-asistencia"><i class="fas fa-user-check"></i></div><span class="app-label">Asistencia</span></a>
+    <a href="{% url 'consulta_asistencia' %}" class="app-icon"><div class="icon-container bg-consulta"><i class="fas fa-clipboard-list"></i></div><span class="app-label">Consultar Asist.</span></a>
+    <a href="{% url 'observador_selector' %}" class="app-icon"><div class="icon-container bg-observador"><i class="fas fa-eye"></i></div><span class="app-label">Observador</span></a>
+    <a href="{% url 'plan_mejoramiento' %}" class="app-icon"><div class="icon-container bg-mejoramiento"><i class="fas fa-tasks"></i></div><span class="app-label">Nivelaciones</span></a>
+    <a href="{% url 'reporte_parcial' %}" class="app-icon"><div class="icon-container bg-reporte"><i class="fas fa-file-alt"></i></div><span class="app-label">Reporte Parcial</span></a>
+    <a href="{% url 'selector_boletines' %}" class="app-icon"><div class="icon-container bg-boletines"><i class="fas fa-file-invoice"></i></div><span class="app-label">Boletines</span></a>
+    <a href="{% url 'selector_sabana' %}" class="app-icon"><div class="icon-container bg-sabana"><i class="fas fa-table"></i></div><span class="app-label">Sábana de Notas</span></a>
+    <a href="{% url 'panel_estadisticas' %}" class="app-icon"><div class="icon-container bg-stats"><i class="fas fa-chart-pie"></i></div><span class="app-label">Estadísticas</span></a>
+    <a href="{% url 'bandeja_entrada' %}" class="app-icon"><div class="icon-container bg-mail"><i class="fas fa-envelope"></i></div><span class="app-label">CofraMail</span></a>
+    <a href="{% url 'configuracion_portal' %}" class="app-icon"><div class="icon-container" style="background: linear-gradient(135deg, #42b42c, #b02130);"><i class="fas fa-newspaper"></i></div><span class="app-label">Gestionar Portal</span></a>
+</div>

@@ -1,0 +1,108 @@
+{% extends "notas/base.html" %}
+
+{% block page_title %}
+    <h1>Gestión de Materias</h1>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message|safe }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="mb-3 d-flex flex-wrap gap-2">
+    <a href="{% url 'crear_materia' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Añadir Materia
+    </a>
+    <a href="{% url 'gestion_areas' %}" class="btn btn-secondary">
+        <i class="fas fa-folder-plus me-2"></i>Gestionar Áreas
+    </a>
+    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importarModal">
+        <i class="fas fa-file-excel me-2"></i>Importar Materias
+    </button>
+    <a href="{% url 'exportar_materias_excel' %}" class="btn btn-info">
+        <i class="fas fa-file-download me-2"></i>Exportar Lista a Excel
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Área de Conocimiento</th>
+                        <th>Materia</th>
+                        <th>Abreviatura</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for materia in materias %}
+                    <tr>
+                        <td><strong>{{ materia.area.nombre }}</strong></td>
+                        <td>{{ materia.nombre }}</td>
+                        <td>{{ materia.abreviatura|default_if_none:"" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'editar_materia' materia.id %}" class="btn btn-sm btn-outline-info" title="Editar"><i class="fas fa-pencil-alt"></i></a>
+                            <form action="{% url 'eliminar_materia' materia.id %}" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de que quieres eliminar la materia \'{{ materia.nombre|escapejs }}\'?')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            No hay materias registradas en el sistema.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="importarModal" tabindex="-1" aria-labelledby="importarModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importarModalLabel">Importación Masiva de Materias</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'importacion_datos' %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>Siga estos pasos para importar materias y áreas:</p>
+                    <ol>
+                        <li>Descargue la plantilla oficial.</li>
+                        <li>Rellene el archivo Excel. Si el área ya existe, se asignará la materia; si no, se creará una nueva área.</li>
+                        <li>Guarde el archivo y súbalo en el siguiente formulario.</li>
+                    </ol>
+                    <a href="{% url 'descargar_plantilla_materias' %}" class="btn btn-link">
+                       <i class="fas fa-download me-1"></i> Descargar plantilla de importación (.xlsx)
+                    </a>
+                    <hr>
+                    <div class="mb-3">
+                        <label for="archivo_importacion_materias" class="form-label"><strong>Seleccione el archivo Excel (.xlsx):</strong></label>
+                        <input type="hidden" name="tipo_importacion" value="materias">
+                        <input class="form-control" type="file" name="archivo_importacion" id="archivo_importacion_materias" accept=".xlsx" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-upload me-2"></i>Iniciar Importación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

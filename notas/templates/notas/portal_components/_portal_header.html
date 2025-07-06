@@ -1,0 +1,75 @@
+{% load static %}
+<nav class="navbar navbar-expand-lg navbar-light bg-light sticky-top shadow-sm">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand d-flex align-items-center" href="#" id="logoBtn">
+            <img src="{% static 'img/logo_colegio.png' %}" alt="Logo del Colegio" style="height: 40px;" class="d-inline-block align-text-top me-2">
+            <span class="fw-bold" style="color: var(--color-primario);">I.E.T. Alfonso Palacio Rudas</span>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-navbar" aria-controls="main-navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="main-navbar">
+            <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="inicioBtn">Inicio</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="noticiasBtn">Noticias</a>
+                </li>
+                <!-- Menú "Nuestro Colegio" como botones individuales -->
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="historiaBtn">Historia</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="misionBtn">Misión y Visión</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="modeloBtn">Modelo Pedagógico</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="directorioBtn">Equipo Docente</a>
+                </li>
+                 <li class="nav-item">
+                    <a class="nav-link" href="#" id="galeriaBtn">Galería</a>
+                </li>
+                <!-- Menú "Comunidad" como botones individuales -->
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="documentosBtn">Documentos</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="recursosBtn">Recursos Educativos</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" id="redesBtn">Redes Sociales</a>
+                </li>
+            </ul>
+
+            <div class="d-flex">
+                <div class="dropdown">
+                    <button class="btn dropdown-toggle" type="button" id="dropdownLogin" data-bs-toggle="dropdown" aria-expanded="false" style="background-color: var(--color-primario); color: white;">
+                        <i class="fas fa-user-lock me-2"></i>Ingreso
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end p-3" aria-labelledby="dropdownLogin" style="width: 280px;">
+                        {% if user.is_authenticated %}
+                            <div class="text-center">
+                                <p class="mb-1 small">Bienvenido/a,</p>
+                                <h6 class="mb-2 fw-bold">{{ user.get_full_name|default:user.username }}</h6>
+                                <a href="{% url 'dashboard' %}" class="btn btn-sm btn-dark w-100">Ir a mi Panel</a>
+                            </div>
+                        {% else %}
+                            <form action="{% url 'portal' %}" method="POST" target="_blank">
+                                {% csrf_token %}
+                                <input type="hidden" name="form_type" value="login_form">
+                                <div class="mb-2"><label for="login-username" class="form-label small">Usuario</label><input type="text" name="username" class="form-control form-control-sm" id="login-username" required></div>
+                                <div class="mb-3"><label for="login-password" class="form-label small">Contraseña</label><input type="password" name="password" class="form-control form-control-sm" id="login-password" required></div>
+                                <button type="submit" class="btn btn-sm w-100 text-white" style="background-color: var(--color-primario-oscuro);">Ingresar</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>

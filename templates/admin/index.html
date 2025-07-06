@@ -1,0 +1,92 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static %}
+
+{# --- Bloque para Estilos Personalizados --- #}
+{% block extrastyle %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static "admin/css/dashboard.css" %}">
+    <style>
+        /* Paleta de Colores del Colegio */
+        :root {
+            --vinotinto-oscuro: #4A001E;
+            --vinotinto-claro: #78002e;
+            --dorado-acento: #F5DD5D;
+            --blanco: #FFFFFF;
+        }
+
+        /* Encabezado Principal */
+        #header {
+            background: var(--vinotinto-oscuro);
+            color: var(--dorado-acento);
+        }
+        #header a:link, #header a:visited {
+            color: var(--blanco);
+        }
+
+        /* Títulos de los Módulos (Grupos) */
+        .module caption, .module h2 {
+            background: var(--vinotinto-claro);
+        }
+
+        /* Botones y Enlaces Principales */
+        .button, input[type=submit], input[type=button], .submit-row input, a.button {
+            background: var(--vinotinto-oscuro);
+            color: var(--blanco);
+        }
+        .button.default, .submit-row input.default {
+            background: #c4dce8; /* Un color neutro para botones secundarios */
+            color: #333;
+        }
+    </style>
+{% endblock %}
+
+
+{# --- Bloque para el Logo en el Encabezado --- #}
+{% block branding %}
+    <div id="site-name">
+        <a href="{% url 'admin:index' %}">
+            <img src="{% static 'img/logo_colegio.png' %}" alt="Logo Colegio" style="height: 35px; margin-right: 10px; vertical-align: middle;">
+            {{ site_header|default:_('Django administration') }}
+        </a>
+    </div>
+{% endblock %}
+
+
+{# --- Bloques Estándar de Django (No tocar) --- #}
+{% block coltype %}colM{% endblock %}
+{% block bodyclass %}{{ block.super }} dashboard{% endblock %}
+{% block breadcrumbs %}{% endblock %}
+
+
+{# --- Bloque de Contenido Principal --- #}
+{% block content %}
+<div id="content-main">
+    {# Este archivo simplemente llama a app_list.html, donde está toda la lógica del orden #}
+    {% include "admin/app_list.html" with app_list=app_list %}
+</div>
+{% endblock %}
+
+
+{# --- Bloque de la Barra Lateral --- #}
+{% block sidebar %}
+<div id="content-related">
+    <div class="module" id="recent-actions-module">
+        <h2>{% translate 'Recent actions' %}</h2>
+        <h3>{% translate 'My actions' %}</h3>
+        {% load log %}
+        {% get_admin_log 10 as admin_log for_user user %}
+        {% if not admin_log %}<p>{% translate 'None available' %}</p>
+        {% else %}
+            <ul class="actionlist">
+            {% for entry in admin_log %}
+                <li class="{% if entry.is_addition %}addlink{% endif %}{% if entry.is_change %}changelink{% endif %}{% if entry.is_deletion %}deletelink{% endif %}">
+                {% if entry.is_deletion or not entry.get_admin_url %}{{ entry.object_repr }}{% else %}<a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>{% endif %}
+                <br>
+                {% if entry.content_type %}<span class="mini quiet">{% filter capfirst %}{{ entry.content_type.name }}{% endfilter %}</span>{% else %}<span class="mini quiet">{% translate 'Unknown content' %}</span>{% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

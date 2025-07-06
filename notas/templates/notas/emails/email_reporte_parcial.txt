@@ -1,0 +1,28 @@
+Notificación de Seguimiento Académico
+=====================================
+
+Estimado(a) acudiente de {{ estudiante.nombres }} {{ estudiante.primer_apellido }},
+
+Le saludamos cordialmente desde la I.E.T. Alfonso Palacio Rudas.
+Hemos completado el ciclo de reportes parciales de desempeño para el {{ periodo.nombre }} del año {{ periodo.ano_lectivo }}.
+
+{% if materias_con_dificultades %}
+A continuación, le presentamos un resumen de las materias en las que el equipo docente ha identificado que el estudiante requiere un apoyo adicional para alcanzar los objetivos:
+
+{% for reporte in materias_con_dificultades %}
+- Materia: {{ reporte.asignacion.materia.nombre }} (Docente: {{ reporte.asignacion.docente }})
+{% endfor %}
+
+Le invitamos a dialogar con el estudiante sobre estos puntos y a revisar la plataforma para más detalles. Su acompañamiento en casa es fundamental.
+
+{% else %}
+¡Felicitaciones!
+
+Nos complace informarle que {{ estudiante.nombres }} ha demostrado un desempeño adecuado y sin dificultades en todas las materias reportadas para este periodo. Agradecemos su invaluable apoyo en casa y le animamos a seguir fomentando su compromiso y dedicación.
+{% endif %}
+
+Atentamente,
+Equipo Docente I.E.T. Alfonso Palacio Rudas
+
+--
+Este es un correo electrónico generado automáticamente. Por favor, no responda a este mensaje.

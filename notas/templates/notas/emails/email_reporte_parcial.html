@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte Parcial de Desempeño</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
+        <h2 style="color: #923e2b;">Notificación de Seguimiento Académico</h2>
+        <p>Estimado(a) acudiente de <strong>{{ estudiante.nombres }} {{ estudiante.primer_apellido }}</strong>,</p>
+        <p>
+            Le saludamos cordialmente desde la I.E.T. Alfonso Palacio Rudas.
+            Hemos completado el ciclo de reportes parciales de desempeño para el <strong>{{ periodo.nombre }}</strong> del año <strong>{{ periodo.ano_lectivo }}</strong>.
+        </p>
+        
+        {% if materias_con_dificultades %}
+            <p>A continuación, le presentamos un resumen de las materias en las que el equipo docente ha identificado que el estudiante requiere un apoyo adicional para alcanzar los objetivos:</p>
+            <ul style="list-style-type: none; padding: 0;">
+                {% for reporte in materias_con_dificultades %}
+                    <li style="background-color: #f9f9f9; margin-bottom: 5px; padding: 10px; border-radius: 3px;">
+                        <strong>Materia:</strong> {{ reporte.asignacion.materia.nombre }}<br>
+                        <strong>Docente:</strong> {{ reporte.asignacion.docente }}
+                    </li>
+                {% endfor %}
+            </ul>
+            <p>Le invitamos a dialogar con el estudiante sobre estos puntos y a revisar la plataforma para más detalles. Su acompañamiento en casa es fundamental.</p>
+        {% else %}
+            <p style="background-color: #d4edda; padding: 15px; border-left: 5px solid #28a745; border-radius: 4px;">
+                <strong>¡Felicitaciones!</strong> Nos complace informarle que {{ estudiante.nombres }} ha demostrado un desempeño adecuado y sin dificultades en todas las materias reportadas para este periodo. Agradecemos su invaluable apoyo en casa y le animamos a seguir fomentando su compromiso y dedicación.
+            </p>
+        {% endif %}
+
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="font-size: 0.9em; color: #777;">
+            Este es un correo electrónico generado automáticamente. Por favor, no responda a este mensaje.
+        </p>
+        <p style="font-size: 0.9em; color: #777;">
+            <strong>I.E.T. Alfonso Palacio Rudas</strong><br>
+            Honda-Tolima
+        </p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+{% load i18n %}
+
+{% if app_list %}
+  {# Recorremos cada aplicación registrada en el admin (ej: 'auth', 'notas') #}
+  {% for app in app_list %}
+    
+    {# CASO 1: Si es la app de Autenticación, la mostramos como viene por defecto #}
+    {% if app.app_label == 'auth' %}
+      <div class="app-{{ app.app_label }} module">
+        <table>
+          <caption><a href="{{ app.app_url }}" class="section" title="Modelos en la aplicación {{ app.name }}">{{ app.name }}</a></caption>
+          {% for model in app.models %}
+            {% include "admin/includes/model_row.html" %}
+          {% endfor %}
+        </table>
+      </div>
+    {% endif %}
+
+    {# CASO 2: Si es nuestra app 'notas', aplicamos el orden y los grupos personalizados #}
+    {% if app.app_label == 'notas' %}
+      
+      {# Grupo: Configuración Principal #}
+      <div class="app-notas module">
+        <table>
+          <caption><a href="{{ app.app_url }}" class="section">Configuración Principal</a></caption>
+          {% for model in app.models %}{% if model.object_name == 'PeriodoAcademico' or model.object_name == 'AreaConocimiento' or model.object_name == 'Curso' or model.object_name == 'Materia' %}{% include "admin/includes/model_row.html" %}{% endif %}{% endfor %}
+        </table>
+      </div>
+      
+      {# Grupo: Comunidad Educativa #}
+      <div class="app-notas module">
+        <table>
+          <caption><a href="{{ app.app_url }}" class="section">Comunidad Educativa</a></caption>
+          {% for model in app.models %}{% if model.object_name == 'Docente' or model.object_name == 'Estudiante' %}{% include "admin/includes/model_row.html" %}{% endif %}{% endfor %}
+        </table>
+      </div>
+      
+      {# Grupo: Gestión Académica #}
+      <div class="app-notas module">
+        <table>
+          <caption><a href="{{ app.app_url }}" class="section">Gestión Académica</a></caption>
+          {% for model in app.models %}{% if model.object_name == 'AsignacionDocente' or model.object_name == 'IndicadorLogroPeriodo' %}{% include "admin/includes/model_row.html" %}{% endif %}{% endfor %}
+        </table>
+      </div>
+      
+      {# Grupo: Registros y Seguimiento #}
+      <div class="app-notas module">
+        <table>
+          <caption><a href="{{ app.app_url }}" class="section">Registros y Seguimiento</a></caption>
+          {% for model in app.models %}{% if model.object_name == 'Calificacion' or model.object_name == 'Asistencia' or model.object_name == 'Observacion' %}{% include "admin/includes/model_row.html" %}{% endif %}{% endfor %}
+        </table>
+      </div>
+      
+      {# Grupo: Procesos Especiales #}
+      <div class="app-notas module">
+        <table>
+          <caption><a href="{{ app.app_url }}" class="section">Procesos Especiales</a></caption>
+          {% for model in app.models %}{% if model.object_name == 'PlanDeMejoramiento' or model.object_name == 'ReporteParcial' or model.object_name == 'InasistenciasManualesPeriodo' %}{% include "admin/includes/model_row.html" %}{% endif %}{% endfor %}
+        </table>
+      </div>
+      
+    {% endif %}
+  {% endfor %}
+{% else %}
+  <p>{% translate 'You don’t have permission to view or edit anything.' %}</p>
+{% endif %}

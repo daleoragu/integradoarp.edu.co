@@ -1,0 +1,47 @@
+{% comment %}
+    Este parcial maneja la visualización, creación y gestión de los
+    indicadores de logro para una asignación y periodo específicos.
+{% endcomment %}
+
+{% if asignacion_seleccionada and periodo_seleccionado %}
+<div class="indicadores-container mb-4">
+    <h5>Indicadores de Logro / Desempeños del Periodo</h5>
+    
+    {% if periodo_cerrado %}
+        <p class="text-muted">No se pueden añadir o editar indicadores porque el periodo está cerrado.</p>
+    {% else %}
+        <form method="POST" action="{% url 'crear_indicador' %}" class="form-indicador my-3">
+            {% csrf_token %}
+            <input type="hidden" name="asignacion_id" value="{{ asignacion_seleccionada.id }}">
+            <input type="hidden" name="periodo_id" value="{{ periodo_seleccionado.id }}">
+            <textarea name="descripcion" class="form-control" rows="3" placeholder="Escriba aquí un nuevo indicador..." required></textarea>
+            <button class="btn btn-primary" type="submit">Agregar Indicador</button>
+        </form>
+    {% endif %}
+    
+    <h6 class="mt-4">Indicadores Actuales:</h6>
+    
+    {% if indicadores %}
+        <ul class="list-group">
+            {% for indicador in indicadores %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    {{ indicador.descripcion }}
+                    {% if not periodo_cerrado %}
+                        <div>
+                            <a href="{% url 'editar_indicador' indicador.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Editar">
+                                <i class="fas fa-pencil-alt"></i>
+                            </a>
+                            <a href="{% url 'eliminar_indicador' indicador.id %}" class="btn btn-sm btn-outline-danger py-0 px-1" title="Eliminar" onclick="return confirm('¿Está seguro de que desea eliminar este indicador?');">
+                                <i class="fas fa-trash-alt"></i>
+                            </a>
+                        </div>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted fst-italic">Aún no hay indicadores definidos.</p>
+    {% endif %}
+</div>
+<hr class="separador">
+{% endif %}

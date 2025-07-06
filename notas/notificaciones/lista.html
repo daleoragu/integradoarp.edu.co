@@ -1,0 +1,18 @@
+{% extends 'notas/base.html' %}
+
+{% block page_title %}Mis Notificaciones{% endblock %}
+
+{% block content %}
+    <h2>Mis Notificaciones</h2>
+    <ul>
+        {% for notificacion in notificaciones %}
+            <li style="{% if not notificacion.leido %}font-weight: bold;{% endif %}; margin-bottom: 10px;">
+                <!-- Enlace a la URL asociada con la notificación -->
+                <a href="{% url 'ver_notificacion' notificacion.id %}">{{ notificacion.mensaje }}</a>
+                <small>{{ notificacion.fecha_creacion|date:"d M Y H:i" }}</small>
+            </li>
+        {% empty %}
+            <li>No tienes notificaciones.</li>
+        {% endfor %}
+    </ul>
+{% endblock %}

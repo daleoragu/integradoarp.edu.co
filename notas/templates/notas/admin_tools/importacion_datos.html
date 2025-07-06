@@ -1,0 +1,80 @@
+{% extends 'notas/base.html' %}
+
+{% block title %}Importación Masiva de Datos{% endblock %}
+{% block page_title %}Herramienta de Importación de Datos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="card-title mb-0">Importar Estudiantes</h5></div>
+            <div class="card-body d-flex flex-column">
+                <p class="card-text text-muted">Carga masiva de perfiles de estudiantes y sus cuentas de usuario.</p>
+                <div class="alert alert-info">
+                    <strong>Formato del archivo:</strong> 11 columnas.<br>
+                    <a href="{% url 'descargar_plantilla_estudiantes' %}" class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="fas fa-download me-1"></i> Descargar Plantilla Excel
+                    </a>
+                </div>
+                <form method="post" enctype="multipart/form-data" class="mt-auto">
+                    {% csrf_token %}
+                    <input type="hidden" name="tipo_importacion" value="estudiantes">
+                    <div class="mb-3">
+                        <label for="archivo_csv_est" class="form-label"><b>Subir archivo CSV:</b></label>
+                        <input class="form-control" type="file" id="archivo_csv_est" name="archivo_csv" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-upload me-2"></i>Importar Estudiantes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="card-title mb-0">Importar Docentes</h5></div>
+            <div class="card-body d-flex flex-column">
+                <p class="card-text text-muted">Carga masiva de perfiles de docentes y sus cuentas de usuario.</p>
+                <div class="alert alert-secondary">
+                    <strong>Formato del archivo:</strong> 6 columnas.<br>
+                    <a href="{% url 'descargar_plantilla_docentes' %}" class="btn btn-sm btn-outline-secondary mt-2">
+                        <i class="fas fa-download me-1"></i> Descargar Plantilla Excel
+                    </a>
+                </div>
+                <form method="post" enctype="multipart/form-data" class="mt-auto">
+                    {% csrf_token %}
+                    <input type="hidden" name="tipo_importacion" value="docentes">
+                     <div class="mb-3">
+                        <label for="archivo_csv_doc" class="form-label"><b>Subir archivo CSV:</b></label>
+                        <input class="form-control" type="file" id="archivo_csv_doc" name="archivo_csv" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn btn-secondary w-100"><i class="fas fa-upload me-2"></i>Importar Docentes</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4 col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="card-title mb-0">Importar Materias</h5></div>
+            <div class="card-body d-flex flex-column">
+                <p class="card-text text-muted">Carga masiva de materias y su asignación a un área de conocimiento.</p>
+                <div class="alert alert-warning">
+                    <strong>Formato del archivo:</strong> 2 columnas (NOMBRE_MATERIA;NOMBRE_AREA).<br>
+                    <a href="{% url 'descargar_plantilla_materias' %}" class="btn btn-sm btn-outline-warning mt-2 text-dark">
+                        <i class="fas fa-download me-1"></i> Descargar Plantilla Excel
+                    </a>
+                </div>
+                <form method="post" enctype="multipart/form-data" class="mt-auto">
+                    {% csrf_token %}
+                    <input type="hidden" name="tipo_importacion" value="materias">
+                     <div class="mb-3">
+                        <label for="archivo_csv_mat" class="form-label"><b>Subir archivo CSV:</b></label>
+                        <input class="form-control" type="file" id="archivo_csv_mat" name="archivo_csv" accept=".csv" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 text-dark"><i class="fas fa-upload me-2"></i>Importar Materias</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

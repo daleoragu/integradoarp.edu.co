@@ -1,0 +1,154 @@
+{% load nota_filters %}
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% if request.GET.tipo_reporte == 'anual' %}Sábana Final Anual - {{ curso.nombre }}{% else %}Sábana Acumulada - {{ curso.nombre }}{% endif %}</title>
+    <style>
+        @page { size: letter landscape; margin: 1.5cm; @bottom-right { content: "Página " counter(page); font-family: 'Helvetica', sans-serif; font-size: 8px; color: #555; } }
+        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 8px; color: #333; }
+        .encabezado-tabla { width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 10px; }
+        .encabezado-tabla td { vertical-align: middle; text-align: center; padding: 5px; border: 1px solid #000; }
+        .escudo { max-width: 65px; height: auto; }
+        .info-institucion { font-size: 11px; font-weight: bold; }
+        .info-institucion p { margin: 1px 0; }
+        .tabla-sabana { width: 100%; border-collapse: collapse; font-size: 7.5px; }
+        .tabla-sabana th, .tabla-sabana td { border: 1px solid #999; padding: 3px; text-align: center; vertical-align: middle; }
+        .tabla-sabana tbody td.nombre-estudiante { text-align: left; padding-left: 4px; }
+        .tabla-sabana tr { page-break-inside: avoid; page-break-after: auto; }
+        .convenciones { border: 1px solid #ccc; padding: 8px; margin-bottom: 10px; font-size: 7.5px; }
+        .convenciones h6 { margin: 0 0 5px 0; padding-bottom: 3px; border-bottom: 1px solid #eee; }
+        .resumen-final-wrapper, .resumen-materias-wrapper { margin-top: 15px; page-break-inside: avoid; }
+        .resumen-final-tabla { width: 100%; border-collapse: collapse; }
+        .resumen-final-tabla td { vertical-align: top; padding: 0; }
+        .ranking-box, .promedio-box, .resumen-materias-box { border: 1px solid #333; padding: 10px; box-sizing: border-box; height: 100%; }
+        .resumen-materias-box h5, .ranking-box h5, .promedio-box h5 { margin-top: 0; text-align: center; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        .ranking-list { list-style: none; padding-left: 0; margin: 0; }
+        .ranking-list li { padding: 2px 0; }
+        .promedio-valor { font-size: 24px; font-weight: bold; text-align: center; }
+        .medalla { display: inline-block; width: 14px; height: 14px; border-radius: 50%; color: white; font-weight: bold; line-height: 14px; text-align: center; font-size: 9px; margin-right: 5px; vertical-align: middle; }
+        .medalla.oro { background-color: #FFC300; border: 1px solid #DAA520; }
+        .medalla.plata { background-color: #C0C0C0; border: 1px solid #A9A9A9; color: #333; }
+        .medalla.bronce { background-color: #CD7F32; border: 1px solid #8C5B30; }
+        .th-vertical { text-align: center; vertical-align: bottom; padding-bottom: 8px; height: 100px; }
+        .th-vertical div { transform: rotate(-90deg); white-space: nowrap; width: 25px; transform-origin: bottom center; font-weight: bold; }
+        .tabla-resumen-transposed { width: 100%; font-size: 7.5px; border-collapse: collapse; }
+        .tabla-resumen-transposed th, .tabla-resumen-transposed td { border: 1px solid #aaa; padding: 3px; }
+        .tabla-resumen-transposed thead th { background-color: #e0e0e0; text-align: center; }
+        .porc-rendimiento-pdf { font-size: 7px; color: #555; }
+        .nota-recuperada-pdf { color: green; font-weight: bold; }
+        .nota-original-reprobada-pdf { color: red; }
+    </style>
+</head>
+<body>
+    <header>
+        <table class="encabezado-tabla">
+            <tr>
+                <!-- INICIO DE LA CORRECCIÓN: Se usa la sintaxis de filtro -->
+                <td style="width: 20%;"><img src="{{ 'img/Logo_govtolima.png' | get_static_path }}" alt="Escudo Tolima" class="escudo"></td>
+                <td style="width: 60%;" class="info-institucion">
+                    <p>INSTITUCIÓN EDUCATIVA TÉCNICA</p><p>ALFONSO PALACIO RUDAS</p>
+                    <p style="font-size: 8px; font-weight: normal;">Nit. 890.701.233-7 Código DANE 173349000026</p>
+                    <p style="font-size: 8px; font-weight: normal;">Honda-Tolima</p>
+                </td>
+                <td style="width: 20%;"><img src="{{ 'img/logo_colegio.png' | get_static_path }}" alt="Logo Colegio" class="escudo"></td>
+                <!-- FIN DE LA CORRECCIÓN -->
+            </tr>
+        </table>
+        {% if request.GET.tipo_reporte == 'anual' %}<h4 style="text-align: center; margin: 5px 0;">SÁBANA DE NOTAS FINAL - AÑO {{ ano_lectivo }}</h4>{% else %}<h4 style="text-align: center; margin: 5px 0;">SÁBANA DE NOTAS ACUMULATIVA AL {{ periodo.get_nombre_display|upper }} - {{ periodo.ano_lectivo }}</h4>{% endif %}
+        <p style="text-align: center; margin-top: -5px; margin-bottom: 5px;"><strong>Curso:</strong> {{ curso.nombre }}</p>
+        <p style="text-align: center; margin: 0; padding-bottom: 10px;"><strong>Director de Grado:</strong> {{ curso.director_grado.user.get_full_name|default:"No asignado" }}</p>
+    </header>
+
+    <main>
+        <div class="convenciones">
+            <h6>Convenciones</h6>
+            <p style="margin: 0;"><strong>P1, P2, P3, P4:</strong> Nota del Periodo. Una nota entre paréntesis (ej: 3,5) indica la nota de nivelación. | <strong>Prom:</strong> Promedio Acumulado Materia. | <strong>F:</strong> Puntos Faltantes para promoción (12,0).</p>
+        </div>
+        
+        <table class="tabla-sabana">
+            <thead>
+                <tr>
+                    <th style="vertical-align: middle;">N°</th>
+                    <th style="width: 20%; vertical-align: middle;">Apellidos y Nombres</th>
+                    {% for materia in materias_curso %}
+                        <th class="th-vertical" title="{{ materia.nombre }}"><div>{{ materia.abreviatura }}</div></th>
+                    {% endfor %}
+                    <th style="vertical-align: middle;">PROM</th><th style="vertical-align: middle;">PUESTO</th>
+                    <th style="vertical-align: middle;">SUP</th><th style="vertical-align: middle;">ALT</th>
+                    <th style="vertical-align: middle;">BÁS</th><th style="vertical-align: middle;">BAJ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in sabana_data %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td class="nombre-estudiante">{{ data.info.user.last_name }} {{ data.info.user.first_name }}</td>
+                    {% for materia_data in data.calificaciones_por_materia %}
+                        <td>
+                            {% for nota in materia_data.notas_periodos %}
+                                P{{ forloop.counter }}: 
+                                <span class="{% if nota.recuperacion and nota.original < 3.0 %}nota-original-reprobada-pdf{% endif %}">
+                                    {{ nota.original|coma_decimal|default_if_none:"-" }}
+                                </span>
+                                {% if nota.recuperacion %}
+                                    <span class="nota-recuperada-pdf">({{ nota.recuperacion|coma_decimal }})</span>
+                                {% endif %}<br>
+                            {% endfor %}
+                            <strong style="border-top: 1px solid #ccc; display: block; margin-top: 2px; padding-top: 2px;">Prom: {{ materia_data.promedio_materia|coma_decimal }}</strong>
+                            <strong style="color: #D32F2F;">F: {{ materia_data.puntos_faltantes|coma_decimal }}</strong>
+                        </td>
+                    {% endfor %}
+                    <td><strong>{{ data.promedio_general|coma_decimal }}</strong></td><td><strong>{{ data.puesto }}</strong></td>
+                    <td>{{ data.rendimiento.SUPERIOR }}</td><td>{{ data.rendimiento.ALTO }}</td><td>{{ data.rendimiento.BASICO }}</td>
+                    <td>{{ data.rendimiento.BAJO }}</td>
+                </tr>
+                {% empty %}<tr><td colspan="100%">No hay estudiantes en este curso.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="resumen-materias-wrapper">
+            <div class="resumen-materias-box">
+                <h5>Resumen por Materia</h5>
+                <table class="tabla-resumen-transposed">
+                    <thead><tr><th>Materia</th><th>Prom. Curso</th><th>Sup.</th><th>Alto</th><th>Bás.</th><th>Bajo</th></tr></thead>
+                    <tbody>
+                        {% for resumen in resumen_materias %}
+                        <tr>
+                            <td style="text-align: left;">{{ resumen.materia.nombre }}</td>
+                            <td style="text-align: center;">{{ resumen.promedio_curso|coma_decimal }}</td>
+                            <td style="text-align: center;">{{ resumen.rendimiento.SUPERIOR.count }} <span class="porc-rendimiento-pdf">({{ resumen.rendimiento.SUPERIOR.percentage|floatformat:1 }}%)</span></td>
+                            <td style="text-align: center;">{{ resumen.rendimiento.ALTO.count }} <span class="porc-rendimiento-pdf">({{ resumen.rendimiento.ALTO.percentage|floatformat:1 }}%)</span></td>
+                            <td style="text-align: center;">{{ resumen.rendimiento.BASICO.count }} <span class="porc-rendimiento-pdf">({{ resumen.rendimiento.BASICO.percentage|floatformat:1 }}%)</span></td>
+                            <td style="text-align: center;">{{ resumen.rendimiento.BAJO.count }} <span class="porc-rendimiento-pdf">({{ resumen.rendimiento.BAJO.percentage|floatformat:1 }}%)</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="resumen-final-wrapper">
+            <table class="resumen-final-tabla" style="border-spacing: 10px 0; border-collapse: separate;">
+                <tr>
+                    <td style="width: 65%; padding: 0;">
+                        <div class="ranking-box">
+                            <h5>Mejores Estudiantes del Curso</h5>
+                            <ul class="ranking-list">
+                                 {% for estudiante in mejores_estudiantes %}<li>{% if estudiante.puesto == 1 %}<span class="medalla oro">1</span>{% elif estudiante.puesto == 2 %}<span class="medalla plata">2</span>{% elif estudiante.puesto == 3 %}<span class="medalla bronce">3</span>{% else %} ({{ estudiante.puesto }}) {% endif %} {{ estudiante.info.user.last_name }} {{ estudiante.info.user.first_name }} - <strong>Prom: {{ estudiante.promedio_general|coma_decimal }}</strong></li>{% empty %}<li>No hay datos para mostrar un ranking.</li>{% endfor %}
+                            </ul>
+                        </div>
+                    </td>
+                    <td style="width: 35%; padding: 0;">
+                        <div class="promedio-box">
+                            <h5>Promedio General del Curso</h5>
+                            <p class="promedio-valor">{{ promedio_total_curso|coma_decimal }}</p>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </main>
+</body>
+</html>

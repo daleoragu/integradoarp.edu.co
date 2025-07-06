@@ -1,0 +1,246 @@
+{% load nota_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Observador - {{ estudiante.user.get_full_name }}</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 1.5cm;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 9.5pt;
+            color: #333;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .header-wrapper {
+            border: 2px solid #000;
+            margin-bottom: 10px;
+        }
+        .header-table td {
+            vertical-align: middle;
+            padding: 5px;
+            text-align: center;
+        }
+        .logo-cell {
+            width: 20%;
+        }
+        .info-cell {
+            width: 60%;
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
+        }
+        .escudo {
+            max-width: 70px;
+            height: auto;
+        }
+        .info-institucion p {
+            margin: 1px 0;
+            font-weight: bold;
+            font-size: 11px;
+        }
+        .titulo-principal {
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .ficha-cuerpo-tabla td {
+            vertical-align: top;
+        }
+        .ficha-datos-principales {
+            padding-right: 15px;
+        }
+        .ficha-foto-cell {
+            width: 125px;
+        }
+        .ficha-foto-box {
+            width: 120px;
+            height: 140px;
+            border: 1px solid #ccc;
+            text-align: center;
+            line-height: 140px;
+            color: #ccc;
+            background-color: #f9f9f9;
+        }
+        .ficha-foto-box img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: cover;
+        }
+        .ficha-fila {
+            margin-bottom: 10px;
+        }
+        .label {
+            font-weight: bold;
+        }
+        .data {
+            border-bottom: 1px dotted #999;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 0 4px;
+        }
+        .compromisos-titulo {
+            font-weight: bold;
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 5px;
+            font-size: 11px;
+        }
+        .compromisos-box {
+            border: 1px solid #aaa;
+            padding: 8px;
+            min-height: 60px;
+            margin-top: 5px;
+        }
+        .firmas-section {
+            margin-top: 40px;
+        }
+        .firma-linea {
+            border-top: 1px solid #000;
+            text-align: center;
+            padding-top: 5px;
+            font-weight: bold;
+            font-size: 9pt;
+        }
+        .section-title-historial {
+            background-color: #333;
+            color: white;
+            padding: 8px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 12pt;
+            text-align: center;
+            page-break-before: auto;
+        }
+        .registro-item {
+            border: 1px solid #999;
+            padding: 10px;
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+        }
+        .registro-header {
+            background-color: #f2f2f2;
+            padding: 8px;
+            margin: -10px -10px 10px -10px;
+            border-bottom: 1px solid #ccc;
+            font-size: 9pt;
+        }
+        .registro-descargo {
+            margin-top: 10px;
+            border-top: 1px dashed #ccc;
+            padding-top: 8px;
+        }
+        .registro-label {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-wrapper">
+        <table class="header-table">
+            <tr>
+                <td class="logo-cell"><img src="{{ 'img/Logo_govtolima.png'|get_image_base64 }}" class="escudo"></td>
+                <td class="info-cell">
+                    <div class="info-institucion">
+                        <p>INSTITUCION EDUCATIVA TÉCNICA ALFONSO PALACIO RUDAS</p>
+                        <p style="font-size: 9px; font-weight: normal;">Nit. 890.701.233-7</p>
+                        <p style="font-size: 9px; font-weight: normal;">Honda Tolima</p>
+                    </div>
+                </td>
+                <td class="logo-cell"><img src="{{ 'img/logo_colegio.png'|get_image_base64 }}" class="escudo"></td>
+            </tr>
+        </table>
+    </div>
+    <div class="titulo-principal">OBSERVADOR DEL ESTUDIANTE {% now "Y" %}</div>
+
+    <table class="ficha-cuerpo-tabla">
+        <tr>
+            <td class="ficha-datos-principales">
+                <table style="width:100%;">
+                    <tr>
+                        <td style="width: 70%;"><p class="ficha-fila"><span class="label">Director(a) Grado:</span> <span class="data">{{ estudiante.curso.director_grado.user.get_full_name|default_if_none:"" }}</span></p></td>
+                        <td style="width: 30%;"><p class="ficha-fila"><span class="label">Grado:</span> <span class="data">{{ estudiante.curso.nombre }}</span></p></td>
+                    </tr>
+                    <tr>
+                        <td><p class="ficha-fila"><span class="label">Estudiante:</span> <span class="data">{{ estudiante.user.last_name|upper }} {{ estudiante.user.first_name|upper }}</span></p></td>
+                        <td><p class="ficha-fila"><span class="label">Celular:</span> <span class="data">{{ ficha.celular_acudiente|default_if_none:"" }}</span></p></td>
+                    </tr>
+                    <tr>
+                        <td><p class="ficha-fila"><span class="label">Lugar De Nacimiento:</span> <span class="data">{{ ficha.lugar_nacimiento|default_if_none:"" }}</span></p></td>
+                        <td><p class="ficha-fila"><span class="label">Fecha:</span> D: <span class="data">{{ ficha.fecha_nacimiento|date:"d"|default:"&nbsp;" }}</span> M: <span class="data">{{ ficha.fecha_nacimiento|date:"m"|default:"&nbsp;" }}</span> A: <span class="data">{{ ficha.fecha_nacimiento|date:"Y"|default:"&nbsp;" }}</span></p></td>
+                    </tr>
+                     <tr>
+                        <td colspan="2"><p class="ficha-fila"><span class="label">Documento de Identificación N°:</span> <span class="data">{{ estudiante.user.username }}</span></p></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2"><p class="ficha-fila"><span class="label">Dirección De Residencia:</span><span class="data">&nbsp;</span></p></td>
+                    </tr>
+                    <tr>
+                        <td><p class="ficha-fila"><span class="label">E.P.S:</span> <span class="data">{{ ficha.eps|default_if_none:"" }}</span></p></td>
+                        <td><p class="ficha-fila"><span class="label">Grupo Sanguíneo:</span> <span class="data">{{ ficha.grupo_sanguineo|default_if_none:"" }}</span> <span class="label">RH:</span><span class="data">&nbsp;</span></p></td>
+                    </tr>
+                </table>
+            </td>
+            <td class="ficha-foto-cell">
+                <div class="ficha-foto-box">
+                    {% if ficha.foto %}
+                        <img src="{{ ficha.foto.path }}">
+                    {% else %}
+                        FOTO
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+    </table>
+    
+    <table>
+        <tr><td colspan="2"><p class="ficha-fila" style="margin-top: 10px;"><span class="label">Nombre del Padre:</span> <span class="data">{{ ficha.nombre_padre|default_if_none:"" }}</span> <span class="label" style="margin-left:15px;">Celular:</span> <span class="data">{{ ficha.celular_padre|default_if_none:"" }}</span></p></td></tr>
+        <tr><td colspan="2"><p class="ficha-fila"><span class="label">Nombre de la Madre:</span> <span class="data">{{ ficha.nombre_madre|default_if_none:"" }}</span> <span class="label" style="margin-left:15px;">Celular:</span> <span class="data">{{ ficha.celular_madre|default_if_none:"" }}</span></p></td></tr>
+        <tr><td colspan="2"><p class="ficha-fila"><span class="label">Nombre del Acudiente:</span> <span class="data">{{ ficha.nombre_acudiente|default_if_none:"" }}</span> <span class="label" style="margin-left:15px;">Celular:</span> <span class="data">{{ ficha.celular_acudiente|default_if_none:"" }}</span></p></td></tr>
+        <tr><td colspan="2"><p class="ficha-fila"><span class="label">El (la) Estudiante debe esperar en portería?</span> SI: <span class="data">{% if ficha.espera_en_porteria %}&nbsp;X&nbsp;{% else %}&nbsp;&nbsp;&nbsp;{% endif %}</span> NO: <span class="data">{% if not ficha.espera_en_porteria %}&nbsp;X&nbsp;{% else %}&nbsp;&nbsp;&nbsp;{% endif %}</span></p></td></tr>
+        <tr><td colspan="2"><p class="ficha-fila"><span class="label">El año anterior lo estudió en:</span> <span class="data">{{ ficha.colegio_anterior|default_if_none:"" }}</span> <span class="label" style="margin-left:15px;">Grado:</span> <span class="data">{{ ficha.grado_anterior|default_if_none:"" }}</span></p></td></tr>
+    </table>
+    
+    <div class="compromisos-titulo">COMPROMISOS</div>
+    <p class="label">Como Padre me Comprometo a:</p>
+    <div class="compromisos-box">{{ ficha.compromiso_padre|linebreaksbr|default:"&nbsp;" }}</div>
+    <p class="label" style="margin-top: 10px;">Como Estudiante me Comprometo a:</p>
+    <div class="compromisos-box">{{ ficha.compromiso_estudiante|linebreaksbr|default:"&nbsp;" }}</div>
+    
+    <table class="firmas-section">
+        <tr>
+            <td style="width: 50%; padding: 0 20px;"><div class="firma-linea">FIRMA DEL PADRE O ACUDIENTE</div></td>
+            <td style="width: 50%; padding: 0 20px;"><div class="firma-linea">FIRMA DEL ESTUDIANTE</div></td>
+        </tr>
+    </table>
+
+    <div class="section-title-historial">HISTORIAL DE ANOTACIONES</div>
+    {% for registro in registros %}
+        <div class="registro-item">
+            <div class="registro-header">
+                <strong>Fecha Suceso:</strong> {{ registro.fecha_suceso|date:"d/m/Y" }} | 
+                <strong>Tipo:</strong> {{ registro.get_tipo_display }}
+                {% if registro.subtipo %} | <strong>Subtipo:</strong> {{ registro.get_subtipo_display }}{% endif %}
+                | <strong>Reporta:</strong> {{ registro.docente_reporta.user.get_full_name }}
+            </div>
+            <div class="registro-body">
+                <p class="registro-label" style="margin-top: 10px;">Descripción del suceso:</p>
+                <p>{{ registro.descripcion|linebreaksbr }}</p>
+                {% if registro.descargo_estudiante %}
+                    <div class="registro-descargo">
+                        <p class="registro-label">Descargo del estudiante (Fecha: {{ registro.fecha_descargo|date:"d/m/Y" }}):</p>
+                        <p><em>"{{ registro.descargo_estudiante|linebreaksbr }}"</em></p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    {% empty %}
+        <p style="text-align: center; margin-top: 20px;">No hay registros en el observador.</p>
+    {% endfor %}
+</body>
+</html>

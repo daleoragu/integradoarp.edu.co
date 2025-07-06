@@ -1,0 +1,43 @@
+{% extends 'notas/base.html' %}
+
+{% block title %}Herramientas de Exportación{% endblock %}
+{% block page_title %}Exportar Datos a CSV{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Exportar Lista de Estudiantes por Curso</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text text-muted">
+                    Seleccione un curso para descargar un archivo CSV con la lista completa de estudiantes, sus nombres y datos de contacto. Este archivo es compatible con Microsoft Excel.
+                </p>
+                <form method="get" action="{% url 'exportar_estudiantes_csv' %}" target="_blank">
+                    <div class="row align-items-end g-3">
+                        <div class="col-md-8">
+                            <label for="curso_id" class="form-label"><b>Curso</b></label>
+                            <select name="curso_id" id="curso_id" class="form-select" required>
+                                <option value="">--- Seleccione un curso ---</option>
+                                {% for curso in cursos %}
+                                    <option value="{{ curso.id }}">{{ curso.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="fas fa-file-csv me-2"></i>Descargar CSV
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Aquí podrías añadir más tarjetas para otras opciones de exportación en el futuro -->
+        <!-- Ejemplo: Exportar lista de Docentes, exportar Cursos, etc. -->
+
+    </div>
+</div>
+{% endblock %}

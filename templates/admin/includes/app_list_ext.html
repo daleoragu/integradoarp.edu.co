@@ -1,0 +1,8 @@
+<div class="app-{{ app.app_label }} module">
+    <table>
+        <caption><a href="{{ app.app_url }}" class="section" title="Modelos en la aplicación {{ app.name }}">{{ app.name }}</a></caption>
+        {% for model in app.models %}
+            {% include "admin/includes/model_row.html" %}
+        {% endfor %}
+    </table>
+</div>

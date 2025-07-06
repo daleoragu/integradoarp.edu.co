@@ -1,0 +1,44 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+{% load nota_filters %}
+
+{% block title %}Ingreso de Notas e Indicadores{% endblock %}
+
+{% block extra_css %}
+    {# Carga la hoja de estilos específica para esta página #}
+    <link rel="stylesheet" href="{% static 'css/ingresar_notas.css' %}">
+{% endblock %}
+
+{% block page_title %}
+    <h1>Ingreso de Notas e Indicadores</h1>
+{% endblock %}
+
+{% block content %}
+<div class="container-notas" 
+    {% if asignacion_seleccionada and periodo_seleccionado %}
+        {# Estos atributos data-* son leídos por el archivo JS para las peticiones AJAX #}
+        data-csrf-token="{{ csrf_token }}"
+        data-asignacion-id="{{ asignacion_seleccionada.id }}"
+        data-materia-id="{{ asignacion_seleccionada.materia.id }}"
+        data-periodo-id="{{ periodo_seleccionado.id }}"
+        data-guardar-url="{% url 'guardar_todo_ajax' %}"
+    {% endif %}>
+
+    {# 1. Carga el formulario de filtros (docente, asignación, periodo) #}
+    {% include 'notas/partials/_filtros_notas.html' %}
+    
+    <hr class="separador">
+    
+    {# 2. Carga la sección para agregar y listar indicadores de logro #}
+    {% include 'notas/partials/_gestion_indicadores.html' %}
+    
+    {# 3. Carga la tabla principal para el ingreso de calificaciones y el botón de guardado #}
+    {% include 'notas/partials/_tabla_notas.html' %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    {# Carga el archivo JavaScript específico para esta página #}
+    <script src="{% static 'js/ingresar_notas.js' %}"></script>
+{% endblock %}

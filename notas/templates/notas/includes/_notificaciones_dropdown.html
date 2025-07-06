@@ -1,0 +1,26 @@
+{% comment %} 
+Este es un fragmento de plantilla (sub-template) que se utiliza para renderizar
+la lista de notificaciones en el menú desplegable. Es llamado por la vista AJAX
+'obtener_notificaciones_dropdown_ajax' y su contenido se inyecta en 'base.html'
+mediante JavaScript.
+{% endcomment %}
+
+{% load i18n %}
+
+{% for notificacion in notificaciones_dropdown %}
+    {# Cada notificación es un elemento de la lista con un ID de datos para que JS lo identifique #}
+    <li class="notificacion-item" data-id="{{ notificacion.id }}">
+        {# Usamos un enlace <a> para que sea clickable, aunque el JS manejará la navegación #}
+        <a href="{{ notificacion.url|default:"#" }}" class="dropdown-item">
+            <p class="mensaje mb-0">{{ notificacion.mensaje }}</p>
+            <small class="fecha text-muted">
+                {% blocktrans with timesince=notificacion.fecha_creacion|timesince %}hace {{ timesince }}{% endblocktrans %}
+            </small>
+        </a>
+    </li>
+{% empty %}
+    {# Mensaje que se muestra si no hay notificaciones no leídas #}
+    <li class="no-notificaciones">
+        <p class="text-center text-muted my-2">No tienes notificaciones nuevas.</p>
+    </li>
+{% endfor %}

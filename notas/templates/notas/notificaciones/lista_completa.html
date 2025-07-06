@@ -1,0 +1,116 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}
+    Todas mis Notificaciones
+{% endblock %}
+
+{% block page_title %}
+    <h1><i class="fas fa-bell me-2"></i> Todas mis Notificaciones</h1>
+    <p class="lead text-muted">Aquí encontrarás un historial de todas las alertas y avisos que has recibido.</p>
+{% endblock %}
+
+
+{% block content %}
+<style>
+    .notification-list {
+        list-style: none;
+        padding: 0;
+    }
+    .notification-item a {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border: 1px solid #e9ecef;
+        margin-bottom: -1px; /* Para que los bordes se solapen */
+        background-color: #fff;
+        color: #495057;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+    .notification-item a:hover {
+        background-color: #f8f9fa;
+        z-index: 2;
+        position: relative;
+    }
+    .notification-item.unread a {
+        background-color: #f8f9fa; /* Un fondo ligeramente diferente para no leídas */
+    }
+    .notification-item:first-child a {
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+    }
+    .notification-item:last-child a {
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+    .notification-icon {
+        font-size: 1.5rem;
+        width: 50px;
+        text-align: center;
+        margin-right: 15px;
+    }
+    .notification-body {
+        flex-grow: 1;
+    }
+    .notification-body p {
+        margin: 0;
+        font-weight: 500;
+    }
+    .notification-date {
+        font-size: 0.8rem;
+        color: #6c757d;
+        white-space: nowrap;
+        margin-left: 20px;
+    }
+    .unread-dot {
+        width: 10px;
+        height: 10px;
+        background-color: var(--color-primario);
+        border-radius: 50%;
+        margin-right: 15px;
+        flex-shrink: 0;
+    }
+</style>
+
+<div class="card">
+    <div class="card-body p-0">
+        <ul class="notification-list">
+            {% for notificacion in notificaciones %}
+                <li class="notification-item {% if not notificacion.leido %}unread{% endif %}">
+                    <a href="{{ notificacion.url|default:'#' }}">
+                        {% if not notificacion.leido %}
+                            <div class="unread-dot"></div>
+                        {% else %}
+                             <div style="width: 10px; margin-right: 15px;"></div> {% endif %}
+
+                        <div class="notification-icon">
+                            {% if notificacion.tipo == 'MENSAJE' %}
+                                <i class="fas fa-envelope text-primary"></i>
+                            {% elif notificacion.tipo == 'OBSERVADOR' %}
+                                <i class="fas fa-eye text-info"></i>
+                            {% elif notificacion.tipo == 'PERIODO' %}
+                                <i class="fas fa-calendar-alt text-warning"></i>
+                            {% elif notificacion.tipo == 'RENDIMIENTO' %}
+                                 <i class="fas fa-chart-line text-danger"></i>
+                            {% else %}
+                                <i class="fas fa-bell text-secondary"></i>
+                            {% endif %}
+                        </div>
+                        <div class="notification-body">
+                            <p>{{ notificacion.mensaje }}</p>
+                        </div>
+                        <div class="notification-date">
+                            {{ notificacion.fecha_creacion|date:"d M, Y - h:i a" }}
+                        </div>
+                    </a>
+                </li>
+            {% empty %}
+                <li class="list-group-item text-center p-5">
+                    <p class="lead text-muted mb-0">No tienes notificaciones.</p>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

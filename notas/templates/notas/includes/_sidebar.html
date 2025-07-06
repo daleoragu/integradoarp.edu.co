@@ -1,0 +1,54 @@
+{% comment %}
+Este archivo contiene el menú de navegación lateral, reorganizado según las nuevas prioridades.
+{% endcomment %}
+
+{% load nota_filters %}
+
+<ul class="sidebar-menu">
+    {# --- ENLACES COMUNES PARA TODOS --- #}
+    <li>
+        <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' or request.resolver_match.url_name == 'panel_docente' or request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+            <i class="fas fa-home fa-fw me-3"></i>Inicio
+        </a>
+    </li>
+    
+    {# --- 1. COMUNICACIONES --- #}
+    <li class="sidebar-menu-header">Comunicaciones</li>
+    <li><a href="{% url 'bandeja_entrada' %}" class="{% if 'mensajes' in request.path %}active{% endif %}"><i class="fas fa-envelope fa-fw me-3"></i>CofraMail</a></li>
+
+    {# --- 2. PANEL DEL ESTUDIANTE --- #}
+    {% if user|has_group:"Estudiantes" %}
+        <li class="sidebar-menu-header">Panel Estudiante</li>
+        <li><a href="{% url 'mi_observador' %}" class="{% if request.resolver_match.url_name == 'mi_observador' %}active{% endif %}"><i class="fas fa-user-graduate fa-fw me-3"></i>Mi Observador</a></li>
+        <li><a href="{% url 'mi_boletin' %}" class="{% if request.resolver_match.url_name == 'mi_boletin' %}active{% endif %}"><i class="fas fa-file-pdf fa-fw me-3"></i>Mi Boletín</a></li>
+    {% endif %}
+
+    {# --- 3. GESTIÓN DOCENTE --- #}
+    {% if user|has_group:"Docentes" or user.is_superuser %}
+        <li class="sidebar-menu-header">Gestión Docente</li>
+        <li><a href="{% url 'ingresar_notas_periodo' %}" class="{% if request.resolver_match.url_name == 'ingresar_notas_periodo' %}active{% endif %}"><i class="fas fa-edit fa-fw me-3"></i>Ingresar Notas</a></li>   
+        <li><a href="{% url 'plan_mejoramiento' %}" class="{% if request.resolver_match.url_name == 'plan_mejoramiento' %}active{% endif %}"><i class="fas fa-tasks fa-fw me-3"></i>Planes de Mejoramiento</a></li>
+        <li><a href="{% url 'reporte_parcial' %}" class="{% if request.resolver_match.url_name == 'reporte_parcial' %}active{% endif %}"><i class="fas fa-file-alt fa-fw me-3"></i>Reporte Parcial</a></li>
+        <li><a href="{% url 'asistencia' %}" class="{% if request.resolver_match.url_name == 'asistencia' %}active{% endif %}"><i class="fas fa-user-check fa-fw me-3"></i>Toma de Asistencia</a></li>
+        <li><a href="{% url 'consulta_asistencia' %}" class="{% if request.resolver_match.url_name == 'consulta_asistencia' %}active{% endif %}"><i class="fas fa-clipboard-list fa-fw me-3"></i>Consultar Asistencia</a></li>
+        <li><a href="{% url 'observador_selector' %}" class="{% if 'observador' in request.path %}active{% endif %}"><i class="fas fa-eye fa-fw me-3"></i>Observador</a></li>
+        <li><a href="{% url 'selector_boletines' %}" class="{% if 'boletin' in request.path %}active{% endif %}"><i class="fas fa-file-invoice fa-fw me-3"></i>Generar Boletines</a></li>
+        <li><a href="{% url 'selector_sabana' %}" class="{% if 'sabana' in request.path %}active{% endif %}"><i class="fas fa-table fa-fw me-3"></i>Sábana de Notas</a></li>
+        <li><a href="{% url 'panel_estadisticas' %}" class="{% if request.resolver_match.url_name == 'panel_estadisticas' %}active{% endif %}"><i class="fas fa-chart-pie fa-fw me-3"></i>Estadísticas</a></li>
+        <li><a href="{% url 'configuracion_portal' %}" class="{% if 'configuracion-portal' in request.path %}active{% endif %}"><i class="fas fa-newspaper fa-fw me-3"></i>Gestionar Portal</a></li>
+        {% endif %}
+   
+    {# --- 4. PANEL DE ADMINISTRACIÓN --- #}
+    {% if user.is_superuser %}
+        <li class="sidebar-menu-header">Administración</li>
+        
+        <li><a href="{% url 'gestion_estudiantes' %}" class="{% if 'gestion-estudiantes' in request.path %}active{% endif %}"><i class="fas fa-users-cog fa-fw me-3"></i>Gestión de Estudiantes</a></li>
+        
+        <!-- ENLACE NUEVO -->
+        <li><a href="{% url 'gestion_materias' %}" class="{% if 'gestion-materias' in request.path %}active{% endif %}"><i class="fas fa-book fa-fw me-3"></i>Gestión de Materias</a>
+        </li><a class="nav-link {% if 'gestion-docente' in request.path %}active{% endif %}" href="{% url 'gestion_docentes' %}"><div class="sb-nav-link-icon"><i class="fas fa-chalkboard-teacher"></i></div>Gestión de Docentes</a>
+        <li><a href="{% url 'panel_control_periodos' %}" class="{% if request.resolver_match.url_name == 'panel_control_periodos' %}active{% endif %}"><i class="fas fa-calendar-alt fa-fw me-3"></i>Control de Plazos</a></li>
+        <li><a href="{% url 'panel_publicacion' %}" class="{% if request.resolver_match.url_name == 'panel_publicacion' %}active{% endif %}"><i class="fas fa-paper-plane fa-fw me-3"></i>Publicar Boletines</a></li>
+        <li><a href="{% url 'panel_control_promocion' %}" class="{% if request.resolver_match.url_name == 'panel_control_promocion' %}active{% endif %}"><i class="fas fa-gavel fa-fw me-3"></i>Regla de Promoción</a></li>
+    {% endif %}
+</ul>

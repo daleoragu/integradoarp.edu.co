@@ -1,0 +1,70 @@
+{% extends 'notas/base.html' %}
+
+{% block title %}
+    Dashboard - {{ block.super }}
+{% endblock %}
+
+{% block content %}
+    <style>
+        .dashboard-welcome {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .dashboard-welcome h2 {
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .dashboard-welcome .welcome-message {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .dashboard-menu {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+        .dashboard-menu a {
+            background-color: var(--color-primario);
+            color: white;
+            padding: 20px 30px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-width: 200px;
+            text-align: center;
+        }
+        .dashboard-menu a:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+        }
+    </style>
+
+    <div class="dashboard-welcome">
+        <h2>¡Bienvenido, {{ user.get_full_name|default:user.username }}!</h2>
+        <p class="welcome-message">Has iniciado sesión en la plataforma de la I.E.T. Alfonso Palacio Rudas.</p>
+        
+        <div class="dashboard-menu">
+            <!-- Mostramos el menú correspondiente al rol del usuario -->
+            {% if user.groups.all.0.name == 'Docentes' %}
+                <a href="{% url 'ingresar_notas_periodo' %}">Ingresar Notas e Indicadores</a>
+                <a href="#">Tomar Asistencia</a>
+                <a href="#">Registrar Observador</a>
+            {% elif user.groups.all.0.name == 'Estudiantes' %}
+                <a href="#">Ver Mis Notas</a>
+                <a href="#">Ver Mi Horario</a>
+                <a href="#">Consultar Inasistencias</a>
+            {% else %}
+                <!-- Para Superusuario o roles no definidos -->
+                <p>Bienvenido, Administrador. Puede gestionar el sistema desde el Panel de Admin.</p>
+                <a href="/admin/">Ir al Panel de Administración</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

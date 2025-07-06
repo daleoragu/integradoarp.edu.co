@@ -1,0 +1,97 @@
+{% extends 'notas/base.html' %}
+
+{% block title %}Panel de Control de Periodos{% endblock %}
+
+{% block page_title %}Panel de Control de Periodos{% endblock %}
+
+{% block content %}
+<style>
+    .admin-panel-card {
+        background-color: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .admin-panel-card h4 {
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .status-dot {
+        height: 12px;
+        width: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+        vertical-align: middle;
+    }
+    .status-abierto { background-color: #28a745; }
+    .status-cerrado { background-color: #dc3545; }
+</style>
+
+<div class="admin-panel-card">
+    <h4><i class="fas fa-toggle-on me-2"></i>Gestión de Plazos por Periodo</h4>
+    <p class="text-muted">Desde aquí puede habilitar o deshabilitar de forma independiente los diferentes procesos académicos para cada periodo.</p>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">Periodo Académico</th>
+                    <th scope="col" class="text-center">Ingreso de Notas</th>
+                    <th scope="col" class="text-center">Reporte Parcial</th>
+                    <th scope="col" class="text-center">Nivelaciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for periodo in periodos %}
+                <tr>
+                    <td><strong>{{ periodo }}</strong></td>
+                    
+                    <td class="text-center">
+                        {% if periodo.esta_activo %}
+                            <span class="badge bg-success"><span class="status-dot status-abierto"></span> Abierto</span>
+                        {% else %}
+                            <span class="badge bg-danger"><span class="status-dot status-cerrado"></span> Cerrado</span>
+                        {% endif %}
+                        <form method="POST" class="d-inline ms-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="toggle_ingreso_notas">
+                            <input type="hidden" name="periodo_id" value="{{ periodo.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">Cambiar</button>
+                        </form>
+                    </td>
+
+                    <td class="text-center">
+                        {% if periodo.reporte_parcial_activo %}
+                            <span class="badge bg-success"><span class="status-dot status-abierto"></span> Abierto</span>
+                        {% else %}
+                            <span class="badge bg-danger"><span class="status-dot status-cerrado"></span> Cerrado</span>
+                        {% endif %}
+                        <form method="POST" class="d-inline ms-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="toggle_reporte_parcial">
+                            <input type="hidden" name="periodo_id" value="{{ periodo.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">Cambiar</button>
+                        </form>
+                    </td>
+
+                    <td class="text-center">
+                        {% if periodo.nivelaciones_activas %}
+                            <span class="badge bg-success"><span class="status-dot status-abierto"></span> Abierto</span>
+                        {% else %}
+                            <span class="badge bg-danger"><span class="status-dot status-cerrado"></span> Cerrado</span>
+                        {% endif %}
+                        <form method="POST" class="d-inline ms-2">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="toggle_nivelaciones">
+                            <input type="hidden" name="periodo_id" value="{{ periodo.id }}">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">Cambiar</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

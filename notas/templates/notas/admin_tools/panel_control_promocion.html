@@ -1,0 +1,104 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Control de Regla de Promoción - {{ block.super }}{% endblock %}
+
+{% block page_title %}
+    Panel de Control de Promoción
+{% endblock %}
+
+{% block content %}
+<style>
+    .card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        padding: 25px 30px;
+        margin-bottom: 25px;
+    }
+    .card-header h3 {
+        margin: 0;
+        font-size: 1.4rem;
+        color: var(--color-primario);
+    }
+    .card-header p {
+        margin: 5px 0 0;
+        color: #666;
+        font-size: 0.95rem;
+    }
+    .form-group {
+        margin-top: 25px;
+    }
+    .form-group label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: #555;
+    }
+    .form-group input[type="number"] {
+        width: 100%;
+        max-width: 200px; /* Limita el ancho para que no sea excesivo */
+        padding: 10px;
+        border: 1px solid var(--color-borde);
+        border-radius: 5px;
+        font-size: 1.1rem;
+        text-align: center;
+    }
+    .form-actions {
+        margin-top: 25px;
+        text-align: left;
+    }
+    .btn-submit {
+        background-color: var(--color-primario);
+        color: #fff;
+        border: none;
+        padding: 12px 25px;
+        font-size: 1rem;
+        font-weight: bold;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    .btn-submit:hover {
+        background-color: var(--color-primario-oscuro);
+    }
+    .help-text {
+        font-size: 0.85rem;
+        color: #777;
+        margin-top: 10px;
+        max-width: 600px;
+    }
+</style>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Regla de Promoción Anual</h3>
+        <p>Define el criterio para la promoción de estudiantes al final del año lectivo.</p>
+    </div>
+
+    <form method="POST" action="{% url 'panel_control_promocion' %}">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="id_max_materias_reprobadas">Máximo de materias reprobadas permitidas</label>
+            <input type="number" 
+                   id="id_max_materias_reprobadas" 
+                   name="max_materias_reprobadas" 
+                   value="{{ config.max_materias_reprobadas }}" 
+                   min="0"
+                   required>
+            <p class="help-text">
+                Un estudiante con <strong>MÁS</strong> de este número de materias con valoración "BAJO" en su nota definitiva, será marcado como "NO PROMOVIDO".
+                <br>
+                <strong>Ejemplo:</strong> Si el valor es <strong>2</strong>, un estudiante con 3 materias reprobadas no será promovido.
+            </p>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn-submit">
+                <i class="fas fa-save fa-fw"></i> Guardar Cambios
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

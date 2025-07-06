@@ -1,0 +1,167 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Observador de {{ estudiante.user.get_full_name }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos para la ficha del estudiante (sin cambios) */
+    .ficha-container{border:1px solid #aaa;padding:20px;background-color:#fff}.ficha-encabezado-wrapper{border:2px solid #000;margin-bottom:15px;padding:0}.ficha-encabezado-tabla{width:100%;border-collapse:collapse}.ficha-encabezado-tabla td{vertical-align:middle;padding:8px 15px}.td-logo-left{width:20%;text-align:left;border-right:1px solid #000}.td-info-center{width:60%;text-align:center}.td-logo-right{width:20%;text-align:right;border-left:1px solid #000}.ficha-escudo{max-width:70px;height:auto}.ficha-info-institucion{font-size:11px;font-weight:bold}.ficha-info-institucion p{margin:1px 0}.ficha-titulo-principal{text-align:center;font-weight:bold;font-size:14px;margin-bottom:20px}.ficha-cuerpo-principal{display:flex;gap:20px}.ficha-datos-principales{flex-grow:1}.ficha-foto-placeholder{width:120px;height:140px;border:1px solid #ccc;display:flex;justify-content:center;align-items:center;color:#ccc;flex-shrink:0;background-color:#f8f9fa;text-align:center}.ficha-foto-placeholder i{font-size:48px}.ficha-foto-placeholder img{width:100%;height:100%;object-fit:cover}.ficha-fila{display:flex;align-items:flex-end;margin-bottom:12px;font-size:9.5px}.ficha-label{font-weight:bold;margin-right:8px;white-space:nowrap}.ficha-data{border-bottom:1px dotted #999;flex-grow:1;min-height:18px;padding-left:4px;font-family:'Courier New',Courier,monospace}.compromisos-titulo{font-weight:bold;text-align:center;margin-top:25px;margin-bottom:10px;font-size:11px}.compromisos-box{border:1px solid #aaa;padding:10px;min-height:70px;margin-top:5px;font-size:9px}.firmas-section{margin-top:50px;display:flex;justify-content:space-around}.firma-linea{border-top:1px solid #000;width:220px;text-align:center;padding-top:5px;font-weight:bold}
+    
+    /* --- NUEVOS ESTILOS PARA EL HISTORIAL --- */
+    .registro-item{border-left:4px solid #ccc;padding:1.5rem;margin-bottom:1.5rem;background-color:#f9f9f9;border-radius:0 8px 8px 0;box-shadow:0 1px 3px rgba(0,0,0,0.05)}.registro-item.ACADEMICA{border-left-color:#0d6efd}.registro-item.COMPORTAMENTAL{border-left-color:#dc3545}.registro-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding-bottom:.75rem;border-bottom:1px solid #eee}.registro-meta span{font-size:.85rem;color:#6c757d}.registro-descargo{margin-top:1rem;padding-top:1rem;border-top:1px dashed #ddd}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    {# --- INICIO DEL CAMBIO --- #}
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <ul class="nav nav-tabs card-header-tabs" id="observadorTab" role="tablist" style="border-bottom: 0;">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="ficha-tab" data-bs-toggle="tab" data-bs-target="#ficha" type="button" role="tab">
+                    <i class="fas fa-address-card me-2"></i>Ficha del Estudiante
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="historial-tab" data-bs-toggle="tab" data-bs-target="#historial" type="button" role="tab">
+                    <i class="fas fa-history me-2"></i>Historial de Anotaciones
+                </button>
+            </li>
+        </ul>
+        <div>
+            <a href="{% url 'crear_registro_observador' estudiante.id %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Añadir Observación
+            </a>
+        </div>
+    </div>
+    {# --- FIN DEL CAMBIO --- #}
+
+    <div class="card-body">
+        <div class="tab-content" id="observadorTabContent">
+            
+            <div class="tab-pane fade show active" id="ficha" role="tabpanel">
+                <div class="d-flex justify-content-end mb-3 gap-2">
+                    <a href="{% url 'editar_ficha' estudiante.id %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-edit me-2"></i>Editar Ficha</a>
+                    <a href="{% url 'generar_observador_pdf' estudiante.id %}" target="_blank" class="btn btn-outline-danger btn-sm"><i class="fas fa-file-pdf me-2"></i>Descargar PDF</a>
+                </div>
+
+                <div class="ficha-container">
+                    <div class="ficha-encabezado-wrapper">
+                        <table class="ficha-encabezado-tabla">
+                            <tr>
+                                <td class="td-logo-left"><img src="{% static 'img/Logo_govtolima.png' %}" class="ficha-escudo" alt="Escudo Gobernación"></td>
+                                <td class="td-info-center ficha-info-institucion">
+                                    <p>INSTITUCION EDUCATIVA TÉCNICA ALFONSO PALACIO RUDAS</p>
+                                    <p style="font-size: 9px; font-weight: normal;">Nit. 890.701.233-7</p>
+                                    <p style="font-size: 9px; font-weight: normal;">Honda Tolima</p>
+                                </td>
+                                <td class="td-logo-right"><img src="{% static 'img/logo_colegio.png' %}" class="ficha-escudo" alt="Logo Colegio"></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="ficha-titulo-principal">OBSERVADOR DEL ESTUDIANTE {% now "Y" %}</div>
+                    
+                    <div class="ficha-cuerpo-principal">
+                        <div class="ficha-datos-principales">
+                            <div class="row">
+                                <div class="col-8 ficha-fila"><span class="ficha-label">Director(a) Grado:</span><span class="ficha-data">{{ estudiante.curso.director_grado.user.get_full_name|default_if_none:"" }}</span></div>
+                                <div class="col-4 ficha-fila"><span class="ficha-label">Grado:</span><span class="ficha-data">{{ estudiante.curso.nombre }}</span></div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-8 ficha-fila"><span class="ficha-label">Estudiante:</span><span class="ficha-data">{{ estudiante.user.last_name|upper }} {{ estudiante.user.first_name|upper }}</span></div>
+                                <div class="col-4 ficha-fila"><span class="ficha-label">Celular:</span><span class="ficha-data">{{ ficha.celular_acudiente|default_if_none:"" }}</span></div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-6 ficha-fila"><span class="ficha-label">Lugar De Nacimiento:</span><span class="ficha-data">{{ ficha.lugar_nacimiento|default_if_none:"" }}</span></div>
+                                <div class="col-6 ficha-fila"><span class="ficha-label">Fecha D:</span><span class="ficha-data">{{ ficha.fecha_nacimiento|date:"d" }}</span><span class="ficha-label">M:</span><span class="ficha-data">{{ ficha.fecha_nacimiento|date:"m" }}</span><span class="ficha-label">A:</span><span class="ficha-data">{{ ficha.fecha_nacimiento|date:"Y" }}</span></div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-12 ficha-fila"><span class="ficha-label">Documento de Identificación N°:</span><span class="ficha-data">{{ estudiante.user.username }}</span></div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-12 ficha-fila"><span class="ficha-label">Dirección De Residencia:</span><span class="ficha-data"></span></div>
+                            </div>
+                             <div class="row mt-2">
+                                <div class="col-8 ficha-fila"><span class="ficha-label">E.P.S:</span><span class="ficha-data">{{ ficha.eps|default_if_none:"" }}</span></div>
+                                <div class="col-4 ficha-fila"><span class="ficha-label">Grupo Sanguíneo:</span><span class="ficha-data">{{ ficha.grupo_sanguineo|default_if_none:"" }}</span><span class="ficha-label">RH:</span><span class="ficha-data"></span></div>
+                            </div>
+                        </div>
+                        
+                        <div class="ficha-foto-placeholder">
+                            {% if ficha.foto %}
+                                <img src="{{ ficha.foto.url }}" alt="Foto de {{ estudiante.user.get_full_name }}">
+                            {% else %}
+                                <i class="fas fa-user"></i>
+                                <span>FOTO</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <div class="ficha-fila"><span class="ficha-label">Nombre del Padre:</span><span class="ficha-data">{{ ficha.nombre_padre|default_if_none:"" }}</span><span class="ficha-label ms-3">Celular:</span><span class="ficha-data">{{ ficha.celular_padre|default_if_none:"" }}</span></div>
+                        <div class="ficha-fila"><span class="ficha-label">Nombre de la Madre:</span><span class="ficha-data">{{ ficha.nombre_madre|default_if_none:"" }}</span><span class="ficha-label ms-3">Celular:</span><span class="ficha-data">{{ ficha.celular_madre|default_if_none:"" }}</span></div>
+                        <div class="ficha-fila"><span class="ficha-label">Nombre del Acudiente:</span><span class="ficha-data">{{ ficha.nombre_acudiente|default_if_none:"" }}</span><span class="ficha-label ms-3">Celular:</span><span class="ficha-data">{{ ficha.celular_acudiente|default_if_none:"" }}</span></div>
+                    </div>
+                    <div class="row mt-3 align-items-center">
+                        <div class="col-auto ficha-label">¿El (la) Estudiante debe esperar en portería para que lo recojan?</div>
+                        <div class="col-auto"><span class="ficha-label">SI:</span><span class="ficha-data px-3">{% if ficha.espera_en_porteria %}X{% endif %}</span></div>
+                        <div class="col-auto"><span class="ficha-label">NO:</span><span class="ficha-data px-3">{% if not ficha.espera_en_porteria %}X{% endif %}</span></div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-8 ficha-fila"><span class="ficha-label">El año anterior lo estudió en:</span><span class="ficha-data">{{ ficha.colegio_anterior|default_if_none:"" }}</span></div>
+                        <div class="col-4 ficha-fila"><span class="ficha-label">Grado:</span><span class="ficha-data">{{ ficha.grado_anterior|default_if_none:"" }}</span></div>
+                    </div>
+                    <div class="compromisos-titulo">COMPROMISOS</div>
+                    <p class="ficha-label mt-2">Como Padre me Comprometo a:</p>
+                    <div class="compromisos-box">{{ ficha.compromiso_padre|linebreaksbr }}</div>
+                    <p class="ficha-label mt-3">Como Estudiante me Comprometo a:</p>
+                    <div class="compromisos-box">{{ ficha.compromiso_estudiante|linebreaksbr }}</div>
+                    <div class="firmas-section">
+                        <div class="firma-linea">FIRMA DEL PADRE O ACUDIENTE</div>
+                        <div class="firma-linea">FIRMA DEL ESTUDIANTE</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="historial" role="tabpanel" aria-labelledby="historial-tab">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="mb-0">Historial de Anotaciones</h4>
+                    {# El botón ha sido movido a la cabecera #}
+                </div>
+                {% for registro in registros %}
+                    <div class="registro-item {{ registro.tipo }}">
+                        <div class="registro-header">
+                            <div>
+                                <strong class="text-primary">{{ registro.get_tipo_display }}</strong>
+                                {% if registro.subtipo %}<span class="badge bg-secondary">{{ registro.get_subtipo_display }}</span>{% endif %}
+                            </div>
+                            <div class="registro-meta">
+                                <span><strong>Fecha:</strong> {{ registro.fecha_suceso|date:"d/m/Y" }}</span>
+                                <span class="ms-3"><strong>Reporta:</strong> {{ registro.docente_reporta.user.get_full_name }}</span>
+                            </div>
+                        </div>
+                        <p>{{ registro.descripcion|linebreaksbr }}</p>
+                        {% if registro.descargo_estudiante %}
+                        <div class="registro-descargo">
+                            <p class="mb-1"><strong><i class="fas fa-reply me-2"></i>Descargo del estudiante</strong> <small class="text-muted">({{ registro.fecha_descargo|date:"d/m/Y, h:i a" }})</small>:</p>
+                            <blockquote class="blockquote-footer mb-0" style="font-size: 0.95rem;">
+                                {{ registro.descargo_estudiante|linebreaksbr }}
+                            </blockquote>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% empty %}
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle fa-2x mb-2"></i>
+                        <p class="mb-0">Este estudiante aún no tiene ninguna anotación en su historial.</p>
+                        <p>Puede ser el primero en añadir una usando el botón de arriba.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

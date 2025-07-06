@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Asistencia</title>
+    <style>
+        @page {
+            size: letter landscape;
+            margin: 1cm;
+            @bottom-right {
+                content: "Página " counter(page);
+                font-family: 'Helvetica', sans-serif;
+                font-size: 9px;
+                color: #555;
+            }
+        }
+        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 9px; color: #333; }
+        .page-break { page-break-before: always; }
+        .encabezado { text-align: center; margin-bottom: 8px; }
+        .encabezado-tabla { width: 100%; border-collapse: collapse; border: 1px solid #000; }
+        .encabezado-tabla td { vertical-align: middle; text-align: center; padding: 4px; border: 1px solid #000; }
+        .escudo { max-width: 60px; height: auto; }
+        .info-institucion { font-size: 10px; font-weight: bold; }
+        .info-institucion p { margin: 1px 0; }
+        .titulo-reporte { font-size: 13px; font-weight: bold; text-align: center; margin-bottom: 5px; }
+        .info-reporte {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+        }
+        .info-reporte td {
+            padding: 4px 8px;
+        }
+        .main-table { width: 100%; border-collapse: collapse; }
+        .main-table th, .main-table td { border: 1px solid #ccc; padding: 2px; text-align: center; font-size: 8.5px; }
+        .main-table th { background-color: #e9ecef; font-weight: bold; }
+        .col-estudiante { text-align: left !important; width: 25%; padding-left: 4px !important; }
+        .estado-a { color: red; font-weight: bold; }
+        .estado-t { color: #f0ad4e; font-weight: bold; }
+        .estado-aj { color: blue; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+{% for reporte in reportes_por_mes %}
+    {% if not forloop.first %}<div class="page-break"></div>{% endif %}
+
+    <div class="encabezado">
+        <table class="encabezado-tabla">
+            <tr>
+                <td style="width: 20%;"><img src="{% static 'img/Logo_govtolima.png' %}" alt="Escudo Tolima" class="escudo"></td>
+                <td style="width: 60%;" class="info-institucion">
+                    <p>INSTITUCIÓN EDUCATIVA TÉCNICA</p>
+                    <p>ALFONSO PALACIO RUDAS</p>
+                    <p style="font-size: 8px; font-weight: normal;">Nit. 890.701.233-7 Código DANE 173349000026</p>
+                </td>
+                <td style="width: 20%;"><img src="{% static 'img/logo_colegio.png' %}" alt="Logo Colegio" class="escudo"></td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="titulo-reporte">REPORTE DE ASISTENCIA MENSUAL</div>
+
+    <table class="info-reporte">
+        <tr>
+            <td><strong>CURSO:</strong> {{ asignacion.curso.nombre }}</td>
+            <td><strong>ASIGNATURA:</strong> {{ asignacion.materia.nombre }}</td>
+            <td><strong>DOCENTE:</strong> {{ asignacion.docente.user.get_full_name }}</td>
+        </tr>
+    </table>
+
+    <table class="main-table">
+        <thead>
+            <tr>
+                <th rowspan="2" class="col-estudiante">ESTUDIANTE</th>
+                <th colspan="{{ reporte.fechas|length }}">{{ reporte.nombre_mes|upper }}</th>
+            </tr>
+            <tr>
+                {% for fecha in reporte.fechas %}
+                    <th>{{ fecha.day }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in reporte.tabla_asistencia %}
+            <tr>
+                <td class="col-estudiante">{{ forloop.counter }}. {{ fila.nombre }}</td>
+                {% for estado in fila.estados %}
+                    <td><span class="estado-{{ estado|lower }}">{% if estado == 'A' %}X{% elif estado == 'P' %}&nbsp;{% else %}{{ estado }}{% endif %}</span></td>
+                {% endfor %}
+            </tr>
+            
+            {% if forloop.counter|divisibleby:40 and not forloop.last %}
+                </tbody></table>
+                <div class="page-break"></div>
+                <div class="encabezado">
+                     <table class="encabezado-tabla">
+                        <tr>
+                            <td style="width: 20%;"><img src="{% static 'img/Logo_govtolima.png' %}" alt="Escudo Tolima" class="escudo"></td>
+                            <td style="width: 60%;" class="info-institucion"><p>INSTITUCIÓN EDUCATIVA TÉCNICA</p><p>ALFONSO PALACIO RUDAS</p><p style="font-size: 8px; font-weight: normal;">Nit. 890.701.233-7 Código DANE 173349000026</p></td>
+                            <td style="width: 20%;"><img src="{% static 'img/logo_colegio.png' %}" alt="Logo Colegio" class="escudo"></td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="titulo-reporte">REPORTE DE ASISTENCIA MENSUAL (Continuación)</div>
+                <table class="main-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="col-estudiante">ESTUDIANTE</th>
+                            <th colspan="{{ reporte.fechas|length }}">{{ reporte.nombre_mes|upper }}</th>
+                        </tr>
+                        <tr>
+                            {% for fecha in reporte.fechas %}
+                                <th>{{ fecha.day }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+            {% endif %}
+
+            {% empty %}
+            <tr>
+                <td colspan="{{ reporte.fechas|length|add:1 }}" style="text-align: center; padding: 20px;">
+                    No hay estudiantes matriculados en este curso.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endfor %}
+
+</body>
+</html>

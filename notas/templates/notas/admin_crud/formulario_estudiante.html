@@ -1,0 +1,145 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <form method="POST" enctype="multipart/form-data" novalidate>
+        {% csrf_token %}
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0">{{ titulo }}{% if estudiante %}: {{ estudiante.user.get_full_name }}{% endif %}</h1>
+            <div>
+                <a href="{% url 'gestion_estudiantes' %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-1"></i>Cancelar
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
+            </div>
+        </div>
+
+        {% if form.non_field_errors or form.errors %}
+        <div class="alert alert-danger p-3">
+            <p class="mb-1 fw-bold">Por favor, corrige los errores a continuación:</p>
+            <ul class="mb-0 ps-3">
+            {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+            {% for field in form %}{% if field.errors %}<li>{{ field.label }}: {{ field.errors|striptags }}</li>{% endif %}{% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                {% if 'Crear' in titulo %}
+                    {# ============================================= #}
+                    {# VERSIÓN ACTUALIZADA PARA CREAR ESTUDIANTE     #}
+                    {# ============================================= #}
+                    <h5 class="mb-3">Datos del Nuevo Estudiante</h5>
+                    <p class="text-muted">El nombre de usuario y la contraseña provisional se generarán automáticamente a partir del nombre y apellido.</p>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">{{ form.nombres.label_tag }} {{ form.nombres }}</div>
+                        <div class="col-md-6 mb-3">{{ form.apellidos.label_tag }} {{ form.apellidos }}</div>
+                    </div>
+                     <div class="row">
+                        <div class="col-md-6 mb-3">{{ form.tipo_documento.label_tag }} {{ form.tipo_documento }}</div>
+                        <div class="col-md-6 mb-3">{{ form.numero_documento.label_tag }} {{ form.numero_documento }}</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">{{ form.curso.label_tag }} {{ form.curso }}</div>
+                    </div>
+                {% else %}
+                    {# Versión completa con PESTAÑAS para EDITAR un estudiante #}
+                    <nav>
+                        <div class="nav nav-tabs" id="nav-tab" role="tablist">
+                            <button class="nav-link active" id="nav-principal-tab" data-bs-toggle="tab" data-bs-target="#nav-principal" type="button">Datos Principales</button>
+                            <button class="nav-link" id="nav-acudientes-tab" data-bs-toggle="tab" data-bs-target="#nav-acudientes" type="button">Acudientes</button>
+                            <button class="nav-link" id="nav-adicional-tab" data-bs-toggle="tab" data-bs-target="#nav-adicional" type="button">Info Adicional</button>
+                            <button class="nav-link" id="nav-compromisos-tab" data-bs-toggle="tab" data-bs-target="#nav-compromisos" type="button">Compromisos</button>
+                        </div>
+                    </nav>
+                    <div class="tab-content p-3 border border-top-0 rounded-bottom" id="nav-tabContent">
+                        <!-- Pestaña de Datos Principales -->
+                        <div class="tab-pane fade show active" id="nav-principal" role="tabpanel">
+                            <h5 class="mb-3">Información de Identificación</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">{{ form.first_name.label_tag }} {{ form.first_name }}</div>
+                                <div class="col-md-6 mb-3">{{ form.last_name.label_tag }} {{ form.last_name }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">{{ form.tipo_documento.label_tag }} {{ form.tipo_documento }}</div>
+                                <div class="col-md-4 mb-3">{{ form.numero_documento.label_tag }} {{ form.numero_documento }}</div>
+                                <div class="col-md-4 mb-3">{{ form.grupo_sanguineo.label_tag }} {{ form.grupo_sanguineo }}</div>
+                            </div>
+                            <hr>
+                            <h5 class="mb-3">Información Académica y Personal</h5>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">{{ form.curso.label_tag }} {{ form.curso }}</div>
+                                <div class="col-md-4 mb-3">{{ form.lugar_nacimiento.label_tag }} {{ form.lugar_nacimiento }}</div>
+                                <div class="col-md-4 mb-3">{{ form.fecha_nacimiento.label_tag }} {{ form.fecha_nacimiento }}</div>
+                            </div>
+                             <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">{{ form.eps.label_tag }} {{ form.eps }}</div>
+                                        <div class="col-12 mb-3">{{ form.enfermedades_alergias.label_tag }} {{ form.enfermedades_alergias }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-3 text-center">
+                                    {{ form.foto.label_tag }}
+                                    {% if form.instance.foto %}
+                                        <img src="{{ form.instance.foto.url }}" alt="Foto actual" class="img-thumbnail mb-2" style="max-height: 150px;">
+                                    {% endif %}
+                                    {{ form.foto }}
+                                    <div class="form-check mt-3">
+                                        {{ form.is_active }}
+                                        <label class="form-check-label" for="{{ form.is_active.id_for_label }}"> {{ form.is_active.label }}</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Pestaña de Acudientes -->
+                        <div class="tab-pane fade" id="nav-acudientes" role="tabpanel">
+                             <h5 class="mb-3">Información de Familiares</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">{{ form.nombre_padre.label_tag }} {{ form.nombre_padre }}</div>
+                                <div class="col-md-6 mb-3">{{ form.celular_padre.label_tag }} {{ form.celular_padre }}</div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">{{ form.nombre_madre.label_tag }} {{ form.nombre_madre }}</div>
+                                <div class="col-md-6 mb-3">{{ form.celular_madre.label_tag }} {{ form.celular_madre }}</div>
+                            </div>
+                            <hr>
+                            <h5 class="mb-3">Información del Acudiente Principal</h5>
+                            <div class="row">
+                                 <div class="col-md-6 mb-3">{{ form.nombre_acudiente.label_tag }} {{ form.nombre_acudiente }}</div>
+                                 <div class="col-md-6 mb-3">{{ form.celular_acudiente.label_tag }} {{ form.celular_acudiente }}</div>
+                                 <div class="col-md-6 mb-3">{{ form.email_acudiente.label_tag }} {{ form.email_acudiente }}</div>
+                            </div>
+                        </div>
+                        <!-- Pestaña Adicional -->
+                        <div class="tab-pane fade" id="nav-adicional" role="tabpanel">
+                            <h5 class="mb-3">Otros Datos</h5>
+                             <div class="row">
+                                <div class="col-md-6 mb-3">{{ form.colegio_anterior.label_tag }} {{ form.colegio_anterior }}</div>
+                                <div class="col-md-6 mb-3">{{ form.grado_anterior.label_tag }} {{ form.grado_anterior }}</div>
+                            </div>
+                             <div class="form-check mt-3">
+                                {{ form.espera_en_porteria }}
+                                <label class="form-check-label" for="{{ form.espera_en_porteria.id_for_label }}"> El estudiante debe esperar en portería para que lo recojan</label>
+                            </div>
+                        </div>
+                        <!-- Pestaña Compromisos -->
+                        <div class="tab-pane fade" id="nav-compromisos" role="tabpanel">
+                            <h5 class="mb-3">Compromisos Académicos y Convivenciales</h5>
+                            <div class="mb-3">{{ form.compromiso_padre.label_tag }} {{ form.compromiso_padre }}</div>
+                            <div class="mb-3">{{ form.compromiso_estudiante.label_tag }} {{ form.compromiso_estudiante }}</div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

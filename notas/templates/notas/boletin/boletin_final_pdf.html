@@ -1,0 +1,173 @@
+{% load static %}
+{% load nota_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Boletín Final del Año</title>
+    <style>
+        @page { size: letter portrait; margin: 1.5cm; @bottom-right { content: "Página " counter(page); font-family: 'Helvetica', sans-serif; font-size: 8px; color: #555; } }
+        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 9px; color: #333; }
+        .boletin { page-break-after: always; }
+        .boletin:last-child { page-break-after: auto; }
+        .encabezado { text-align: center; margin-bottom: 10px; }
+        .encabezado-tabla { width: 100%; border-collapse: collapse; border: 1px solid #000; }
+        .encabezado-tabla td { vertical-align: middle; text-align: center; padding: 5px; border: 1px solid #000; }
+        .escudo { max-width: 65px; height: auto; }
+        .info-institucion { font-size: 11px; font-weight: bold; }
+        .info-institucion p { margin: 1px 0; }
+        .info-estudiante { width: 100%; font-size: 9px; border-collapse: collapse; margin-bottom: 10px; }
+        .info-estudiante td { padding: 3px 4px; }
+        .tabla-notas { width: 100%; border-collapse: collapse; font-size: 8.5px; }
+        .tabla-notas th, .tabla-notas td { border: 1px solid #999; padding: 4px; text-align: center; vertical-align: middle; }
+        .tabla-notas th { background-color: #E0E0E0; font-weight: bold; }
+        .materia-nombre { text-align: left; }
+        .area-nombre { text-align: left; font-weight: bold; }
+        .nota-definitiva { font-weight: bold; }
+        .tabla-resumen { width: 100%; margin-top: 15px; border-collapse: collapse; font-size: 9px; }
+        .tabla-resumen th, .tabla-resumen td { border: 1px solid #999; padding: 4px; text-align: center; }
+        .tabla-resumen th { background-color: #E0E0E0; }
+        .estado-final { margin-top: 15px; padding: 8px; border: 2px solid #333; text-align: center; font-size: 12px; font-weight: bold; }
+        .estado-final.promovido { background-color: #DFF0D8; color: #3C763D; }
+        .estado-final.no-promovido { background-color: #F2DEDE; color: #A94442; }
+        .seccion-perdidas { margin-top: 2px; padding: 6px; border: 1px solid #ccc; font-size: 8.5px; text-align: center; }
+        .seccion-perdidas h4 { margin: 0 0 5px 0; font-size: 10px; }
+        .seccion-perdidas p { margin: 0; }
+        .pie-pagina { margin-top: 30px; text-align: center; font-size: 9px; }
+        /* --- INICIO: NUEVOS ESTILOS PARA NIVELACIÓN --- */
+        .nota-recuperada { color: green; font-weight: bold; }
+        .nota-original-reprobada { color: red; }
+        /* --- FIN --- */
+    </style>
+</head>
+<body>
+{% for boletin in boletines %}
+    <div class="boletin">
+        <header class="encabezado">
+            <table class="encabezado-tabla">
+                <tr>
+                    <td style="width: 20%;"><img src="{{ 'img/Logo_govtolima.png' | get_static_path }}" alt="Escudo Tolima" class="escudo"></td>
+                    <td style="width: 60%;" class="info-institucion">
+                        <p>INSTITUCIÓN EDUCATIVA TÉCNICA</p>
+                        <p>ALFONSO PALACIO RUDAS</p>
+                        <p style="font-size: 8px; font-weight: normal;">Nit. 890.701.233-7 Código DANE 173349000026</p>
+                        <p style="font-size: 8px; font-weight: normal;">Honda-Tolima</p>
+                    </td>
+                    <td style="width: 20%;"><img src="{{ 'img/logo_colegio.png' | get_static_path }}" alt="Logo Colegio" class="escudo"></td>
+                </tr>
+            </table>
+        </header>
+        
+        <h3 style="text-align: center; margin: 10px 0;">INFORME FINAL DE CALIFICACIONES AÑO {{ ano_lectivo }}</h3>
+
+        <table class="info-estudiante">
+            <tr>
+                <td><strong>Estudiante:</strong> {{ boletin.info.user.last_name|upper }} {{ boletin.info.user.first_name|upper }}</td>
+                <td><strong>Identificación:</strong> {{ boletin.info.user.username|default_if_none:"" }}</td>
+                <td><strong>Grupo:</strong> {{ curso.nombre }}</td>
+            </tr>
+            <tr>
+                <td><strong>Sede:</strong> ALFONSO PALACIO RUDAS</td>
+                <td><strong>Año:</strong> {{ ano_lectivo }}</td>
+                <td><strong>Prom. Final:</strong> {{ boletin.promedio_general_final|coma_decimal }} &nbsp;&nbsp; <strong>Puesto:</strong> {{ boletin.puesto_final }}</td>
+            </tr>
+        </table>
+
+        <table class="tabla-notas">
+            <thead>
+                <tr>
+                    <th style="width: 20%;">ÁREA</th>
+                    <th style="width: 35%;">ASIGNATURA</th>
+                    {% for p_nombre in nombres_periodos %}
+                        <th style="width: 8%;">{{ forloop.counter }}P</th>
+                    {% endfor %}
+                    <th style="width: 11%;">DEFINITIVA</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for materia in boletin.materias %}
+                {% ifchanged materia.area %}
+                <tr>
+                    <td class="area-nombre">{{ materia.area }}</td>
+                    <td class="materia-nombre">
+                        {{ materia.nombre }}
+                        {% if materia.docente %}
+                            <br><small><strong>Docente:</strong> {{ materia.docente.user.get_full_name }}</small>
+                        {% endif %}
+                    </td>
+                    {% for p_nombre in nombres_periodos %}
+                        <td>
+                            {% with nota_data=materia.notas_periodos|get_item:p_nombre %}
+                                <span class="{% if nota_data.nivelacion and nota_data.original < 3.0 %}nota-original-reprobada{% endif %}">
+                                    {{ nota_data.original|coma_decimal|default_if_none:"-" }}
+                                </span>
+                                {% if nota_data.nivelacion %}
+                                    <span class="nota-recuperada">({{ nota_data.nivelacion|coma_decimal }})</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                    {% endfor %}
+                    <td class="nota-definitiva">{{ materia.definitiva|coma_decimal|default_if_none:"-" }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td></td>
+                    <td class="materia-nombre">
+                        {{ materia.nombre }}
+                        {% if materia.docente %}
+                            <br><small><strong>Docente:</strong> {{ materia.docente.user.get_full_name }}</small>
+                        {% endif %}
+                    </td>
+                     {% for p_nombre in nombres_periodos %}
+                        <td>
+                            {% with nota_data=materia.notas_periodos|get_item:p_nombre %}
+                                <span class="{% if nota_data.nivelacion and nota_data.original < 3.0 %}nota-original-reprobada{% endif %}">
+                                    {{ nota_data.original|coma_decimal|default_if_none:"-" }}
+                                </span>
+                                {% if nota_data.nivelacion %}
+                                    <span class="nota-recuperada">({{ nota_data.nivelacion|coma_decimal }})</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                    {% endfor %}
+                    <td class="nota-definitiva">{{ materia.definitiva|coma_decimal|default_if_none:"-" }}</td>
+                </tr>
+                {% endifchanged %}
+            {% endfor %}
+            </tbody>
+        </table>
+        
+        <table class="tabla-resumen">
+            <thead>
+                <tr><th colspan="4">Resumen de Rendimiento Final por Asignaturas</th></tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Superior:</strong> {{ boletin.rendimiento_final.SUPERIOR|default:0 }}</td>
+                    <td><strong>Alto:</strong> {{ boletin.rendimiento_final.ALTO|default:0 }}</td>
+                    <td><strong>Básico:</strong> {{ boletin.rendimiento_final.BASICO|default:0 }}</td>
+                    <td><strong>Bajo:</strong> {{ boletin.rendimiento_final.BAJO|default:0 }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="estado-final {% if boletin.estado_promocion == 'PROMOVIDO' %}promovido{% else %}no-promovido{% endif %}">
+            ESTADO FINAL: {{ boletin.estado_promocion }}
+        </div>
+
+        {% if boletin.nombres_materias_reprobadas %}
+            <div class="seccion-perdidas">
+                <h4>Asignaturas Reprobadas</h4>
+                <p>{{ boletin.nombres_materias_reprobadas|join:", " }}</p>
+            </div>
+        {% endif %}
+
+        <footer class="pie-pagina">
+            <p>_________________________</p>
+            <p>{{ curso.director_grado.user.get_full_name|default_if_none:"DIRECTOR(A) DE GRUPO" }}</p>
+            <p><strong>Director(a) de Grupo</strong></p>
+        </footer>
+    </div>
+{% endfor %}
+</body>
+</html>

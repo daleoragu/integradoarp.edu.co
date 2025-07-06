@@ -1,0 +1,149 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Mi Observador Estudiantil{% endblock %}
+{% block page_title %}Mi Observador Estudiantil{% endblock %}
+
+{% block extra_css %}
+{# --- Estilos unificados con la vista del docente --- #}
+<style>
+    .registro-item { border-left: 4px solid #ccc; padding: 1.5rem; margin-bottom: 2.5rem; background-color: #fff; border-radius: 0 8px 8px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .registro-item.ACADEMICA { border-left-color: #0d6efd; }
+    .registro-item.COMPORTAMENTAL { border-left-color: #dc3545; }
+    .registro-header { margin-bottom: 0.5rem; }
+    .registro-body { padding: 1rem 0; }
+    .registro-descargo { margin-top: 1rem; padding: 1rem; background-color: #f0f2f5; border-left: 4px solid #198754; border-radius: 5px; }
+    .registro-descargo textarea { min-height: 100px; }
+
+    /* Estilos de la ficha del docente para unificar la apariencia */
+    .ficha-container { border: 1px solid #aaa; padding: 20px; background-color: #fff; }
+    .ficha-encabezado-wrapper { border: 2px solid #000; margin-bottom: 15px; padding: 0; }
+    .ficha-encabezado-tabla { width: 100%; border-collapse: collapse; }
+    .ficha-encabezado-tabla td { vertical-align: middle; padding: 8px 15px; }
+    .td-logo-left { width: 20%; text-align: left; border-right: 1px solid #000; }
+    .td-info-center { width: 60%; text-align: center; }
+    .td-logo-right { width: 20%; text-align: right; border-left: 1px solid #000; }
+    .ficha-escudo { max-width: 70px; height: auto; }
+    .ficha-info-institucion { font-size: 11px; font-weight: bold; }
+    .ficha-info-institucion p { margin: 1px 0; }
+    .ficha-titulo-principal { text-align: center; font-weight: bold; font-size: 14px; margin-bottom: 20px; }
+    .ficha-cuerpo-principal { display: flex; gap: 20px; }
+    .ficha-datos-principales { flex-grow: 1; }
+    .ficha-foto-placeholder { width: 120px; height: 140px; border: 1px solid #ccc; display: flex; justify-content: center; align-items: center; color: #ccc; flex-shrink: 0; background-color: #f8f9fa; text-align: center; }
+    .ficha-foto-placeholder i { font-size: 48px; }
+    .ficha-foto-placeholder img { width: 100%; height: 100%; object-fit: cover; }
+    .ficha-fila { display: flex; align-items: flex-end; margin-bottom: 12px; font-size: 9.5px; }
+    .ficha-label { font-weight: bold; margin-right: 8px; white-space: nowrap; }
+    .ficha-data { border-bottom: 1px dotted #999; flex-grow: 1; min-height: 18px; padding-left: 4px; font-family: 'Courier New', Courier, monospace; }
+    .compromisos-titulo { font-weight: bold; text-align: center; margin-top: 25px; margin-bottom: 10px; font-size: 11px; }
+    .compromisos-box { border: 1px solid #aaa; padding: 10px; min-height: 70px; margin-top: 5px; font-size: 9px; background-color: #f9f9f9; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="observadorTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="historial-tab" data-bs-toggle="tab" data-bs-target="#historial" type="button" role="tab" aria-controls="historial" aria-selected="true">
+                    <i class="fas fa-history me-2"></i>Historial de Observaciones
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ficha-tab" data-bs-toggle="tab" data-bs-target="#ficha" type="button" role="tab" aria-controls="ficha" aria-selected="false">
+                    <i class="fas fa-id-card me-2"></i>Mi Ficha Personal
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="observadorTabContent">
+
+            <div class="tab-pane fade show active" id="historial" role="tabpanel" aria-labelledby="historial-tab">
+                <h4 class="mb-4">Historial de Anotaciones</h4>
+                {% for registro in registros %}
+                <div class="registro-item {{ registro.tipo }}">
+                    <div class="registro-header d-flex flex-wrap justify-content-between text-muted small">
+                        <span><strong>Fecha Suceso:</strong> {{ registro.fecha_suceso|date:"d \d\e F \d\e Y" }}</span>
+                        <span><strong>Tipo:</strong> {{ registro.get_tipo_display }} {% if registro.subtipo %}({{ registro.get_subtipo_display }}){% endif %}</span>
+                        <span><strong>Reporta:</strong> {{ registro.docente_reporta.user.get_full_name }}</span>
+                    </div>
+                    <hr>
+                    <div class="registro-body"><p class="mt-2">{{ registro.descripcion|linebreaksbr }}</p></div>
+                    <div class="registro-descargo">
+                        {% if registro.descargo_estudiante %}
+                            <strong>Tu Descargo (Guardado el {{ registro.fecha_descargo|date:"d/m/Y" }}):</strong>
+                            <p class="mt-2 mb-0 fst-italic">"{{ registro.descargo_estudiante|linebreaksbr }}"</p>
+                        {% else %}
+                            <strong>Escribe tu descargo o respuesta a esta observación:</strong>
+                            <form method="POST" class="mt-2">
+                                {% csrf_token %}
+                                <input type="hidden" name="registro_id" value="{{ registro.id }}">
+                                <textarea name="descargo" class="form-control" rows="3" required placeholder="Escribe aquí tu versión de los hechos o tu compromiso..."></textarea>
+                                <div class="text-end mt-2">
+                                    <button type="submit" name="guardar_descargo" class="btn btn-sm btn-primary">Guardar Descargo</button>
+                                </div>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center p-5">
+                    <i class="fas fa-info-circle fa-4x text-info"></i>
+                    <h5 class="mt-3">Sin Anotaciones</h5>
+                    <p class="text-muted">Actualmente no hay ninguna anotación en tu historial.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="tab-pane fade" id="ficha" role="tabpanel" aria-labelledby="ficha-tab">
+                <div class="ficha-container">
+                    <div class="ficha-encabezado-wrapper">
+                        <table class="ficha-encabezado-tabla">
+                            <tr>
+                                <td class="td-logo-left"><img src="{% static 'img/Logo_govtolima.png' %}" class="ficha-escudo" alt="Escudo Gobernación"></td>
+                                <td class="td-info-center ficha-info-institucion">
+                                    <p>INSTITUCION EDUCATIVA TÉCNICA ALFONSO PALACIO RUDAS</p>
+                                    <p style="font-size: 9px; font-weight: normal;">Nit. 890.701.233-7</p>
+                                    <p style="font-size: 9px; font-weight: normal;">Honda Tolima</p>
+                                </td>
+                                <td class="td-logo-right"><img src="{% static 'img/logo_colegio.png' %}" class="ficha-escudo" alt="Logo Colegio"></td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="ficha-titulo-principal">OBSERVADOR DEL ESTUDIANTE {% now "Y" %}</div>
+                    <div class="ficha-cuerpo-principal">
+                        <div class="ficha-datos-principales">
+                            <div class="row"><div class="col-8 ficha-fila"><span class="ficha-label">Director(a) Grado:</span><span class="ficha-data">{{ estudiante.curso.director_grado.user.get_full_name|default_if_none:"" }}</span></div><div class="col-4 ficha-fila"><span class="ficha-label">Grado:</span><span class="ficha-data">{{ estudiante.curso.nombre }}</span></div></div>
+                            <div class="row mt-2"><div class="col-8 ficha-fila"><span class="ficha-label">Estudiante:</span><span class="ficha-data">{{ estudiante.user.last_name|upper }} {{ estudiante.user.first_name|upper }}</span></div><div class="col-4 ficha-fila"><span class="ficha-label">Celular:</span><span class="ficha-data">{{ ficha.celular_acudiente|default_if_none:"" }}</span></div></div>
+                            <div class="row mt-2"><div class="col-6 ficha-fila"><span class="ficha-label">Lugar De Nacimiento:</span><span class="ficha-data">{{ ficha.lugar_nacimiento|default_if_none:"" }}</span></div><div class="col-6 ficha-fila"><span class="ficha-label">Fecha D:</span><span class="ficha-data">{{ ficha.fecha_nacimiento|date:"d" }}</span><span class="ficha-label">M:</span><span class="ficha-data">{{ ficha.fecha_nacimiento|date:"m" }}</span><span class="ficha-label">A:</span><span class="ficha-data">{{ ficha.fecha_nacimiento|date:"Y" }}</span></div></div>
+                            <div class="row mt-2"><div class="col-12 ficha-fila"><span class="ficha-label">Documento de Identificación N°:</span><span class="ficha-data">{{ estudiante.user.username }}</span></div></div>
+                        </div>
+                        <div class="ficha-foto-placeholder">
+                            {% if ficha.foto %}<img src="{{ ficha.foto.url }}" alt="Foto de {{ estudiante.user.get_full_name }}">
+                            {% else %}<i class="fas fa-user"></i><span>FOTO</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="compromisos-titulo">COMPROMISOS</div>
+                    <p class="ficha-label mt-2">Compromiso del Padre/Acudiente:</p>
+                    <div class="compromisos-box">{{ ficha.compromiso_padre|linebreaksbr|default:"El acudiente no ha registrado un compromiso." }}</div>
+                    
+                    <form method="POST" class="mt-3">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="{{ compromiso_form.compromiso_estudiante.id_for_label }}" class="form-label ficha-label">{{ compromiso_form.compromiso_estudiante.label }}</label>
+                            {{ compromiso_form.compromiso_estudiante }}
+                            {% if compromiso_form.compromiso_estudiante.help_text %}
+                                <div class="form-text small">{{ compromiso_form.compromiso_estudiante.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" name="guardar_compromiso" class="btn btn-primary">Guardar mi Compromiso</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

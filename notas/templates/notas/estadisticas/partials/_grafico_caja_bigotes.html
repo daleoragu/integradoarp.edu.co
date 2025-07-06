@@ -1,0 +1,18 @@
+{% comment %}
+Este parcial muestra el gráfico de Caja y Bigotes (Box Plot) para la distribución de notas.
+Utiliza las clases CSS definidas en 'panel_estadisticas.html' para su estilo.
+{% endcomment %}
+
+<div class="chart-card">
+    <h5>Distribución de Notas por Materia</h5>
+    
+    {# Este div es el contenedor responsivo para el gráfico de ApexCharts #}
+    <div class="chart-canvas-container">
+        <div id="boxplotMateriaChart"></div>
+    </div>
+    
+    {# Mensaje que se muestra si no hay datos para el gráfico #}
+    <div id="boxplotMateriaNoData" style="display: none; text-align: center; padding: 20px;">
+        <p class="text-muted">No hay suficientes datos para mostrar este gráfico con los filtros seleccionados.</p>
+    </div>
+</div>

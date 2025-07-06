@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ingreso a Plataforma - I.E.T. Alfonso Palacio Rudas</title>
+    <style>
+        :root {
+            --color-primario: #923e2b; /* Rojo del escudo */
+            --color-secundario: #ffc000; /* Amarillo del escudo */
+            --color-fondo: #f4f4f9;
+            --color-texto: #333;
+            --color-borde: #ddd;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--color-fondo);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+            border-top: 5px solid var(--color-primario);
+        }
+        .login-container img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin-bottom: 20px;
+            border: 3px solid var(--color-borde);
+        }
+        .login-container h1 {
+            color: var(--color-texto);
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .login-container p {
+            color: #777;
+            margin-bottom: 30px;
+        }
+        .login-form input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid var(--color-borde);
+            border-radius: 4px;
+            box-sizing: border-box; /* Importante para que el padding no afecte el ancho */
+        }
+        .login-form button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--color-primario);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .login-form button:hover {
+            background-color: #7a3323; /* Un rojo más oscuro */
+        }
+        .forgot-password {
+            display: block;
+            margin-top: 15px;
+            color: var(--color-primario);
+            text-decoration: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <img src="https://placehold.co/100x100/923e2b/ffc000?text=APR" alt="Logo del Colegio">
+        <h1>Bienvenido</h1>
+        <p>I.E.T. Alfonso Palacio Rudas</p>
+        <form class="login-form" action="" method="POST">
+            {% csrf_token %} <input type="text" name="username" placeholder="Nombre de Usuario" required>
+            <input type="password" name="password" placeholder="Contraseña" required>
+            <button type="submit">Ingresar</button>
+        </form>
+        <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
+    </div>
+</body>
+</html>

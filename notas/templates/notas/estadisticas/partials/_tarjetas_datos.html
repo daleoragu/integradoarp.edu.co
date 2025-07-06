@@ -1,0 +1,43 @@
+<style>
+    .stats-grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+    }
+    .stat-card {
+        background-color: #fff; padding: 20px; border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05); text-align: center;
+    }
+    .stat-card .stat-value {
+        font-size: 2.5rem; font-weight: bold; color: var(--color-primario); margin: 0;
+    }
+    .stat-card .stat-label {
+        font-size: 0.9rem; color: #666; margin-top: 5px;
+    }
+    .stats-title-container { text-align: center; margin-top: 15px; }
+    .stats-title {
+        font-size: 1.1rem; font-weight: 500; color: #444;
+        background-color: #e9ecef; padding: 8px 15px;
+        border-radius: 6px; display: inline-block; margin: 0;
+    }
+</style>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <p id="promedioGeneral" class="stat-value">--</p>
+        <p class="stat-label">Promedio General</p>
+    </div>
+    <div class="stat-card">
+        <p id="desviacionEstandar" class="stat-value">--</p>
+        <p class="stat-label">Desviación Estándar</p>
+    </div>
+    <div class="stat-card">
+        <p id="puestoCurso" class="stat-value">--</p>
+        <p class="stat-label">Puesto del Curso</p>
+    </div>
+    
+    {# --- TARJETA ACTUALIZADA --- #}
+    <div class="stat-card">
+        <p id="totalEstudiantes" class="stat-value">--</p>
+        <p class="stat-label">Total Estudiantes</p>
+    </div>
+</div>

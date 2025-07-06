@@ -1,0 +1,182 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+{% load nota_filters %}
+
+{% block title %}
+    {% if request.GET.tipo_reporte == 'anual' %}Sábana Final Anual: {{ curso.nombre }} - {{ ano_lectivo }}{% else %}Sábana Acumulativa: {{ curso.nombre }} - {{ periodo }}{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .medalla { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; color: white; font-weight: bold; font-size: 14px; margin-right: 8px; vertical-align: middle; flex-shrink: 0; }
+    .medalla.oro { background-color: #FFC300; border: 1px solid #DAA520; }
+    .medalla.plata { background-color: #C0C0C0; border: 1px solid #A9A9A9; }
+    .medalla.bronce { background-color: #CD7F32; border: 1px solid #8C5B30; }
+    .medalla.normal { background-color: #f8f9fa; border: 1px solid #dee2e6; color: #495057; width: auto; padding: 0 8px; border-radius: 8px; font-size: 12px; height: 22px; line-height: 22px; }
+    .th-vertical { writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; vertical-align: middle; padding: 8px 4px !important; white-space: nowrap; }
+    .table-responsive thead tr { height: 120px; }
+    .porc-rendimiento { font-size: 0.75rem; color: #6c757d; font-weight: normal; }
+    
+    /* --- INICIO: Estilo para nota recuperada --- */
+    .nota-recuperada {
+        color: #155724; /* Verde oscuro */
+        font-weight: bold;
+        margin-left: 4px;
+    }
+    .nota-original-reprobada {
+        color: #721c24; /* Rojo oscuro */
+    }
+    /* --- FIN --- */
+
+</style>
+{% endblock %}
+
+{% block page_title %}
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h4 class="mb-0">{% if request.GET.tipo_reporte == 'anual' %}Sábana Final Anual {{ ano_lectivo }}{% else %}Sábana Acumulativa al {{ periodo.get_nombre_display }}{% endif %}</h4>
+            <p class="mb-0 text-muted"><strong>Curso:</strong> {{ curso.nombre }} | <strong>Director de Grado:</strong> {{ curso.director_grado.user.get_full_name|default:"No asignado" }}</p>
+        </div>
+        <div><a href="{% url 'selector_sabana' %}" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i> Volver al Selector</a></div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-body p-3">
+        <h6 class="card-title">Convenciones</h6>
+        <div style="font-size: 0.8rem;">
+            <p class="mb-1"><strong>P1, P2, P3, P4:</strong> Nota del Periodo correspondiente. Una nota entre paréntesis (ej: 3.5) indica la nota de nivelación.</p>
+            <p class="mb-1"><strong>Prom:</strong> Promedio Acumulado de la Materia (calculado con la nota de nivelación si existe).</p>
+            <p class="mb-0"><strong>F:</strong> Puntos Faltantes para alcanzar la nota mínima de promoción anual (12.0 pts).</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover" style="font-size: 0.8rem; vertical-align: middle;">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center">N°</th>
+                        <th style="min-width: 220px;">Apellidos y Nombres</th>
+                        {% for materia in materias_curso %}
+                            <th class="th-vertical" title="{{ materia.nombre }}">{{ materia.abreviatura }}</th>
+                        {% endfor %}
+                        <th class="text-center table-info">PROM</th>
+                        <th class="text-center table-info">PUESTO</th>
+                        <th class="text-center" style="background-color: #d1e7dd;">SUP</th>
+                        <th class="text-center" style="background-color: #cff4fc;">ALT</th>
+                        <th class="text-center" style="background-color: #fff3cd;">BÁS</th>
+                        <th class="text-center" style="background-color: #f8d7da;">BAJ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for data in sabana_data %}
+                    <tr>
+                        <td class="text-center">{{ forloop.counter }}</td>
+                        <td>{{ data.info.user.last_name }} {{ data.info.user.first_name }}</td>
+                        {% for materia_data in data.calificaciones_por_materia %}
+                            <td class="text-center p-1">
+                                <div class="d-flex flex-column">
+                                    {% for nota in materia_data.notas_periodos %}
+                                        <span class="border-bottom py-1">
+                                            P{{ forloop.counter }}: 
+                                            <span class="{% if nota.recuperacion and nota.original < 3.0 %}nota-original-reprobada{% endif %}">
+                                                {{ nota.original|coma_decimal|default_if_none:"-" }}
+                                            </span>
+                                            {% if nota.recuperacion %}
+                                                <span class="nota-recuperada">({{ nota.recuperacion|coma_decimal }})</span>
+                                            {% endif %}
+                                        </span>
+                                    {% endfor %}
+                                    <span class="border-top py-1 fw-bold">Prom: {{ materia_data.promedio_materia|coma_decimal }}</span>
+                                    <span class="py-1 text-danger fw-bold">F: {{ materia_data.puntos_faltantes|coma_decimal }}</span>
+                                </div>
+                            </td>
+                        {% endfor %}
+                        <td class="text-center table-info"><strong>{{ data.promedio_general|coma_decimal }}</strong></td>
+                        <td class="text-center table-info"><strong>{{ data.puesto }}</strong></td>
+                        <td class="text-center" style="background-color: #d1e7dd;">{{ data.rendimiento.SUPERIOR }}</td>
+                        <td class="text-center" style="background-color: #cff4fc;">{{ data.rendimiento.ALTO }}</td>
+                        <td class="text-center" style="background-color: #fff3cd;">{{ data.rendimiento.BASICO }}</td>
+                        <td class="text-center" style="background-color: #f8d7da;">{{ data.rendimiento.BAJO }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="{{ total_columnas }}" class="text-center">No hay estudiantes en este curso para mostrar.</td></tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-group-divider">
+                    <tr class="table-light">
+                        <th colspan="2" class="text-end pe-3">PROMEDIO DEL CURSO:</th>
+                        {% for resumen in resumen_materias %}
+                            <td class="text-center fw-bold">{{ resumen.promedio_curso|coma_decimal }}</td>
+                        {% endfor %}
+                        <td colspan="6" class="text-center fst-italic">Resumen por Materia</td>
+                    </tr>
+                    <tr class="table-light">
+                        <th colspan="2" class="text-end pe-3" style="background-color: #d1e7dd;">TOTAL SUPERIOR:</th>
+                        {% for resumen in resumen_materias %}
+                            <td class="text-center fw-bold" style="background-color: #d1e7dd;">{{ resumen.rendimiento.SUPERIOR.count }} <span class="porc-rendimiento">({{ resumen.rendimiento.SUPERIOR.percentage|floatformat:1 }}%)</span></td>
+                        {% endfor %}
+                        <td colspan="6"></td>
+                    </tr>
+                    <tr class="table-light">
+                        <th colspan="2" class="text-end pe-3" style="background-color: #cff4fc;">TOTAL ALTO:</th>
+                        {% for resumen in resumen_materias %}
+                            <td class="text-center fw-bold" style="background-color: #cff4fc;">{{ resumen.rendimiento.ALTO.count }} <span class="porc-rendimiento">({{ resumen.rendimiento.ALTO.percentage|floatformat:1 }}%)</span></td>
+                        {% endfor %}
+                        <td colspan="6"></td>
+                    </tr>
+                    <tr class="table-light">
+                        <th colspan="2" class="text-end pe-3" style="background-color: #fff3cd;">TOTAL BÁSICO:</th>
+                        {% for resumen in resumen_materias %}
+                            <td class="text-center fw-bold" style="background-color: #fff3cd;">{{ resumen.rendimiento.BASICO.count }} <span class="porc-rendimiento">({{ resumen.rendimiento.BASICO.percentage|floatformat:1 }}%)</span></td>
+                        {% endfor %}
+                        <td colspan="6"></td>
+                    </tr>
+                    <tr class="table-light">
+                        <th colspan="2" class="text-end pe-3" style="background-color: #f8d7da;">TOTAL BAJO:</th>
+                        {% for resumen in resumen_materias %}
+                            <td class="text-center fw-bold" style="background-color: #f8d7da;">{{ resumen.rendimiento.BAJO.count }} <span class="porc-rendimiento">({{ resumen.rendimiento.BAJO.percentage|floatformat:1 }}%)</span></td>
+                        {% endfor %}
+                        <td colspan="6"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-lg-8 mb-4 mb-lg-0">
+        <div class="card h-100">
+            <div class="card-header"><h5 class="card-title mb-0">Mejores Estudiantes del Curso</h5></div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for estudiante in mejores_estudiantes %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center">
+                            {% if estudiante.puesto == 1 %}<span class="medalla oro">1</span>{% elif estudiante.puesto == 2 %}<span class="medalla plata">2</span>{% elif estudiante.puesto == 3 %}<span class="medalla bronce">3</span>{% else %}<span class="medalla normal">{{ estudiante.puesto }}</span>{% endif %}
+                            <span>{{ estudiante.info.user.last_name }} {{ estudiante.info.user.first_name }}</span>
+                        </div>
+                        <span class="badge bg-primary rounded-pill fs-6">{{ estudiante.promedio_general|coma_decimal }}</span>
+                    </li>
+                    {% empty %}
+                    <li class="list-group-item">No hay datos de estudiantes para mostrar un ranking.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100 text-center">
+            <div class="card-header"><h5 class="card-title mb-0">Promedio General del Curso</h5></div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <p class="display-3 fw-bold text-success mb-0">{{ promedio_total_curso|coma_decimal }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

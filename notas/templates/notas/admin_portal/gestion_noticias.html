@@ -1,0 +1,73 @@
+{% extends "notas/base.html" %}
+
+{% block page_title %}
+    <h1>Gestión de Noticias</h1>
+    <div>
+        <a href="{% url 'crear_noticia' %}" class="btn btn-primary"><i class="fas fa-plus me-2"></i>Crear Noticia</a>
+        <a href="{% url 'configuracion_portal' %}" class="btn btn-secondary"><i class="fas fa-arrow-left me-2"></i>Volver</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>Publicación</th>
+                        <th>Estado</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for noticia in noticias %}
+                    <tr>
+                        <td><strong>{{ noticia.titulo }}</strong></td>
+                        <td>{{ noticia.autor.get_full_name|default:noticia.autor.username }}</td>
+                        <td>{{ noticia.fecha_publicacion|date:"d/m/Y H:i" }}</td>
+                        <td>
+                            {% if noticia.estado == 'PUBLICADO' %}
+                                <span class="badge bg-success">Publicado</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Borrador</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <form action="{% url 'publicar_noticia' noticia.pk %}" method="POST" class="d-inline">
+                                {% csrf_token %}
+                                {% if noticia.estado == 'BORRADOR' %}
+                                    <button type="submit" class="btn btn-success btn-sm" title="Publicar Noticia">
+                                        <i class="fas fa-eye"></i> Publicar
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-warning btn-sm" title="Mover a Borradores">
+                                        <i class="fas fa-eye-slash"></i> Ocultar
+                                    </button>
+                                {% endif %}
+                            </form>
+
+                            <a href="{% url 'editar_noticia' noticia.pk %}" class="btn btn-info btn-sm" title="Editar">
+                                <i class="fas fa-pencil-alt"></i>
+                            </a>
+                            <form action="{% url 'eliminar_noticia' noticia.pk %}" method="POST" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-danger btn-sm" title="Eliminar" onclick="return confirm('¿Eliminar esta noticia?');">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No hay noticias publicadas.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

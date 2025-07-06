@@ -1,0 +1,89 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Panel de Estadísticas - {{ block.super }}{% endblock %}
+
+{% block page_title %}
+    Panel de Estadísticas Académicas
+{% endblock %}
+
+{% block content %}
+    <style>
+        .stats-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        .chart-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* 1 columna por defecto para móviles */
+            gap: 30px;
+            align-items: start; /* Alinea los elementos al inicio de la celda del grid */
+        }
+        @media (min-width: 1200px) { /* Se activa en pantallas grandes */
+            .chart-grid {
+                grid-template-columns: 1fr 1fr; /* 2 columnas de igual tamaño */
+            }
+        }
+        .vertical-chart-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 30px; /* Espacio entre los gráficos apilados */
+            min-width: 0; /* Evita que los contenedores flex/grid se estiren con su contenido */
+        }
+        .chart-card {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            height: 100%; /* Asegura que todas las tarjetas en una fila tengan la misma altura */
+        }
+        .chart-card h5 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #495057;
+            font-weight: 600;
+        }
+        .chart-canvas-container {
+            position: relative;
+            flex-grow: 1; /* Permite que el contenedor del gráfico crezca */
+            min-height: 300px;
+        }
+        .apexcharts-canvas {
+            margin: 0 auto;
+        }
+    </style>
+    
+    {% include 'notas/estadisticas/partials/_filtros.html' %}
+
+    <div class="stats-container">
+        {% include 'notas/estadisticas/partials/_tarjetas_datos.html' %}
+        
+        <div id="statsTitleContainer" class="stats-title-container" style="display: none;">
+            <h3 id="statsTitle" class="stats-title"></h3>
+        </div>
+        
+        {# --- SECCIÓN DE CONCLUSIONES AÑADIDA --- #}
+        <div id="conclusionesWrapper" style="display: none;">
+             {% include 'notas/estadisticas/partials/_conclusiones.html' %}
+        </div>
+
+        <div class="chart-grid">
+            <div class="vertical-chart-stack">
+                {% include 'notas/estadisticas/partials/_grafico_dona.html' %}
+                {% include 'notas/estadisticas/partials/_grafico_barras.html' %}
+            </div>
+
+            <div class="vertical-chart-stack">
+                {% include 'notas/estadisticas/partials/_grafico_caja_bigotes.html' %}
+                {% include 'notas/estadisticas/partials/_grafico_histograma.html' %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+    {% include 'notas/estadisticas/partials/_scripts.html' %}
+{% endblock %}

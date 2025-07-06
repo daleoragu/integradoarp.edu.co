@@ -1,0 +1,44 @@
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required
+# La importación ahora usa '..' para subir un nivel desde la carpeta 'views' a 'notas'
+# e importar los modelos.
+from ..models import Estudiante, Docente, Curso, AsignacionDocente
+
+@login_required
+def dashboard_vista(request):
+    """
+    Acts as a router, redirecting users to the appropriate dashboard
+    based on their role (group).
+    """
+    if request.user.is_superuser:
+        return redirect('admin_dashboard')
+    
+    if request.user.groups.filter(name='Docentes').exists():
+        return render(request, 'notas/dashboard_docente.html')
+    
+    if request.user.groups.filter(name='Estudiantes').exists():
+        return render(request, 'notas/dashboard_estudiante.html')
+
+    # Fallback if user has no assigned role
+    messages.warning(request, "Su usuario no tiene un rol asignado. Por favor, contacte al administrador.")
+    logout(request)
+    return redirect('login')
+
+@login_required
+def admin_dashboard_vista(request):
+    """
+    Displays a custom dashboard for superusers with site statistics.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, "Acceso denegado.")
+        return redirect('dashboard')
+
+    context = {
+        'num_estudiantes': Estudiante.objects.count(),
+        'num_docentes': Docente.objects.count(),
+        'num_cursos': Curso.objects.count(),
+        'num_asignaciones': AsignacionDocente.objects.count(),
+    }
+    return render(request, 'notas/admin_dashboard.html', context)

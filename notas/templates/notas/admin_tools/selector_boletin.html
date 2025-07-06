@@ -1,0 +1,131 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Generar Boletines - {{ block.super }}{% endblock %}
+
+{% block page_title %}
+    Generar Boletines Académicos
+{% endblock %}
+
+{% block content %}
+<style>
+    /* Estilos simplificados para una sola tarjeta */
+    .card {
+        background-color: #fff;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        padding: 25px 30px;
+        max-width: 600px; /* Ancho máximo para el formulario centrado */
+        margin: 0 auto; /* Centrar la tarjeta */
+    }
+    .card-header h3 {
+        margin: 0 0 5px 0;
+        font-size: 1.4rem;
+        color: var(--color-primario);
+    }
+    .card-header p {
+        margin: 0;
+        color: #666;
+        font-size: 0.95rem;
+    }
+    .form-selector {
+        margin-top: 20px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: #555;
+    }
+    .form-group select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--color-borde);
+        border-radius: 5px;
+        background-color: #fff;
+        font-size: 1rem;
+    }
+    .form-actions {
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid var(--color-borde);
+    }
+    .btn-submit {
+        background-color: var(--color-primario);
+        color: #fff;
+        border: none;
+        padding: 12px 25px;
+        font-size: 1rem;
+        font-weight: bold;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        width: 100%;
+    }
+    .btn-submit:hover {
+        background-color: var(--color-primario-oscuro);
+    }
+</style>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Selector de Boletines</h3>
+        <p>Selecciona el curso y el reporte que deseas generar.</p>
+    </div>
+    <!-- El formulario ahora apunta a una nueva URL unificada -->
+    <form method="GET" action="{% url 'generar_boletin' %}" target="_blank" class="form-selector">
+        <div class="form-body">
+            {% if user.is_superuser %}
+            <div class="form-group">
+                <label for="docente_select_periodo">Filtrar por Docente (Opcional)</label>
+                <!-- Este onchange recarga la página para filtrar los cursos.
+                     Necesitarás un poco de JS si quieres mantener la selección del periodo/reporte al recargar.
+                     Por ahora, lo dejamos simple para que funcione. -->
+                <select id="docente_select_periodo" name="docente_id" onchange="window.location.href = '?docente_id=' + this.value;">
+                    <option value="">-- Todos los Docentes --</option>
+                    {% for docente in todos_los_docentes %}
+                        <option value="{{ docente.id }}" {% if docente_seleccionado_id == docente.id|stringformat:"s" %}selected{% endif %}>
+                            {{ docente.user.get_full_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+
+            <div class="form-group">
+                <label for="curso_select_periodo">Seleccionar Curso</label>
+                <select id="curso_select_periodo" name="curso_id" required>
+                    <option value="">-- Seleccione un curso --</option>
+                    {% for curso in cursos %}
+                        <option value="{{ curso.id }}">{{ curso.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Menú desplegable unificado -->
+            <div class="form-group">
+                <label for="reporte_select">Seleccionar Periodo o Reporte Final</label>
+                <select id="reporte_select" name="reporte_id" required>
+                    <option value="">-- Seleccione una opción --</option>
+                    <optgroup label="Boletines por Periodo">
+                        {% for periodo in periodos %}
+                            <option value="{{ periodo.id }}">{{ periodo }}</option>
+                        {% endfor %}
+                    </optgroup>
+                    <optgroup label="Reportes Finales">
+                        {% for ano in anos_lectivos %}
+                            <option value="FINAL_{{ ano }}">Boletín Final del Año {{ ano }}</option>
+                        {% endfor %}
+                    </optgroup>
+                </select>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-submit"><i class="fas fa-file-pdf fa-fw"></i> Generar Reporte</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

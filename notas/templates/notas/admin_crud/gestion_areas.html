@@ -1,0 +1,62 @@
+{% extends "notas/base.html" %}
+
+{% block page_title %}
+    <h1>Gestión de Áreas de Conocimiento</h1>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message|safe }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="mb-3 d-flex flex-wrap gap-2">
+    <a href="{% url 'crear_area' %}" class="btn btn-primary">
+        <i class="fas fa-plus me-2"></i>Añadir Nueva Área
+    </a>
+     <a href="{% url 'gestion_materias' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Volver a Gestión de Materias
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nombre del Área</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for area in areas %}
+                    <tr>
+                        <td><strong>{{ area.nombre }}</strong></td>
+                        <td class="text-end">
+                            <a href="{% url 'editar_area' area.id %}" class="btn btn-sm btn-outline-info" title="Editar"><i class="fas fa-pencil-alt"></i></a>
+                            <form action="{% url 'eliminar_area' area.id %}" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de que quieres eliminar el área \'{{ area.nombre|escapejs }}\'? Esta acción solo es posible si el área no tiene materias asociadas.')">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="fas fa-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="text-center text-muted py-4">
+                            No hay áreas de conocimiento registradas.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

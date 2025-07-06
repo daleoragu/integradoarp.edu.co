@@ -1,0 +1,53 @@
+{% extends "notas/base.html" %}
+
+{% block page_title %}
+    <h1>Configuración del Portal Público</h1>
+{% endblock %}
+
+{% block content %}
+<div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body text-center d-flex flex-column">
+                <i class="fas fa-images fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">Gestionar Carrusel</h5>
+                <p class="card-text text-muted small">Suba y ordene las imágenes del slider de la página de inicio.</p>
+                <a href="{% url 'gestion_carrusel' %}" class="btn btn-warning mt-auto">Administrar</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body text-center d-flex flex-column">
+                <i class="fas fa-newspaper fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Gestionar Noticias</h5>
+                <p class="card-text text-muted small">Publique noticias y eventos en la página principal del portal.</p>
+                <a href="{% url 'gestion_noticias' %}" class="btn btn-success mt-auto">Administrar</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body text-center d-flex flex-column">
+                <i class="fas fa-photo-video fa-3x text-info mb-3"></i>
+                <h5 class="card-title">Gestionar Galería</h5>
+                <p class="card-text text-muted small">Añada o elimine fotos de la galería de imágenes del portal.</p>
+                <a href="{% url 'gestion_galeria' %}" class="btn btn-info mt-auto">Administrar</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col">
+        <div class="card h-100">
+            <div class="card-body text-center d-flex flex-column">
+                <i class="fas fa-file-upload fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Gestionar Documentos</h5>
+                <p class="card-text text-muted small">Suba archivos como el manual de convivencia, formularios, etc.</p>
+                <a href="{% url 'gestion_documentos' %}" class="btn btn-primary mt-auto">Administrar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

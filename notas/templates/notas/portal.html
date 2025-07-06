@@ -1,0 +1,17 @@
+{% extends "notas/base_portal.html" %}
+{% load static %}
+
+{% block portal_content %}
+<div class="portal-publico-container">
+    
+    {# Incluimos la nueva barra de navegación superior #}
+    {% include "notas/portal_components/_portal_header.html" %}
+
+    {# Incluimos el nuevo contenido principal con el carrusel #}
+    {% include "notas/portal_components/_portal_main_content.html" %}
+    
+    {# Incluimos el pie de página que no ha cambiado #}
+    {% include "notas/portal_components/_portal_footer.html" %}
+
+</div>
+{% endblock portal_content %}

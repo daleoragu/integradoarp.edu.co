@@ -1,0 +1,89 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<form method="POST" enctype="multipart/form-data" novalidate>
+    {% csrf_token %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0 h2">{{ titulo }}{% if docente %}: {{ docente.user.get_full_name }}{% endif %}</h1>
+        <div>
+            <a href="{% url 'gestion_docentes' %}" class="btn btn-secondary"><i class="fas fa-times me-1"></i>Cancelar</a>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>Guardar Cambios</button>
+        </div>
+    </div>
+
+    {% if form.non_field_errors or form.errors %}
+    <div class="alert alert-danger p-3">
+        <p class="mb-1 fw-bold">Por favor, corrige los errores a continuación:</p>
+        <ul class="mb-0 ps-3">
+        {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+        {% for field in form %}{% if field.errors %}<li>{{ field.label }}: {{ field.errors|striptags }}</li>{% endif %}{% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            {% if 'Crear' in titulo %}
+                {# Versión simple para CREAR un docente #}
+                <h5 class="mb-3">Datos del Nuevo Docente</h5>
+                <p class="text-muted">El nombre de usuario y la contraseña provisional se generarán automáticamente a partir del nombre y apellido.</p>
+                <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.nombres.label_tag }} {{ form.nombres }}</div>
+                    <div class="col-md-6 mb-3">{{ form.apellidos.label_tag }} {{ form.apellidos }}</div>
+                </div>
+                 <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.numero_documento.label_tag }} {{ form.numero_documento }}</div>
+                    <div class="col-md-6 mb-3">{{ form.email.label_tag }} {{ form.email }}</div>
+                </div>
+            {% else %}
+                {# Versión completa para EDITAR un docente #}
+                <h5 class="mb-3">Datos Principales</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.first_name.label_tag }} {{ form.first_name }}</div>
+                    <div class="col-md-6 mb-3">{{ form.last_name.label_tag }} {{ form.last_name }}</div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.email.label_tag }} {{ form.email }}</div>
+                    <div class="col-md-6 mb-3 pt-4">
+                        <div class="form-check form-switch">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">{{ form.is_active.label }}</label>
+                        </div>
+                    </div>
+                </div>
+                <hr>
+                <h5 class="mb-3">Información Opcional de la Ficha</h5>
+                 <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.numero_documento.label_tag }} {{ form.numero_documento }}</div>
+                    <div class="col-md-6 mb-3">{{ form.telefono.label_tag }} {{ form.telefono }}</div>
+                </div>
+                 <div class="row">
+                    <div class="col-md-6 mb-3">{{ form.titulo_profesional.label_tag }} {{ form.titulo_profesional }}</div>
+                    <div class="col-md-6 mb-3">{{ form.direccion.label_tag }} {{ form.direccion }}</div>
+                </div>
+
+                <hr>
+                <h5 class="mb-3">Foto de Perfil</h5>
+                <div class="row align-items-center">
+                    <div class="col-md-8 mb-3">
+                        {{ form.foto.label_tag }}
+                        {{ form.foto }}
+                    </div>
+                    <div class="col-md-4 text-center">
+                        <strong>Foto Actual</strong><br>
+                        {% if docente.ficha.foto %}
+                            <img src="{{ docente.ficha.foto.url }}" alt="Foto actual del docente" class="img-thumbnail mt-2" style="max-height: 150px;">
+                        {% else %}
+                            <p class="text-muted mt-2">No hay foto.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</form>
+{% endblock %}

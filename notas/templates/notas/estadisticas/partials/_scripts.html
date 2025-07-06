@@ -1,0 +1,183 @@
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        let rendimientoChart, materiasChart, boxplotChart, histogramaChart;
+
+        Chart.register(ChartDataLabels);
+
+        // --- INICIALIZACIÓN DE GRÁFICOS ---
+        const ctxRendimiento = document.getElementById('rendimientoGeneralChart');
+        if (ctxRendimiento) {
+            rendimientoChart = new Chart(ctxRendimiento.getContext('2d'), {
+                type: 'doughnut', data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'top', labels: { padding: 15 } }, datalabels: { formatter: (v,c) => { let s=c.chart.data.datasets[0].data.reduce((a,b)=>a+b,0); if(v===0||!s) return ''; return (v*100/s).toFixed(1)+'%'; }, color:'#fff', font:{weight:'bold',size:12}, textStrokeColor:'black', textStrokeWidth:0.5 } } }
+            });
+        }
+
+        const ctxMaterias = document.getElementById('promediosMateriaChart');
+        if (ctxMaterias) {
+            materiasChart = new Chart(ctxMaterias.getContext('2d'), {
+                type: 'bar', data: { labels: [], datasets: [{ label: '', data: [], backgroundColor: '', borderWidth: 1 }] },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { beginAtZero: true, max: 5.0 } }, plugins: { legend: { display: false }, datalabels: { display: false } } }
+            });
+        }
+        
+        const boxplotChartEl = document.querySelector("#boxplotMateriaChart");
+        const boxplotNoDataEl = document.querySelector("#boxplotMateriaNoData");
+        if (boxplotChartEl) {
+            const boxplotOptions = {
+                series: [], 
+                chart: { 
+                    type: 'boxPlot', 
+                    height: '100%', 
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    // --- ¡CORRECCIÓN PARA CARGA AUTOMÁTICA! ---
+                    // Esto le dice al gráfico que la herramienta de 'zoom' esté
+                    // seleccionada por defecto, en lugar de la 'mano' (pan).
+                    toolbar: {
+                        autoSelected: 'zoom'
+                    }
+                },
+                title: { text: 'Distribución de Notas por Materia', align: 'center' },
+                plotOptions: { boxPlot: { colors: { upper: '#923e2b', lower: '#c7a9a2' } } },
+                tooltip: { shared: false, intersect: false, y: { formatter: function(val, { series, seriesIndex, dataPointIndex, w }) { const stats = w.globals.series[seriesIndex][dataPointIndex]; return `Máx: ${stats[4]} | Q3: ${stats[3]} | Med: ${stats[2]} | Q1: ${stats[1]} | Mín: ${stats[0]}`; } } },
+                xaxis: { type: 'category', labels: { trim: true } }, yaxis: { min: 0, max: 5, tickAmount: 5 }
+            };
+            boxplotChart = new ApexCharts(boxplotChartEl, boxplotOptions);
+            boxplotChart.render();
+        }
+
+        const ctxHistograma = document.getElementById('histogramaChart');
+        if (ctxHistograma) {
+            histogramaChart = new Chart(ctxHistograma.getContext('2d'), {
+                type: 'bar', data: { labels: [], datasets: [{ data: [], backgroundColor: [] }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                        y: { beginAtZero: true, ticks: { precision: 0 } }
+                    },
+                    plugins: { legend: { display: false }, datalabels: { color: '#363636', anchor: 'end', align: 'top', font: { weight: 'bold' }, formatter: function(value) { return value > 0 ? value : ''; } } }
+                }
+            });
+        }
+        
+        // --- LÓGICA DE FILTROS Y ACTUALIZACIÓN ---
+        const form = document.getElementById('statsFilterForm');
+        const applyBtn = document.getElementById('applyFiltersBtn');
+        const checkList = document.getElementById('cursos_select');
+        const anchor = checkList.querySelector('.anchor');
+        anchor.onclick = function(evt) { checkList.classList.toggle('visible'); evt.stopPropagation(); }
+        document.addEventListener('click', function(e) { if (!checkList.contains(e.target)) { checkList.classList.remove('visible'); } });
+        checkList.addEventListener('change', function() {
+            const checkedItems = checkList.querySelectorAll('input[type="checkbox"]:checked');
+            if (checkedItems.length === 0) { anchor.textContent = 'Seleccionar Cursos...'; }
+            else if (checkedItems.length === 1) { anchor.textContent = checkedItems[0].parentElement.textContent.trim(); }
+            else { anchor.textContent = `${checkedItems.length} cursos seleccionados`; }
+        });
+
+        const promedioEl = document.getElementById('promedioGeneral');
+        const desviacionEl = document.getElementById('desviacionEstandar');
+        const totalEl = document.getElementById('totalEstudiantes');
+        const puestoEl = document.getElementById('puestoCurso');
+        const statsTitleContainer = document.getElementById('statsTitleContainer');
+        const statsTitle = document.getElementById('statsTitle');
+        const conclusionesWrapper = document.getElementById('conclusionesWrapper');
+        const conclusionesContainer = document.getElementById('conclusionesContainer');
+
+        async function actualizarEstadisticas() {
+            const ano = form.querySelector('#ano_lectivo_select').value;
+            const periodo = form.querySelector('#periodo_select').value;
+            const cursosCheckboxes = form.querySelectorAll('input[name="cursos"]:checked');
+            const cursosSeleccionados = [...cursosCheckboxes].map(cb => cb.value);
+            const nombresCursosSeleccionados = [...cursosCheckboxes].map(cb => cb.dataset.nombre);
+            
+            if (nombresCursosSeleccionados.length > 0) { statsTitle.textContent = `Estadísticas para: ${nombresCursosSeleccionados.join(', ')}`; statsTitleContainer.style.display = 'block'; }
+            else { statsTitle.textContent = 'Estadísticas Generales'; statsTitleContainer.style.display = 'block'; }
+
+            const params = new URLSearchParams();
+            params.append('ano_lectivo', ano);
+            params.append('periodo_id', periodo);
+            cursosSeleccionados.forEach(cursoId => params.append('curso_ids[]', cursoId));
+            
+            const baseUrl = "{% url 'datos_graficos_ajax' %}";
+            const url = `${baseUrl}?${params.toString()}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                // Actualiza las tarjetas de datos
+                promedioEl.textContent = data.promedio_general;
+                desviacionEl.textContent = `± ${data.desviacion_estandar}`;
+                puestoEl.textContent = data.puesto_curso;
+                totalEl.textContent = data.totalEstudiantes;
+
+                // Rellena la sección de conclusiones
+                if (data.conclusiones && data.conclusiones.length > 0) {
+                    let conclusionesHtml = '<ul class="list-group list-group-flush">';
+                    data.conclusiones.forEach(conclusion => {
+                        conclusionesHtml += `<li class="list-group-item">${conclusion}</li>`;
+                    });
+                    conclusionesHtml += '</ul>';
+                    conclusionesContainer.innerHTML = conclusionesHtml;
+                    conclusionesWrapper.style.display = 'block';
+                } else {
+                    conclusionesWrapper.style.display = 'none';
+                }
+
+                // Actualiza los gráficos
+                if(rendimientoChart) {
+                    rendimientoChart.data.labels = data.rendimiento_general_chart.labels;
+                    rendimientoChart.data.datasets[0].data = data.rendimiento_general_chart.datasets[0].data;
+                    rendimientoChart.data.datasets[0].backgroundColor = data.rendimiento_general_chart.datasets[0].backgroundColor;
+                    rendimientoChart.update();
+                }
+
+                if(materiasChart) {
+                    materiasChart.data.labels = data.promedios_materia_chart.labels;
+                    materiasChart.data.datasets[0].data = data.promedios_materia_chart.datasets[0].data;
+                    materiasChart.data.datasets[0].backgroundColor = data.promedios_materia_chart.datasets[0].backgroundColor;
+                    materiasChart.data.datasets[0].borderColor = data.promedios_materia_chart.datasets[0].borderColor;
+                    materiasChart.data.datasets[0].borderWidth = data.promedios_materia_chart.datasets[0].borderWidth;
+                    materiasChart.update();
+                }
+
+                if(boxplotChart) {
+                    if (data.distribucion_materia_chart && data.distribucion_materia_chart.length > 0) {
+                        if(boxplotChartEl) boxplotChartEl.style.display = 'block';
+                        if(boxplotNoDataEl) boxplotNoDataEl.style.display = 'none';
+                        
+                        const numMaterias = data.distribucion_materia_chart.length;
+                        const anchoMinimo = numMaterias * 60;
+                        if (boxplotChartEl) {
+                           boxplotChartEl.style.minWidth = `${anchoMinimo}px`;
+                        }
+                        
+                        boxplotChart.updateSeries([{ data: data.distribucion_materia_chart }]);
+                    } else {
+                        if(boxplotChartEl) boxplotChartEl.style.display = 'none';
+                        if(boxplotNoDataEl) boxplotNoDataEl.style.display = 'block';
+                    }
+                }
+
+                if(histogramaChart) {
+                    histogramaChart.data.labels = data.histograma_chart.labels;
+                    histogramaChart.data.datasets[0].data = data.histograma_chart.datasets[0].data;
+                    histogramaChart.data.datasets[0].backgroundColor = data.histograma_chart.datasets[0].backgroundColor;
+                    histogramaChart.data.datasets[0].label = data.histograma_chart.datasets[0].label;
+                    histogramaChart.update();
+                }
+
+            } catch (error) {
+                console.error("Error al obtener los datos de estadísticas:", error);
+            }
+        }
+
+        applyBtn.addEventListener('click', actualizarEstadisticas);
+        actualizarEstadisticas();
+    });
+</script>

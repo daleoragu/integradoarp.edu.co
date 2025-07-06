@@ -1,0 +1,144 @@
+{% extends "notas/base.html" %}
+
+{% block page_title %}
+    <h1>{{ titulo }}</h1>
+{% endblock %}
+
+{% block content %}
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message|safe }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="row">
+    <!-- Columna Principal: Asignación por Docente -->
+    <div class="col-lg-9">
+        <div class="card shadow-sm">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Carga Académica por Docente</h5>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#asignacionModal">
+                    <i class="fas fa-plus me-2"></i>Añadir Asignación
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 25%;">Docente</th>
+                                <th style="width: 15%;">Director de Grado</th>
+                                <th>Asignaturas (Materia - Curso - I.H.)</th>
+                                <th class="text-center" style="width: 10%;">Total I.H.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for data in docentes_list %}
+                            <tr>
+                                <td class="align-middle">
+                                    <strong>{{ data.user.get_full_name }}</strong>
+                                </td>
+                                <td class="align-middle">
+                                    {% for curso in data.cursos_dirigidos.all %}
+                                        <span class="badge bg-info">{{ curso.nombre }}</span>
+                                    {% empty %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    <ul class="list-unstyled mb-0">
+                                        {% for asignacion in data.asignaciondocente_set.all %}
+                                        <li class="d-flex justify-content-between align-items-center py-1">
+                                            <span>
+                                                <i class="fas fa-book-open text-muted me-2"></i>
+                                                {{ asignacion.materia.nombre }} - <strong>{{ asignacion.curso.nombre }}</strong> ({{ asignacion.intensidad_horaria_semanal }}h)
+                                            </span>
+                                            <form action="{% url 'eliminar_asignacion' asignacion.id %}" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta asignación?')">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Eliminar Asignación"><i class="fas fa-trash-alt"></i></button>
+                                            </form>
+                                        </li>
+                                        {% empty %}
+                                        <li class="text-muted">Sin asignaciones.</li>
+                                        {% endfor %}
+                                    </ul>
+                                </td>
+                                <td class="align-middle text-center fs-5">
+                                    <strong>{{ data.total_ih }}</strong>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">No hay docentes registrados.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Columna Lateral: Resúmenes y Acciones -->
+    <div class="col-lg-3">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Acciones Rápidas</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{% url 'gestion_docentes' %}" class="list-group-item list-group-item-action">Gestionar Docentes</a>
+                <a href="{% url 'gestion_cursos' %}" class="list-group-item list-group-item-action">Gestionar Cursos / Grados</a>
+                <a href="{% url 'gestion_materias' %}" class="list-group-item list-group-item-action">Gestionar Materias</a>
+            </div>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-hourglass-half me-2"></i>I.H. por Curso</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for curso in cursos_list %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ curso.nombre }}
+                        <span class="badge bg-primary rounded-pill fs-6">{{ curso.total_ih }}h</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Añadir/Editar Asignación -->
+<div class="modal fade" id="asignacionModal" tabindex="-1" aria-labelledby="asignacionModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="asignacionModalLabel">Crear Nueva Asignación Académica</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'crear_asignacion' %}" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    {% for field in form_asignacion %}
+                        <div class="mb-3">
+                            {{ field.label_tag }}
+                            {{ field }}
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Asignación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

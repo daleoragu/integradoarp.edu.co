@@ -1,0 +1,213 @@
+{% extends 'notas/base.html' %}
+{% load nota_filters %}
+
+{% block title %}Consulta de Asistencia{% endblock %}
+{% block page_title %}Consulta y Reportes de Asistencia{% endblock %}
+
+{% block content %}
+<div class="card card-body mb-4">
+    <h5 class="card-title">Filtros de Consulta</h5>
+    <form method="get" id="consultaForm" class="row g-3 align-items-end">
+
+        {% if user.is_superuser %}
+        <div class="col-md-4">
+            <label for="docente_id" class="form-label"><b>Filtrar por Docente</b></label>
+            <select name="docente_id" id="docente_id" class="form-select" onchange="this.form.submit()">
+                <option value="">Todos los Docentes</option>
+                {% for docente in todos_los_docentes %}
+                <option value="{{ docente.id }}" {% if docente.id|stringformat:"s" == docente_seleccionado_id %}selected{% endif %}>
+                    {{ docente.user.get_full_name|default:docente.user.username }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endif %}
+
+        <div class="col-md-5">
+            <label for="asignacion_id" class="form-label"><b>1. Seleccione Asignatura (para definir el curso)</b></label>
+            <select name="asignacion_id" id="asignacion_id" class="form-select" onchange="this.form.submit()">
+                <option value="">--- Seleccione una asignatura para empezar ---</option>
+                {% for asignacion_opcion in asignaciones %}
+                    <option value="{{ asignacion_opcion.id }}" {% if asignacion_opcion.id|stringformat:"s" == asignacion_seleccionada_id %}selected{% endif %}>
+                        {{ asignacion_opcion.curso.nombre }} - {{ asignacion_opcion.materia.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label for="fecha_consulta" class="form-label"><b>2. Seleccione Fecha del Historial</b></label>
+            <input type="date" name="fecha_consulta" id="fecha_consulta" value="{{ fecha_consulta|date:'Y-m-d' }}" class="form-control" onchange="this.form.submit()">
+        </div>
+    </form>
+</div>
+
+{% if asignacion_seleccionada_id %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">1. Generar Reporte / Descargar Plantilla</h5>
+        <p class="card-text text-muted">
+            Genere una sábana de asistencia o descargue una plantilla en blanco para llenar offline.
+        </p>
+        <form method="get" target="_blank">
+            <input type="hidden" name="asignacion_id" value="{{ asignacion_seleccionada_id }}">
+            <div class="row align-items-end g-3">
+                <div class="col-md-4">
+                     <label for="periodo_id" class="form-label"><b>Periodo Académico</b></label>
+                    <select name="periodo_id" id="periodo_id" class="form-select" required>
+                        <option value="">Seleccione un periodo...</option>
+                        {% for p in periodos_academicos %}
+                            <option value="{{ p.id }}">{{ p }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="mes_id" class="form-label"><b>Mes</b></label>
+                   <select name="mes" id="mes_id" class="form-select" disabled>
+                       <option value="todos">Todo el Periodo</option>
+                   </select>
+               </div>
+                <div class="col-md-5 d-flex gap-2">
+                    <button type="submit" formaction="{% url 'generar_reporte_individual_excel' %}" class="btn btn-success w-100">
+                        <i class="fas fa-download me-2"></i>Descargar Plantilla
+                    </button>
+                    <button type="submit" formaction="{% url 'generar_reporte_individual_pdf' %}" class="btn btn-danger w-100">
+                        <i class="fas fa-file-pdf me-2"></i>Generar PDF
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">2. Cargar Planilla de Asistencia Completa</h5>
+        <p class="card-text text-muted">
+            Una vez haya llenado la plantilla de Excel con las asistencias (X o T), súbala aquí para registrar los datos en la plataforma.
+        </p>
+        <form action="{% url 'importar_asistencia_excel' %}" method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="row align-items-center g-3">
+                <div class="col-md-8">
+                    <input class="form-control" type="file" name="archivo_excel" id="archivo_excel" required accept=".xlsx">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-upload me-2"></i>Subir y Procesar Archivo
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">
+        <h4>Historial de Asistencia del Curso: <strong>{{ curso_seleccionado.nombre }}</strong> para el día <strong>{{ fecha_consulta|date:"d F, Y" }}</strong></h4>
+    </div>
+    <div class="card-body table-responsive">
+        {% if estudiantes_del_curso %}
+        <table class="table table-striped table-hover table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th style="min-width: 250px;">Estudiante</th>
+                    {% for asignatura_curso in asignaturas_del_curso %}
+                        <th class="text-center" style="min-width: 120px;">{{ asignatura_curso.materia.nombre }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for estudiante in estudiantes_del_curso %}
+                <tr>
+                    <td>{{ forloop.counter }}. {{ estudiante.user.get_full_name|default:estudiante.user.username }}</td>
+                    {% for asignatura_curso in asignaturas_del_curso %}
+                        <td class="text-center">
+                            {% with estado=matriz_asistencia|get_item:estudiante.id|get_item:asignatura_curso.id %}
+                                {% if estado == 'A' %}
+                                    <span class="badge bg-danger">Ausente</span>
+                                {% elif estado == 'T' %}
+                                    <span class="badge bg-warning text-dark">Tarde</span>
+                                {% elif estado == 'P' %}
+                                    <span class="badge bg-success">Presente</span>
+                                {% elif estado == 'AJ' %}
+                                    <span class="badge bg-info text-dark">Justificada</span>
+                                {% else %}
+                                    <span class="text-muted">--</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="alert alert-info text-center p-4">
+            <i class="fas fa-info-circle me-2"></i>
+            Seleccione una asignatura para ver el historial de asistencia del curso correspondiente en la fecha indicada.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const periodoSelect = document.getElementById('periodo_id');
+    const mesSelect = document.getElementById('mes_id');
+    
+    if (!periodoSelect || !mesSelect) return;
+
+    const url = "{% url 'ajax_obtener_meses' %}";
+
+    function cargarMeses() {
+        const periodoId = periodoSelect.value;
+        mesSelect.innerHTML = '<option value="todos">Todo el Periodo</option><option disabled>---</option><option disabled>Cargando...</option>';
+        mesSelect.disabled = true;
+
+        if (!periodoId) {
+            mesSelect.innerHTML = '<option value="todos">Todo el Periodo</option><option disabled>---</option><option disabled>Seleccione un periodo</option>';
+            return;
+        }
+
+        fetch(`${url}?periodo_id=${periodoId}`)
+            .then(response => response.ok ? response.json() : Promise.reject('Error en la respuesta del servidor'))
+            .then(data => {
+                mesSelect.innerHTML = '';
+                
+                const todosOption = document.createElement('option');
+                todosOption.value = 'todos';
+                todosOption.textContent = 'Todo el Periodo';
+                mesSelect.appendChild(todosOption);
+
+                if (data.meses && data.meses.length > 0) {
+                    const separador = document.createElement('option');
+                    separador.disabled = true;
+                    separador.textContent = '---';
+                    mesSelect.appendChild(separador);
+
+                    data.meses.forEach(mes => {
+                        const option = document.createElement('option');
+                        option.value = mes[0];
+                        option.textContent = mes[1];
+                        mesSelect.appendChild(option);
+                    });
+                }
+                
+                mesSelect.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error al obtener los meses:', error);
+                mesSelect.innerHTML = '<option value="todos">Todo el Periodo</option><option disabled>Error al cargar meses</option>';
+            });
+    }
+
+    periodoSelect.addEventListener('change', cargarMeses);
+
+    if (periodoSelect.value) {
+        cargarMeses();
+    }
+});
+</script>
+{% endblock %}

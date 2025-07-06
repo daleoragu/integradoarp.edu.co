@@ -1,0 +1,112 @@
+{% comment %}
+Contiene toda la configuración del <head>, incluyendo CSS y estilos.
+Esta versión utiliza CSS Grid para un posicionamiento de footer robusto.
+{% endcomment %}
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Plataforma I.E.T. Alfonso Palacio Rudas{% endblock %}</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<style>
+    :root {
+        --color-primario: #923e2b;
+        --color-primario-oscuro: #7a3323;
+        --color-secundario: #ffc000;
+        --color-verde-escudo: #008000;
+        --color-fondo: #f4f4f9;
+        --color-texto: #333;
+        --color-borde: #ddd;
+        --sidebar-bg: var(--color-primario);
+        --sidebar-link-color: #ffffff;
+        --sidebar-link-hover-bg: var(--color-primario-oscuro);
+        --sidebar-menu-header-color: #fdd835;
+    }
+    html, body {
+        height: 100%;
+    }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--color-fondo);
+        color: var(--color-texto);
+        display: flex;
+        flex-direction: row;
+    }
+    .sidebar {
+        width: 260px;
+        background-color: var(--sidebar-bg);
+        color: white;
+        padding: 20px 0;
+        display: flex;
+        flex-direction: column;
+        position: fixed;
+        height: 100%;
+        overflow-y: auto;
+        z-index: 1001;
+        flex-shrink: 0;
+    }
+
+    /* === CORRECCIÓN CON CSS GRID === */
+    .page-wrapper {
+        flex-grow: 1;
+        margin-left: 260px;
+        display: grid; /* Usamos Grid para el layout principal */
+        grid-template-rows: auto 1fr auto; /* Header: auto, Main: flexible, Footer: auto */
+        min-height: 100vh;
+    }
+    .topbar {
+        /* No necesita cambios, será la primera fila del grid */
+        background-color: var(--color-verde-escudo);
+        height: 70px;
+    }
+    .content-area {
+        /* No necesita 'flex-grow', el grid se encarga de su tamaño */
+        padding: 30px;
+    }
+    .page-footer {
+        /* No necesita cambios, será la última fila del grid */
+        background-color: #e9ecef;
+        color: #6c757d;
+        padding: 20px 30px;
+        font-size: 0.9rem;
+        text-align: center;
+        border-top: 1px solid #dee2e6;
+    }
+    /* === FIN DE LA CORRECCIÓN === */
+    
+    .sidebar-header { padding: 0 20px 20px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); }
+    .sidebar-header img { width: 95px; height: 95px; border-radius: 30%; border: 3px solid var(--color-secundario); }
+    .sidebar-header h2 { margin: 10px 0 0; font-size: 1.2rem; color: white; }
+    .sidebar-menu { list-style: none; padding: 20px 0; margin: 0; flex-grow: 1; }
+    .sidebar-menu-header { padding: 15px 20px 5px 20px; font-size: 0.8rem; text-transform: uppercase; color: var(--sidebar-menu-header-color); font-weight: bold; }
+    .sidebar-menu a { display: flex; align-items: center; color: var(--sidebar-link-color); text-decoration: none; padding: 12px 20px; transition: background-color 0.2s, padding-left 0.2s; }
+    .sidebar-menu a:hover, .sidebar-menu a.active { background-color: var(--sidebar-link-hover-bg); font-weight: bold; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; padding: 0 30px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); color: white; }
+    .topbar .page-title h1 { font-size: 1.5rem; font-weight: bold; margin: 0; }
+    .topbar .user-info { display: flex; align-items: center; }
+    .topbar .user-details { text-align: right; margin-right: 15px; font-size: 0.9rem; }
+    .topbar .user-details strong { display: block; font-weight: bold; }
+    .topbar .user-photo { width: 45px; height: 45px; border-radius: 50%; margin-left: 15px; object-fit: cover; border: 2px solid white; }
+    .topbar .logout-link { text-decoration: none; color: white; font-weight: bold; font-size: 0.9rem; padding: 8px 15px; border: 2px solid white; background-color: transparent; border-radius: 5px; transition: all 0.3s; margin-left: 20px; }
+    .topbar .logout-link:hover { background-color: white; color: var(--color-verde-escudo); }
+    .notification-bell { position: relative; font-size: 1.4rem; color: white; margin-right: 25px; cursor: pointer; }
+    .notification-bell .badge { position: absolute; top: -5px; right: -10px; font-size: 0.65rem; font-weight: bold; padding: 2px 5px; border-radius: 50%; background-color: var(--color-secundario); color: var(--color-primario-oscuro); border: 2px solid var(--color-verde-escudo); }
+    .notificaciones-dropdown { position: absolute; right: 0; top: 50px; width: 320px; max-height: 400px; background-color: white; color: black; border: 1px solid #ccc; border-radius: 8px; box-shadow: 0 6px 15px rgba(0,0,0,0.2); z-index: 9999; display: none; overflow: hidden; flex-direction: column; }
+    .notificaciones-dropdown .dropdown-header { padding: 10px 15px; font-weight: bold; border-bottom: 1px solid #eee; }
+    .notificaciones-dropdown ul { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
+    .notificaciones-dropdown .notificacion-item a { display: block; padding: 10px 15px; text-decoration: none; color: var(--color-texto); border-bottom: 1px solid #f0f0f0; transition: background-color 0.2s; }
+    .notificaciones-dropdown .notificacion-item a:hover { background-color: #f7f7f7; }
+    .notificaciones-dropdown .notificacion-item p { margin: 0; font-size: 0.9rem; }
+    .notificaciones-dropdown .notificacion-item small { font-size: 0.75rem; color: #888; }
+    .notificaciones-dropdown .no-notificaciones p { padding: 20px 15px; text-align: center; color: #999; }
+    .notificaciones-dropdown .dropdown-footer { padding: 10px; text-align: center; border-top: 1px solid #eee; background-color: #f9f9f9; }
+    .notificaciones-dropdown .dropdown-footer a { text-decoration: none; font-weight: bold; color: var(--color-primario); }
+    .messages { list-style: none; padding: 0; margin-bottom: 20px; }
+    .messages li { padding: 15px; margin-bottom: 10px; border-radius: 4px; border: 1px solid transparent; }
+    .messages li.error { background-color: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+    .messages li.success { background-color: #d4edda; color: #155724; border-color: #c3e6cb; }
+    .messages li.warning { background-color: #fff3cd; color: #856404; border-color: #ffeeba; }
+</style>

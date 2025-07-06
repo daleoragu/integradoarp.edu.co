@@ -1,0 +1,71 @@
+{% extends "notas/base.html" %}
+
+{% block page_title %}
+    <h1>Gestión del Carrusel de Inicio</h1>
+    <a href="{% url 'configuracion_portal' %}" class="btn btn-secondary btn-sm"><i class="fas fa-arrow-left me-2"></i>Volver al Panel</a>
+{% endblock %}
+
+{% block content %}
+{# --- INICIO DEL BLOQUE DE DEPURACIÓN DE VARIABLES --- #}
+<div class="alert alert-danger">
+    <h4 class="alert-heading">Información de Depuración (¡BORRAR ESTO DESPUÉS!)</h4>
+    <p>Estas son las variables que el servidor está viendo AHORA MISMO:</p>
+    <ul>
+        <li><strong>B2_BUCKET_NAME:</strong> <code>{{ b2_bucket_name_in_view }}</code></li>
+        <li><strong>B2_REGION:</strong> <code>{{ b2_region_in_view }}</code></li>
+        <li><strong>B2_APPLICATION_KEY_ID:</strong> <code>{{ b2_key_id_in_view }}</code></li>
+    </ul>
+</div>
+{# --- FIN DEL BLOQUE DE DEPURACIÓN --- #}
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><h5>Añadir/Editar Imagen</h5></div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    {# --- INICIO DEL BLOQUE PARA MOSTRAR ERRORES OCULTOS --- #}
+                    {% if form.errors %}
+                        <div class="alert alert-warning">
+                            <strong>El formulario no es válido por los siguientes motivos:</strong>
+                            {{ form.errors }}
+                        </div>
+                    {% endif %}
+                    {# --- FIN DEL BLOQUE --- #}
+                    
+                    {# Renderizamos el formulario como párrafos para mantenerlo simple #}
+                    {{ form.as_p }}
+
+                    <button type="submit" class="btn btn-success w-100 mt-3">Guardar Imagen</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header"><h5>Imágenes Actuales en el Carrusel (Ordenadas por prioridad)</h5></div>
+            <div class="card-body">
+                {% for img in imagenes %}
+                    <div class="d-flex align-items-center mb-3 border p-2 rounded">
+                        <img src="{{ img.imagen.url }}" style="width: 150px; height: 75px; object-fit: cover;" class="me-3 rounded" alt="{{ img.titulo|default:'Imagen del carrusel' }}">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0">{{ img.titulo|default:"(Sin título)" }}</h6>
+                            <p class="mb-1 text-muted small">{{ img.subtitulo }}</p>
+                            <span class="badge bg-info">Orden: {{ img.orden }}</span>
+                            {% if not img.visible %}<span class="badge bg-secondary">Oculto</span>{% endif %}
+                        </div>
+                        <form action="{% url 'eliminar_imagen_carrusel' img.pk %}" method="POST">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('¿Eliminar esta imagen?');"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </div>
+                {% empty %}
+                    <p class="text-center text-muted">No hay imágenes en el carrusel.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

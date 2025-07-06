@@ -1,0 +1,29 @@
+# Entorno virtual
+/venv/
+/pitón/
+
+# Base de datos local
+*.sqlite3
+db.sqlite3
+
+# Archivos de configuración de editores
+.vscode/
+.idea/
+
+# Archivos de Python
+__pycache__/
+*.pyc
+
+# Archivos de Django
+/archivos estáticos/
+/medios de comunicación/
+
+# Otros
+.DS_Store
+
+ingresoplataforma.txt
+.env".env" 
+".env" 
+.env 
+.env 
+.env 

@@ -1,0 +1,81 @@
+<style>
+    .filter-card {
+        background-color: #fff; padding: 25px 30px; border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 30px;
+    }
+    .filter-form {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px; align-items: end;
+    }
+    .form-group label { display: block; font-weight: bold; margin-bottom: 8px; }
+    .form-group select {
+        width: 100%; padding: 10px; border: 1px solid var(--color-borde); border-radius: 5px;
+    }
+    .dropdown-check-list { position: relative; display: inline-block; width: 100%; }
+    .dropdown-check-list .anchor {
+        position: relative; cursor: pointer; display: block; padding: 10px;
+        border: 1px solid var(--color-borde); border-radius: 5px; background-color: #fff;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .dropdown-check-list .anchor:after {
+        position: absolute; content: ""; border-left: 2px solid var(--color-texto);
+        border-top: 2px solid var(--color-texto); padding: 5px; right: 15px;
+        top: 35%; transform: rotate(-135deg);
+    }
+    .dropdown-check-list.visible .anchor:after { transform: rotate(45deg); }
+    .dropdown-check-list ul.items {
+        padding: 2px; display: none; margin: 0; border: 1px solid var(--color-borde);
+        border-top: none; max-height: 200px; overflow-y: auto; background-color: #fff;
+        position: absolute; width: 100%; z-index: 1000; border-radius: 0 0 5px 5px;
+        box-sizing: border-box;
+    }
+    .dropdown-check-list.visible ul.items { display: block; }
+    .dropdown-check-list ul.items label {
+        display: block; padding: 8px 12px; cursor: pointer;
+        font-weight: normal; white-space: nowrap;
+    }
+    .dropdown-check-list ul.items label:hover { background-color: #eee; }
+    .btn-apply {
+        background-color: #0d6efd; color: white; border: none; padding: 10px 25px;
+        border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%;
+    }
+</style>
+<div class="filter-card">
+    <form id="statsFilterForm">
+        <div class="filter-form">
+            <div class="form-group">
+                <label for="ano_lectivo_select">Año Lectivo</label>
+                <select name="ano_lectivo" id="ano_lectivo_select">
+                    <option value="todos">Todos los Años</option>
+                    {% for ano in anos_lectivos %}
+                        <option value="{{ ano }}" {% if ano == ano_actual %}selected{% endif %}>{{ ano }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="periodo_select">Periodo</label>
+                <select name="periodo" id="periodo_select">
+                    <option value="todos">Todos los Periodos</option>
+                    <option value="CONSOLIDADO">Consolidado Anual</option>
+                    {% for periodo in periodos %}
+                        <option value="{{ periodo.id }}">{{ periodo }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Cursos</label>
+                <div id="cursos_select" class="dropdown-check-list" tabindex="100">
+                    <span class="anchor">Seleccionar Cursos...</span>
+                    <ul class="items">
+                        {% for curso in cursos %}
+                            <li><label><input type="checkbox" name="cursos" value="{{ curso.id }}" data-nombre="{{ curso.nombre }}" /> {{ curso.nombre }} </label></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="form-group">
+                <button type="button" id="applyFiltersBtn" class="btn-apply">Aplicar Filtros</button>
+            </div>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,39 @@
+<form method="GET" class="form-filtros">
+    
+    {% if user.is_superuser %}
+    <div class="form-grupo">
+        <label for="docente_id">Filtrar por Docente</label>
+        <select name="docente_id" id="docente_id" class="form-select" onchange="this.form.submit()">
+            <option value="">Todos los Docentes</option>
+            {% for docente in todos_los_docentes %}
+            <option value="{{ docente.id }}" {% if docente.id|stringformat:"s" == docente_seleccionado_id %}selected{% endif %}>
+                {{ docente.user.get_full_name|default:docente.user.username }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+
+    <div class="form-grupo" style="flex-grow: 2;">
+        <label for="asignacion_id">Asignación (Curso - Materia)</label>
+        <select name="asignacion_id" id="asignacion_id" class="form-select" onchange="this.form.submit()">
+            <option value="">Seleccione una asignación...</option>
+            {% for asig in asignaciones %}
+            <option value="{{ asig.id }}" {% if asig.id|stringformat:"s" == asignacion_seleccionada_id %}selected{% endif %}>
+                {{ asig.curso.nombre }} - {{ asig.materia.nombre }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="form-grupo">
+        <label for="periodo_id">Periodo Académico</label>
+        <select name="periodo_id" id="periodo_id" class="form-select" onchange="this.form.submit()">
+            <option value="">Seleccione un periodo...</option>
+            {% for per in todos_los_periodos %}
+            <option value="{{ per.id }}" {% if per.id|stringformat:"s" == periodo_seleccionado_id %}selected{% endif %}>
+                {{ per }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+</form>

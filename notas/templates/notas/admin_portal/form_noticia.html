@@ -1,0 +1,19 @@
+{% extends "notas/base.html" %}
+
+{% block page_title %}
+    <h1>{{ titulo_pagina }}</h1>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <hr>
+            <button type="submit" class="btn btn-success">Guardar Noticia</button>
+            <a href="{% url 'gestion_noticias' %}" class="btn btn-secondary">Cancelar</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,146 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Bienvenido, {{ user.get_full_name|default:user.username }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .welcome-header {
+        background: linear-gradient(135deg, var(--color-primario), var(--color-secundario));
+        color: white;
+        padding: 30px;
+        border-radius: 12px;
+        margin-bottom: 40px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    .welcome-text h1 {
+        font-weight: 700;
+        font-size: 2.2rem;
+        margin: 0;
+        position: relative;
+        z-index: 2;
+    }
+    .welcome-text p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-top: 5px;
+        max-width: 400px;
+        position: relative;
+        z-index: 2;
+    }
+    .welcome-illustration {
+        font-size: 9rem; /* Tamaño del ícono */
+        color: white;
+        opacity: 0.15; /* Opacidad para que parezca marca de agua */
+        position: absolute;
+        right: 30px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 1;
+    }
+
+
+    .app-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 25px;
+        padding: 20px;
+    }
+
+    .app-icon {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-decoration: none;
+        color: #343a40;
+        transition: transform 0.2s;
+    }
+    .app-icon:hover {
+        transform: scale(1.08);
+    }
+
+    .app-icon .icon-container {
+        width: 80px;
+        height: 80px;
+        border-radius: 22%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        background-color: #f8f9fa;
+    }
+
+    .app-icon i {
+        font-size: 2.5rem;
+        color: white;
+    }
+    
+    .app-icon .app-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-align: center;
+    }
+
+    /* Colores de fondo para cada icono */
+    .bg-notas { background: linear-gradient(135deg, #007bff, #0056b3); }
+    .bg-asistencia { background: linear-gradient(135deg, #28a745, #1c7430); }
+    .bg-observador { background: linear-gradient(135deg, #17a2b8, #0f7180); }
+    .bg-mejoramiento { background: linear-gradient(135deg, #fd7e14, #d3640a); }
+    .bg-reporte { background: linear-gradient(135deg, #6f42c1, #532c9c); }
+    .bg-boletines { background: linear-gradient(135deg, #ffc107, #d39e00); }
+    .bg-sabana { background: linear-gradient(135deg, #6c757d, #495057); }
+    .bg-mail { background: linear-gradient(135deg, #dc3545, #b02130); }
+    .bg-consulta { background: linear-gradient(135deg, #20c997, #158765); }
+    .bg-stats { background: linear-gradient(135deg, #e83e8c, #c21a68); }
+    .bg-portal-gestion { background: linear-gradient(135deg, #5f72bd, #435185); }
+
+    /* Media query para pantallas pequeñas */
+    @media (max-width: 768px) {
+        .welcome-header {
+            text-align: center;
+            justify-content: center;
+        }
+        .welcome-illustration {
+            display: none; /* Ocultamos la ilustración en pantallas pequeñas para dar espacio */
+        }
+    }
+
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="container-fluid">
+    <div class="welcome-header">
+        <div class="welcome-text">
+            <h1>¡Bienvenido, {{ user.get_full_name|default:user.username }}!</h1>
+            <p>Este es su centro de herramientas para la gestión académica.</p>
+        </div>
+        <div class="welcome-illustration">
+            <i class="fas fa-chalkboard-teacher"></i>
+        </div>
+        </div>
+
+    <div class="app-grid">
+        
+        <a href="{% url 'ingresar_notas_periodo' %}" class="app-icon"><div class="icon-container bg-notas"><i class="fas fa-edit"></i></div><span class="app-label">Ingresar Notas</span></a>
+        <a href="{% url 'asistencia' %}" class="app-icon"><div class="icon-container bg-asistencia"><i class="fas fa-user-check"></i></div><span class="app-label">Asistencia</span></a>
+        <a href="{% url 'consulta_asistencia' %}" class="app-icon"><div class="icon-container bg-consulta"><i class="fas fa-clipboard-list"></i></div><span class="app-label">Consultar Asist.</span></a>
+        <a href="{% url 'observador_selector' %}" class="app-icon"><div class="icon-container bg-observador"><i class="fas fa-eye"></i></div><span class="app-label">Observador</span></a>
+        <a href="{% url 'plan_mejoramiento' %}" class="app-icon"><div class="icon-container bg-mejoramiento"><i class="fas fa-tasks"></i></div><span class="app-label">Nivelaciones</span></a>
+        <a href="{% url 'reporte_parcial' %}" class="app-icon"><div class="icon-container bg-reporte"><i class="fas fa-file-alt"></i></div><span class="app-label">Reporte Parcial</span></a>
+        <a href="{% url 'selector_boletines' %}" class="app-icon"><div class="icon-container bg-boletines"><i class="fas fa-file-invoice"></i></div><span class="app-label">Boletines</span></a>
+        <a href="{% url 'selector_sabana' %}" class="app-icon"><div class="icon-container bg-sabana"><i class="fas fa-table"></i></div><span class="app-label">Sábana de Notas</span></a>
+        <a href="{% url 'panel_estadisticas' %}" class="app-icon"><div class="icon-container bg-stats"><i class="fas fa-chart-pie"></i></div><span class="app-label">Estadísticas</span></a>
+        <a href="{% url 'bandeja_entrada' %}" class="app-icon"><div class="icon-container bg-mail"><i class="fas fa-envelope"></i></div><span class="app-label">CofraMail</span></a>
+        <a href="{% url 'configuracion_portal' %}" class="app-icon"><div class="icon-container bg-portal-gestion"><i class="fas fa-newspaper"></i></div><span class="app-label">Gestionar Portal</span></a>
+    </div>
+</div>
+{% endblock %}

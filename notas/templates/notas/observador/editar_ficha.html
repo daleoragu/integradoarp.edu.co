@@ -1,0 +1,98 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Editando Ficha de {{ estudiante.user.get_full_name }}{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width: 900px;">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">
+                <i class="fas fa-edit me-2"></i>Editando Ficha de {{ estudiante.user.get_full_name }}
+            </h4>
+        </div>
+        <div class="card-body p-4">
+            
+            {# --- CAMBIO 1: Añadimos el 'enctype' para permitir la subida de archivos --- #}
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <h5><i class="fas fa-user-circle me-2 text-primary"></i>Datos Personales</h5>
+                <hr class="mt-2 mb-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.fecha_nacimiento.id_for_label }}" class="form-label fw-bold">Fecha de Nacimiento</label>
+                        {{ form.fecha_nacimiento }}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.lugar_nacimiento.id_for_label }}" class="form-label fw-bold">Lugar de Nacimiento</label>
+                        {{ form.lugar_nacimiento }}
+                    </div>
+                    
+                    {# --- CAMBIO 2: Añadimos el campo para la foto del estudiante --- #}
+                    <div class="col-12 mt-3">
+                        <label for="{{ form.foto.id_for_label }}" class="form-label fw-bold">Foto del Estudiante</label>
+                        {{ form.foto }}
+                        {% if form.foto.help_text %}
+                        <div class="form-text mt-1">{{ form.foto.help_text }}</div>
+                        {% endif %}
+                        {% if form.foto.errors %}
+                        <div class="alert alert-danger mt-1 p-2">{{ form.foto.errors|striptags }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <h5 class="mt-5"><i class="fas fa-heartbeat me-2 text-primary"></i>Información Médica</h5>
+                <hr class="mt-2 mb-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.eps.id_for_label }}" class="form-label fw-bold">EPS</label>
+                        {{ form.eps }}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.grupo_sanguineo.id_for_label }}" class="form-label fw-bold">Grupo Sanguíneo y RH</label>
+                        {{ form.grupo_sanguineo }}
+                    </div>
+                    <div class="col-12">
+                        <label for="{{ form.enfermedades_alergias.id_for_label }}" class="form-label fw-bold">Enfermedades o Alergias que Padece</label>
+                        {{ form.enfermedades_alergias }}
+                    </div>
+                </div>
+
+                <h5 class="mt-5"><i class="fas fa-users me-2 text-primary"></i>Información Familiar</h5>
+                <hr class="mt-2 mb-4">
+                <div class="row g-3">
+                    <div class="col-md-6"><label for="{{ form.nombre_padre.id_for_label }}" class="form-label fw-bold">Nombre del Padre</label>{{ form.nombre_padre }}</div>
+                    <div class="col-md-6"><label for="{{ form.celular_padre.id_for_label }}" class="form-label fw-bold">Celular del Padre</label>{{ form.celular_padre }}</div>
+                    <div class="col-md-6"><label for="{{ form.nombre_madre.id_for_label }}" class="form-label fw-bold">Nombre de la Madre</label>{{ form.nombre_madre }}</div>
+                    <div class="col-md-6"><label for="{{ form.celular_madre.id_for_label }}" class="form-label fw-bold">Celular de la Madre</label>{{ form.celular_madre }}</div>
+                    <div class="col-md-6"><label for="{{ form.nombre_acudiente.id_for_label }}" class="form-label fw-bold">Nombre del Acudiente</label>{{ form.nombre_acudiente }}</div>
+                    <div class="col-md-6"><label for="{{ form.celular_acudiente.id_for_label }}" class="form-label fw-bold">Celular del Acudiente</label>{{ form.celular_acudiente }}</div>
+                    <div class="col-md-12"><label for="{{ form.email_acudiente.id_for_label }}" class="form-label fw-bold">Email del Acudiente</label>{{ form.email_acudiente }}</div>
+                </div>
+                
+                <h5 class="mt-5"><i class="fas fa-info-circle me-2 text-primary"></i>Información Adicional</h5>
+                <hr class="mt-2 mb-4">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-6"><label for="{{ form.colegio_anterior.id_for_label }}" class="form-label fw-bold">Colegio Anterior</label>{{ form.colegio_anterior }}</div>
+                    <div class="col-md-6"><label for="{{ form.grado_anterior.id_for_label }}" class="form-label fw-bold">Último Grado Cursado</label>{{ form.grado_anterior }}</div>
+                    <div class="col-12 mt-4"><div class="form-check"><label for="{{ form.espera_en_porteria.id_for_label }}" class="form-check-label fw-bold">¿El estudiante debe esperar en portería para ser recogido?</label>{{ form.espera_en_porteria }}</div></div>
+                </div>
+
+                <h5 class="mt-5"><i class="fas fa-file-alt me-2 text-primary"></i>Compromisos</h5>
+                <hr class="mt-2 mb-4">
+                <div class="row g-3">
+                    <div class="col-12"><label for="{{ form.compromiso_padre.id_for_label }}" class="form-label fw-bold">Compromiso del Padre/Acudiente</label>{{ form.compromiso_padre }}</div>
+                    <div class="col-12"><label for="{{ form.compromiso_estudiante.id_for_label }}" class="form-label fw-bold">Compromiso del Estudiante</label>{{ form.compromiso_estudiante }}</div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-5">
+                    <a href="{% url 'vista_detalle_observador' estudiante.id %}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

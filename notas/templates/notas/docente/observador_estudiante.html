@@ -1,0 +1,114 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Observador del Estudiante{% endblock %}
+
+{% block page_title %}
+    Observador del Estudiante
+{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-4">
+                <label for="curso_id" class="form-label">Seleccione un curso:</label>
+                <select name="curso_id" id="curso_id" class="form-select" onchange="this.form.submit();">
+                    <option value="">-- Seleccione --</option>
+                    {% for curso in cursos %}
+                        <option value="{{ curso.id }}" {% if curso.id|stringformat:"s" == curso_seleccionado_id %}selected{% endif %}>{{ curso.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% if estudiantes %}
+            <div class="col-md-5">
+                <label for="estudiante_id" class="form-label">Seleccione un estudiante:</label>
+                <select name="estudiante_id" id="estudiante_id" class="form-select" onchange="this.form.submit();">
+                    <option value="">-- Seleccione --</option>
+                    {% for est in estudiantes %}
+                        <option value="{{ est.id }}" {% if est.id|stringformat:"s" == request.GET.estudiante_id %}selected{% endif %}>
+                            {{ est.user.last_name }} {{ est.user.first_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if estudiante_seleccionado %}
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        Observaciones para {{ estudiante_seleccionado.user.last_name }} {{ estudiante_seleccionado.user.first_name }}
+    </div>
+    <div class="card-body">
+        <form method="post" class="row g-3">
+            {% csrf_token %}
+            <div class="col-md-4">
+                <label for="periodo_id" class="form-label">Periodo:</label>
+                <select name="periodo_id" id="periodo_id" class="form-select">
+                    <option value="">-- Seleccione --</option>
+                    {% for periodo in periodos_academicos %}
+                        <option value="{{ periodo.id }}">{{ periodo.get_nombre_display }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="tipo_observacion" class="form-label">Tipo de observación:</label>
+                <select name="tipo_observacion" id="tipo_observacion" class="form-select">
+                    <option value="">-- Seleccione --</option>
+                    {% for value, label in tipos_observacion %}
+                        <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-12">
+                <label for="descripcion" class="form-label">Descripción:</label>
+                <textarea name="descripcion" id="descripcion" class="form-control" rows="6" style="min-height: 150px; width: 100%;"></textarea>
+            </div>
+            <div class="col-12 text-end">
+                <button type="submit" class="btn btn-success">Guardar observación</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+{% if observaciones %}
+<div class="card mt-4">
+    <div class="card-header">
+        Historial de Observaciones
+    </div>
+    <div class="card-body">
+        <table class="table table-bordered table-sm table-hover">
+            <thead>
+                <tr class="table-light">
+                    <th>Fecha</th>
+                    <th>Periodo</th>
+                    <th>Tipo</th>
+                    <th>Descripción</th>
+                    <th>Docente que reporta</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for obs in observaciones %}
+                <tr>
+                    <td>{{ obs.fecha_reporte|date:"d/m/Y H:i" }}</td>
+                    <td>{{ obs.periodo.get_nombre_display }}</td>
+                    <td>{{ obs.get_tipo_observacion_display }}</td>
+                    <td>{{ obs.descripcion }}</td>
+                    <td>{{ obs.docente_reporta.user.last_name }} {{ obs.docente_reporta.user.first_name }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center">No hay observaciones registradas.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+

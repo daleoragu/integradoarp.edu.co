@@ -1,0 +1,147 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Seleccionar Sábana de Notas{% endblock %}
+
+{% block page_title %}
+    Generar Sábana de Notas
+{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h4 class="card-title">Seleccione los Parámetros</h4>
+    </div>
+    <div class="card-body">
+        <form id="formSabana" method="get">
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-bold">Paso 1: Elija el tipo de reporte</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tipo_reporte" id="tipoAcumulativo" value="periodo" checked>
+                        <label class="form-check-label" for="tipoAcumulativo">
+                            Acumulativo por Periodo
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tipo_reporte" id="tipoFinal" value="anual">
+                        <label class="form-check-label" for="tipoFinal">
+                            Final del Año Actual ({{ ano_actual }})
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="curso_id" class="form-label fw-bold">Paso 2: Seleccione el Curso</label>
+                    <select name="curso_id" id="curso_id" class="form-select" required>
+                        <option value="">-- Seleccione un curso --</option>
+                        {% for curso in cursos %}
+                            <option value="{{ curso.id }}">{{ curso.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <hr>
+
+            <label class="form-label fw-bold">Paso 3: Seleccione el corte</label>
+            
+            <div id="selectorPeriodoContainer" class="mb-3">
+                <select name="periodo_id" id="periodo_id" class="form-select">
+                    <option value="">-- Seleccione un periodo de corte --</option>
+                    {% for p in periodos %}
+                        <option value="{{ p.id }}">{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <input type="hidden" name="ano_lectivo" id="ano_lectivo_input" value="{{ ano_actual }}" disabled>
+
+            <div class="d-flex justify-content-end gap-2 mt-3">
+                <button type="button" id="btnVerPantalla" class="btn btn-primary">
+                    <i class="fas fa-desktop"></i> Ver en Pantalla
+                </button>
+                <button type="button" id="btnExportarExcel" class="btn btn-success">
+                    <i class="fas fa-file-excel"></i> Exportar a Excel
+                </button>
+                <button type="button" id="btnDescargarPdf" class="btn btn-danger">
+                    <i class="fas fa-file-pdf"></i> Descargar PDF
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('formSabana');
+    const radioTipo = document.querySelectorAll('input[name="tipo_reporte"]');
+    
+    const contPeriodo = document.getElementById('selectorPeriodoContainer');
+    const selPeriodo = document.getElementById('periodo_id');
+    const inputAno = document.getElementById('ano_lectivo_input');
+
+    function toggleSelectors() {
+        const tipoSeleccionado = document.querySelector('input[name="tipo_reporte"]:checked').value;
+        if (tipoSeleccionado === 'periodo') {
+            contPeriodo.style.display = 'block';
+            selPeriodo.disabled = false;
+            selPeriodo.required = true;
+            inputAno.disabled = true;
+        } else { // 'anual'
+            contPeriodo.style.display = 'none';
+            selPeriodo.disabled = true;
+            selPeriodo.required = false;
+            inputAno.disabled = false;
+        }
+    }
+
+    radioTipo.forEach(radio => radio.addEventListener('change', toggleSelectors));
+    toggleSelectors(); 
+
+    const btnVer = document.getElementById('btnVerPantalla');
+    const btnExcel = document.getElementById('btnExportarExcel');
+    const btnPdf = document.getElementById('btnDescargarPdf');
+
+    const urlVer = "{% url 'generar_sabana' %}";
+    const urlExcel = "{% url 'exportar_sabana_excel' %}";
+    const urlPdf = "{% url 'generar_sabana_pdf' %}";
+
+    function submitInNewTab(actionUrl) {
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        const originalTarget = form.target;
+        form.target = '_blank'; // Abre el resultado en una nueva pestaña
+        form.action = actionUrl;
+        form.submit();
+        form.target = originalTarget; // Restaura el comportamiento original
+    }
+
+    function submitInSameTab(actionUrl) {
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        form.action = actionUrl;
+        form.target = '_self'; // Asegura que se abra/descargue en la misma pestaña
+        form.submit();
+    }
+    
+    // --- INICIO DE LA CORRECCIÓN ---
+    // El botón de "Ver en Pantalla" ahora carga en la misma pestaña.
+    btnVer.addEventListener('click', () => submitInSameTab(urlVer));
+    
+    // El botón del PDF sigue abriendo en una nueva pestaña.
+    btnPdf.addEventListener('click', () => submitInNewTab(urlPdf));
+
+    // El botón de Excel sigue descargando directamente.
+    btnExcel.addEventListener('click', () => submitInSameTab(urlExcel));
+    // --- FIN DE LA CORRECCIÓN ---
+});
+</script>
+{% endblock %}

@@ -1,0 +1,164 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Panel de Administración{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos del Encabezado */
+    .welcome-header {
+        background: linear-gradient(135deg, #6c757d, #343a40);
+        color: white;
+        padding: 20px 30px;
+        border-radius: 12px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+    }
+    .welcome-text h2 { font-weight: 700; font-size: 1.8rem; }
+    .welcome-text p { opacity: 0.9; margin: 5px 0 0; }
+    .welcome-illustration { max-width: 90px; height: auto; opacity: 0.9; }
+    @media (max-width: 768px) {
+        .welcome-header { flex-direction: column; text-align: center; }
+        .welcome-illustration { display: none; }
+    }
+
+    .dashboard-nav { border-bottom: 1px solid #dee2e6; }
+    .dashboard-nav .nav-link {
+        color: #495057;
+        font-weight: 600;
+        padding: 1rem 1.2rem;
+        border: none;
+        border-bottom: 3px solid transparent;
+        transition: all 0.2s ease-in-out;
+    }
+    .dashboard-nav .nav-link.active {
+        color: #0d6efd;
+        border-bottom-color: #0d6efd;
+    }
+    .dashboard-nav .nav-link:hover {
+        color: #0d6efd;
+    }
+
+    .app-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 20px;
+        padding: 15px;
+    }
+    .app-icon {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        text-decoration: none;
+        color: #343a40;
+        transition: transform 0.2s ease, color 0.2s ease;
+    }
+    .app-icon:hover {
+        transform: translateY(-5px);
+        color: #0d6efd;
+    }
+    .icon-container {
+        width: 70px;
+        height: 70px;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+        font-size: 2rem;
+        color: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .app-label { font-size: 0.85rem; font-weight: 500; }
+
+    /* ============================================= */
+    /* ESTILOS INTEGRADOS PARA TODOS LOS PANELES */
+    /* ============================================= */
+    
+    /* Colores Panel Admin */
+    .bg-estudiantes { background-color: #0d6efd; }
+    .bg-materias { background-color: #ffc107; }
+    .bg-docentes { background-color: #6f42c1; }
+    .bg-periodos { background-color: #dc3545; }
+    .bg-publicar { background-color: #0dcaf0; }
+    .bg-promocion { background-color: #198754; }
+    .bg-portal-config { background-color: #212529; }
+    .bg-asignacion { background-color: #fd7e14; }
+
+    /* Colores Panel Docente */
+    .bg-notas { background-color: #0d6efd; }
+    .bg-asistencia { background-color: #28a745; }
+    .bg-consulta { background-color: #17a2b8; }
+    .bg-observador { background-color: #6f42c1; }
+    .bg-mejoramiento { background-color: #ffc107; }
+    .bg-reporte { background-color: #6c757d; }
+    .bg-boletines { background-color: #fd7e14; }
+    .bg-sabana { background-color: #20c997; }
+    .bg-stats { background-color: #e83e8c; }
+    .bg-mail { background-color: #dc3545; }
+
+    /* Colores Panel Estudiante */
+    .bg-est-observador { background-color: #6610f2; }
+    .bg-est-boletin { background-color: #0d6efd; }
+
+</style>
+{% endblock %}
+
+
+{% block content %}
+<div class="container py-4">
+    
+    <nav>
+        <div class="nav nav-tabs dashboard-nav" id="nav-tab" role="tablist">
+            <button class="nav-link active" id="nav-admin-tab" data-bs-toggle="tab" data-bs-target="#nav-admin" type="button" role="tab">Panel de Administración</button>
+            
+            {% if user.is_superuser or user.groups.all.0.name == "Docentes" %}
+            <button class="nav-link" id="nav-docente-tab" data-bs-toggle="tab" data-bs-target="#nav-docente" type="button" role="tab">Vista de Docente</button>
+            {% endif %}
+            
+  
+
+        </div>
+    </nav>
+    <div class="tab-content pt-3" id="nav-tabContent">
+        
+        <div class="tab-pane fade show active" id="nav-admin" role="tabpanel">
+            <div class="welcome-header">
+                <div class="welcome-text">
+                    <h2>Panel de Administración</h2>
+                    <p>Bienvenido, {{ user.get_full_name }}. Gestiona todos los aspectos de la plataforma.</p>
+                </div>
+            </div>
+
+            <div class="app-grid">
+                {% if perms.notas.add_docente and perms.notas.add_curso %}
+                <a href="{% url 'gestion_asignacion_academica' %}" class="app-icon">
+                    <div class="icon-container bg-asignacion"><i class="fas fa-sitemap"></i></div>
+                    <span class="app-label">Asignación Académica</span>
+                </a>
+                {% endif %}
+                <a href="{% url 'gestion_estudiantes' %}" class="app-icon"><div class="icon-container bg-estudiantes"><i class="fas fa-users"></i></div><span class="app-label">Gestión Estudiantes</span></a>
+                <a href="{% url 'gestion_materias' %}" class="app-icon"><div class="icon-container bg-materias"><i class="fas fa-book-open"></i></div><span class="app-label">Gestión Materias</span></a>
+                <a href="{% url 'gestion_docentes' %}" class="app-icon"><div class="icon-container bg-docentes"><i class="fas fa-chalkboard-teacher"></i></div><span class="app-label">Gestión de Docentes</span></a>
+                <a href="{% url 'panel_control_periodos' %}" class="app-icon"><div class="icon-container bg-periodos"><i class="fas fa-calendar-alt"></i></div><span class="app-label">Control de Plazos</span></a>
+                <a href="{% url 'panel_publicacion' %}" class="app-icon"><div class="icon-container bg-publicar"><i class="fas fa-paper-plane"></i></div><span class="app-label">Publicar Boletines</span></a>
+                <a href="{% url 'panel_control_promocion' %}" class="app-icon"><div class="icon-container bg-promocion"><i class="fas fa-gavel"></i></div><span class="app-label">Regla de Promoción</span></a>
+                <a href="{% url 'configuracion_portal' %}" class="app-icon"><div class="icon-container bg-portal-config"><i class="fas fa-cogs"></i></div><span class="app-label">Configurar Portal</span></a>
+            </div>
+        </div>
+
+        {% if user.is_superuser or user.groups.all.0.name == "Docentes" %}
+        <div class="tab-pane fade" id="nav-docente" role="tabpanel">
+            {% include "notas/docente/_panel_docente_content.html" %}
+        </div>
+        {% endif %}
+        
+       
+    </div>
+</div>
+{% endblock %}
