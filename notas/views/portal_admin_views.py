@@ -1,22 +1,18 @@
 # notas/views/portal_admin_views.py
-import os # Asegúrate de que os esté importado al principio del archivo
+import os
+import traceback # Importamos el módulo para imprimir el error detallado
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 
-# Se importan todos los modelos y formularios necesarios para el panel
 from ..models import DocumentoPublico, FotoGaleria, Noticia, ImagenCarrusel
 from ..forms import DocumentoPublicoForm, FotoGaleriaForm, NoticiaForm, ImagenCarruselForm
 
 def es_admin_o_docente(user):
-    # Esta función permite el acceso a Superusuarios y a miembros del grupo 'Docentes'
     return user.is_superuser or user.groups.filter(name='Docentes').exists()
 
 @user_passes_test(es_admin_o_docente)
 def configuracion_portal_vista(request):
-    """
-    Carga el panel principal de configuración del portal.
-    """
     return render(request, 'notas/admin_portal/configuracion_portal.html')
 
 # --- VISTAS PARA DOCUMENTOS ---
@@ -128,28 +124,40 @@ def gestion_carrusel_vista(request):
     if request.method == 'POST':
         form = ImagenCarruselForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Imagen añadida al carrusel.')
+            # --- INICIO DE LA CORRECCIÓN ---
+            # Envolvemos el guardado en un bloque try/except para capturar el error.
+            try:
+                form.save()
+                messages.success(request, 'Imagen añadida al carrusel.')
+                print("✅ El formulario se guardó sin errores en la base de datos.")
+            except Exception as e:
+                # Si ocurre cualquier error durante la subida, lo imprimiremos en los logs.
+                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                print("!!!!!!!!!! ERROR DE SUBIDA CAPTURADO !!!!!!!!!!")
+                print(f"TIPO DE ERROR: {type(e)}")
+                print(f"MENSAJE DE ERROR: {e}")
+                traceback.print_exc() # Imprime el error completo y detallado
+                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                messages.error(request, f"Ocurrió un error al subir la imagen: {e}")
+            # --- FIN DE LA CORRECCIÓN ---
             return redirect('gestion_carrusel')
     else:
         form = ImagenCarruselForm()
     
     imagenes = ImagenCarrusel.objects.all()
 
-    # --- INICIO DEL CÓDIGO DE DEPURACIÓN ---
-    # Recolectamos las variables tal como las ve esta vista
+    # Código de depuración para verificar variables de entorno
     debug_context = {
         'b2_bucket_name_in_view': os.getenv("B2_BUCKET_NAME"),
         'b2_region_in_view': os.getenv("B2_REGION"),
         'b2_key_id_in_view': os.getenv("B2_APPLICATION_KEY_ID"),
     }
-    # --- FIN DEL CÓDIGO DE DEPURACIÓN ---
 
     context = { 
         'form': form, 
         'imagenes': imagenes, 
         'page_title': 'Gestionar Carrusel',
-        **debug_context # Añadimos las variables de depuración al contexto
+        **debug_context
     }
     return render(request, 'notas/admin_portal/gestion_carrusel.html', context)
 
