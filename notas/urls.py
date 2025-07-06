@@ -27,7 +27,6 @@ from .views import (
     portal_views,
     portal_admin_views,
     impersonation_views,
-    # Se añaden los nuevos módulos de vistas de gestión
     gestion_docentes_views,
     gestion_estudiantes_views,
     gestion_academica_views,
@@ -66,7 +65,7 @@ urlpatterns = [
     path('panel-administrador/publicar-noticia/<int:pk>/', portal_admin_views.publicar_noticia_vista, name='publicar_noticia'),
     path('panel-administrador/gestion-carrusel/', portal_admin_views.gestion_carrusel_vista, name='gestion_carrusel'),
     path('panel-administrador/eliminar-imagen-carrusel/<int:pk>/', portal_admin_views.eliminar_imagen_carrusel_vista, name='eliminar_imagen_carrusel'),
-    
+    path('panel-administrador/editar-imagen-carrusel/<int:pk>/', portal_admin_views.editar_imagen_carrusel_vista, name='editar_imagen_carrusel'),
     # --- Rutas del Panel Docente ---
     path('docente/ingresar-notas/', ingreso_notas_views.ingresar_notas_periodo_vista, name='ingresar_notas_periodo'),
     path('docente/reporte-parcial/', reporte_parcial_views.reporte_parcial_vista, name='reporte_parcial'),

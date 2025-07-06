@@ -104,11 +104,15 @@
     /* Media query para pantallas pequeñas */
     @media (max-width: 768px) {
         .welcome-header {
+            flex-direction: column;
             text-align: center;
             justify-content: center;
         }
         .welcome-illustration {
             display: none; /* Ocultamos la ilustración en pantallas pequeñas para dar espacio */
+        }
+        .welcome-header .btn {
+            margin-top: 15px;
         }
     }
 
@@ -123,10 +127,12 @@
             <h1>¡Bienvenido, {{ user.get_full_name|default:user.username }}!</h1>
             <p>Este es su centro de herramientas para la gestión académica.</p>
         </div>
+        <!-- Botón para volver al portal -->
+        <a href="{% url 'portal' %}" class="btn btn-outline-light"><i class="fas fa-globe me-2"></i>Ir al Portal Público</a>
         <div class="welcome-illustration">
             <i class="fas fa-chalkboard-teacher"></i>
         </div>
-        </div>
+    </div>
 
     <div class="app-grid">
         

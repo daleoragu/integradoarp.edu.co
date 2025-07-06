@@ -1,6 +1,5 @@
 # notas/views/portal_admin_views.py
 import os
-import traceback
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
@@ -124,36 +123,44 @@ def gestion_carrusel_vista(request):
     if request.method == 'POST':
         form = ImagenCarruselForm(request.POST, request.FILES)
         if form.is_valid():
-            try:
-                instance = form.save()
-                messages.success(request, 'Imagen añadida al carrusel.')
-            except Exception as e:
-                print("!!!!!!!!!! ERROR DE SUBIDA CAPTURADO (EXCEPCIÓN) !!!!!!!!!!")
-                print(f"MENSAJE DE ERROR: {e}")
-                traceback.print_exc()
-                messages.error(request, f"Ocurrió un error excepcional al subir la imagen: {e}")
+            form.save()
+            messages.success(request, 'Imagen añadida al carrusel.')
+            return redirect('gestion_carrusel')
         else:
-            # --- BLOQUE DE DEPURACIÓN AÑADIDO ---
-            # Si el formulario no es válido, imprimimos los errores en los logs.
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            print("!!!!!!!!!! FORMULARIO NO VÁLIDO !!!!!!!!!!")
-            print(form.errors.as_json())
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             messages.error(request, f"El formulario no es válido. Errores: {form.errors}")
-            # --- FIN DEL BLOQUE DE DEPURACIÓN ---
-            
-        return redirect('gestion_carrusel')
     else:
         form = ImagenCarruselForm()
     
-    imagenes = ImagenCarrusel.objects.all()
-
+    imagenes = ImagenCarrusel.objects.order_by('orden') # Ordenamos por el campo 'orden'
     context = { 
         'form': form, 
         'imagenes': imagenes, 
         'page_title': 'Gestionar Carrusel',
     }
     return render(request, 'notas/admin_portal/gestion_carrusel.html', context)
+
+# --- VISTA NUEVA PARA EDITAR LA IMAGEN ---
+@user_passes_test(es_admin_o_docente)
+def editar_imagen_carrusel_vista(request, pk):
+    imagen = get_object_or_404(ImagenCarrusel, pk=pk)
+    if request.method == 'POST':
+        # Pasamos la instancia para que el formulario sepa que estamos editando
+        form = ImagenCarruselForm(request.POST, request.FILES, instance=imagen)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Imagen del carrusel actualizada exitosamente.')
+            return redirect('gestion_carrusel')
+    else:
+        # Llenamos el formulario con los datos de la imagen existente
+        form = ImagenCarruselForm(instance=imagen)
+    
+    context = {
+        'form': form,
+        'page_title': f'Editando Imagen: {imagen.titulo}'
+    }
+    # Usaremos un nuevo template para la página de edición
+    return render(request, 'notas/admin_portal/editar_imagen_carrusel.html', context)
+
 
 @user_passes_test(es_admin_o_docente)
 def eliminar_imagen_carrusel_vista(request, pk):

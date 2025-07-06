@@ -1,7 +1,141 @@
 {% extends 'notas/base.html' %}
-{% block title %}Panel Estudiante - {{ block.super }}{% endblock %}
-{% block page_title %}Mi Panel{% endblock %}
+{% load static %}
+
+{% block title %}Panel del Estudiante - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos para unificar la apariencia de los paneles */
+    .welcome-header {
+        background: linear-gradient(135deg, #28a745, #20c997); /* Tono verde para estudiantes */
+        color: white;
+        padding: 30px;
+        border-radius: 12px;
+        margin-bottom: 40px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    .welcome-text h1 {
+        font-weight: 700;
+        font-size: 2.2rem;
+        margin: 0;
+    }
+    .welcome-text p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-top: 5px;
+        max-width: 450px;
+    }
+    .welcome-illustration {
+        font-size: 9rem;
+        color: white;
+        opacity: 0.15;
+        position: absolute;
+        right: 30px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 0;
+    }
+
+    .app-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 25px;
+        padding: 20px;
+    }
+
+    .app-icon {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-decoration: none;
+        color: #343a40;
+        transition: transform 0.2s;
+    }
+    .app-icon:hover {
+        transform: scale(1.08);
+    }
+
+    .app-icon .icon-container {
+        width: 80px;
+        height: 80px;
+        border-radius: 22%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .app-icon i {
+        font-size: 2.5rem;
+        color: white;
+    }
+    
+    .app-icon .app-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-align: center;
+    }
+
+    /* Colores de fondo para cada icono del estudiante */
+    .bg-est-observador { background: linear-gradient(135deg, #6610f2, #4c0cb0); }
+    .bg-est-boletin { background: linear-gradient(135deg, #0d6efd, #0a58ca); }
+    .bg-est-mail { background: linear-gradient(135deg, #dc3545, #b02130); }
+    .bg-est-portal { background: linear-gradient(135deg, #6c757d, #495057); }
+
+
+    @media (max-width: 768px) {
+        .welcome-header {
+            flex-direction: column;
+            text-align: center;
+            justify-content: center;
+        }
+        .welcome-header .btn {
+            margin-top: 15px;
+        }
+        .welcome-illustration {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+
 {% block content %}
-    <h2>¡Bienvenido, {{ user.get_full_name|default:user.username }}!</h2>
-    <p>Este es tu panel de estudiante. Próximamente podrás ver tus calificaciones aquí.</p>
+<div class="container-fluid">
+    <div class="welcome-header">
+        <div class="welcome-text">
+            <h1>¡Bienvenido, {{ user.get_full_name|default:user.username }}!</h1>
+            <p>Este es tu panel personal. Aquí encontrarás tus boletines, el observador y más.</p>
+        </div>
+        <div class="welcome-illustration">
+            <i class="fas fa-user-graduate"></i>
+        </div>
+    </div>
+
+    <div class="app-grid">
+        <a href="{% url 'mi_observador' %}" class="app-icon">
+            <div class="icon-container bg-est-observador"><i class="fas fa-eye"></i></div>
+            <span class="app-label">Mi Observador</span>
+        </a>
+        <a href="{% url 'mi_boletin' %}" class="app-icon">
+            <div class="icon-container bg-est-boletin"><i class="fas fa-file-pdf"></i></div>
+            <span class="app-label">Mis Boletines</span>
+        </a>
+        <a href="{% url 'bandeja_entrada' %}" class="app-icon">
+            <div class="icon-container bg-est-mail"><i class="fas fa-envelope"></i></div>
+            <span class="app-label">CofraMail</span>
+        </a>
+        <a href="{% url 'portal' %}" class="app-icon">
+            <div class="icon-container bg-est-portal"><i class="fas fa-globe"></i></div>
+            <span class="app-label">Ir al Portal</span>
+        </a>
+    </div>
+</div>
 {% endblock %}

@@ -89,6 +89,7 @@
     .bg-promocion { background-color: #198754; }
     .bg-portal-config { background-color: #212529; }
     .bg-asignacion { background-color: #fd7e14; }
+    .bg-portal-publico { background-color: #0d6efd; } /* Nuevo color para el botón del portal */
 
     /* Colores Panel Docente */
     .bg-notas { background-color: #0d6efd; }
@@ -133,6 +134,8 @@
                     <h2>Panel de Administración</h2>
                     <p>Bienvenido, {{ user.get_full_name }}. Gestiona todos los aspectos de la plataforma.</p>
                 </div>
+                <!-- Botón para volver al portal -->
+                <a href="{% url 'portal' %}" class="btn btn-light"><i class="fas fa-globe me-2"></i>Ir al Portal</a>
             </div>
 
             <div class="app-grid">
