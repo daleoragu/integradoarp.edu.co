@@ -125,33 +125,32 @@ def gestion_carrusel_vista(request):
         form = ImagenCarruselForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                # Guardamos la instancia del modelo que crea el formulario
                 instance = form.save()
                 print("✅ El formulario se guardó en la DB. Verificando URL del archivo...")
-
-                # Verificamos si la URL del archivo se generó correctamente.
-                # El campo de imagen en el modelo se llama 'imagen'.
                 if instance.imagen and hasattr(instance.imagen, 'url') and instance.imagen.url:
                     print(f"✅ URL generada por storages: {instance.imagen.url}")
                     messages.success(request, 'Imagen añadida y subida correctamente.')
                 else:
-                    # Este bloque se ejecutará si la subida falló silenciosamente.
-                    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                     print("!!!!!!!!!! ERROR DE SUBIDA SILENCIOSO !!!!!!!!!!")
                     print("El campo 'imagen' no tiene un atributo 'url' o la URL está vacía después de guardar.")
                     messages.error(request, "Error: La imagen se guardó en la base de datos, pero falló la subida al almacenamiento externo.")
-
             except Exception as e:
-                # Esto es por si hay otro tipo de error que no habíamos visto.
-                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                 print("!!!!!!!!!! ERROR DE SUBIDA CAPTURADO (EXCEPCIÓN) !!!!!!!!!!")
                 print(f"TIPO DE ERROR: {type(e)}")
                 print(f"MENSAJE DE ERROR: {e}")
                 traceback.print_exc()
-                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
                 messages.error(request, f"Ocurrió un error excepcional al subir la imagen: {e}")
+        else:
+            # --- BLOQUE DE DEPURACIÓN AÑADIDO ---
+            # Si el formulario no es válido, imprimimos los errores en los logs.
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print("!!!!!!!!!! FORMULARIO NO VÁLIDO !!!!!!!!!!")
+            print(form.errors.as_json())
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            messages.error(request, f"El formulario no es válido. Errores: {form.errors}")
+            # --- FIN DEL BLOQUE DE DEPURACIÓN ---
             
-            return redirect('gestion_carrusel')
+        return redirect('gestion_carrusel')
     else:
         form = ImagenCarruselForm()
     
