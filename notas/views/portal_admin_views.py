@@ -119,6 +119,7 @@ def publicar_noticia_vista(request, pk):
     return redirect('gestion_noticias')
 
 # --- VISTAS PARA GESTIONAR EL CARRUSEL ---
+# --- VISTAS PARA GESTIONAR EL CARRUSEL ---
 @user_passes_test(es_admin_o_docente)
 def gestion_carrusel_vista(request):
     if request.method == 'POST':
@@ -126,20 +127,42 @@ def gestion_carrusel_vista(request):
         if form.is_valid():
             form.save()
             messages.success(request, 'Imagen añadida al carrusel.')
+            return redirect('gestion_carrusel')
         else:
             messages.error(request, f"El formulario no es válido. Errores: {form.errors}")
-        return redirect('gestion_carrusel')
     else:
         form = ImagenCarruselForm()
     
-    imagenes = ImagenCarrusel.objects.all()
-
+    imagenes = ImagenCarrusel.objects.order_by('orden') # Ordenamos por el campo 'orden'
     context = { 
         'form': form, 
         'imagenes': imagenes, 
         'page_title': 'Gestionar Carrusel',
     }
     return render(request, 'notas/admin_portal/gestion_carrusel.html', context)
+
+# --- VISTA NUEVA PARA EDITAR LA IMAGEN ---
+@user_passes_test(es_admin_o_docente)
+def editar_imagen_carrusel_vista(request, pk):
+    imagen = get_object_or_404(ImagenCarrusel, pk=pk)
+    if request.method == 'POST':
+        # Pasamos la instancia para que el formulario sepa que estamos editando
+        form = ImagenCarruselForm(request.POST, request.FILES, instance=imagen)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Imagen del carrusel actualizada exitosamente.')
+            return redirect('gestion_carrusel')
+    else:
+        # Llenamos el formulario con los datos de la imagen existente
+        form = ImagenCarruselForm(instance=imagen)
+    
+    context = {
+        'form': form,
+        'page_title': f'Editando Imagen: {imagen.titulo}'
+    }
+    # Usaremos un nuevo template para la página de edición
+    return render(request, 'notas/admin_portal/editar_imagen_carrusel.html', context)
+
 
 @user_passes_test(es_admin_o_docente)
 def eliminar_imagen_carrusel_vista(request, pk):

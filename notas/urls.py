@@ -191,5 +191,6 @@ urlpatterns = [
     path('ajax/recursos-educativos/', portal_views.ajax_recursos_educativos, name='ajax_recursos_educativos'),
     path('ajax/redes-sociales/', portal_views.ajax_redes_sociales, name='ajax_redes_sociales'),
     # --- FIN: NUEVAS RUTAS AJAX ---
+    
        
 ]
