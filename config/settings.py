@@ -1,6 +1,16 @@
-# settings.py - Versión Definitiva y Robusta para Backblaze y Desarrollo Local
+# settings.py - Versión Final con Diagnóstico de Variables de Entorno
 import os
 from pathlib import Path
+
+# --- INICIO DEL CÓDIGO DE DIAGNÓSTICO ---
+# Imprimimos el valor crudo de USE_B2 tal como lo ve el servidor al arrancar.
+# Esto nos dirá exactamente qué está leyendo Render.
+print("==================================================")
+print(f"DIAGNÓSTICO: Valor crudo de USE_B2: '{os.getenv('USE_B2')}'")
+print(f"DIAGNÓSTICO: Tipo de dato: {type(os.getenv('USE_B2'))}")
+print("==================================================")
+# --- FIN DEL CÓDIGO DE DIAGNÓSTICO ---
+
 
 # Carga de variables de entorno (a prueba de fallos para desarrollo local)
 try:
@@ -16,12 +26,10 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-local-dev-key-fallback')
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 
 # --- Configuración de Hosts ---
-# En producción, Render establece la variable RENDER_EXTERNAL_HOSTNAME
+ALLOWED_HOSTS = []
 RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS = [RENDER_EXTERNAL_HOSTNAME]
-else:
-    ALLOWED_HOSTS = []
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # Agrega tus dominios personalizados y los de desarrollo
 ALLOWED_HOSTS.extend([
@@ -39,10 +47,10 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'whitenoise.runserver_nostatic', # Eficiente para archivos estáticos
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'notas.apps.NotasConfig',
-    'storages', # Librería para conectar con almacenamientos externos
+    'storages',
 ]
 
 MIDDLEWARE = [
@@ -77,10 +85,8 @@ TEMPLATES = [
 
 # --- Base de Datos ---
 if DEBUG:
-    # En desarrollo, usa un archivo de base de datos local SQLite.
     DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
 else:
-    # En producción, usa la base de datos de Render (PostgreSQL).
     import dj_database_url
     DATABASES = {'default': dj_database_url.config(conn_max_age=60, ssl_require=True)}
 
@@ -102,31 +108,28 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# --- Almacenamiento de Archivos (Media: fotos, documentos) ---
+# --- Almacenamiento de Archivos (Media) ---
 USE_B2 = os.getenv("USE_B2", "false").lower() in ("true", "1", "yes")
 
 if USE_B2:
     print("✅ Usando almacenamiento en Backblaze B2.")
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     
-    # Lee las variables de entorno de Render
     AWS_ACCESS_KEY_ID = os.getenv("B2_APPLICATION_KEY_ID")
     AWS_SECRET_ACCESS_KEY = os.getenv("B2_APPLICATION_KEY")
     AWS_STORAGE_BUCKET_NAME = os.getenv("B2_BUCKET_NAME")
     AWS_S3_REGION_NAME = os.getenv("B2_REGION")
     
-    # Construye las URLs necesarias para Backblaze
     AWS_S3_ENDPOINT_URL = f'https://s3.{AWS_S3_REGION_NAME}.backblazeb2.com'
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.backblazeb2.com'
     
-    # Configuraciones adicionales para máxima compatibilidad
     AWS_S3_SIGNATURE_VERSION = 's3v4'
     AWS_DEFAULT_ACL = 'public-read'
     AWS_S3_FILE_OVERWRITE = False
     MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
 
 else:
-    print("✅ Usando almacenamiento local (para desarrollo).")
+    print("✅ Usando almacenamiento local.")
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
     MEDIA_URL = '/media/'
     MEDIA_ROOT = BASE_DIR / 'media'
