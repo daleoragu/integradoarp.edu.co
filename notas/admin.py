@@ -4,7 +4,7 @@ from .models import (
     PeriodoAcademico, AreaConocimiento, Curso, Materia, Docente, Estudiante,
     AsignacionDocente, IndicadorLogroPeriodo, Calificacion, Asistencia,
     Observacion, PlanDeMejoramiento, ReporteParcial, InasistenciasManualesPeriodo,
-    ConfiguracionSistema # <-- 1. IMPORTAR EL NUEVO MODELO
+    ConfiguracionSistema, NotaDetallada # Modelos nuevos importados
 )
 
 @admin.register(PeriodoAcademico)
@@ -14,7 +14,6 @@ class PeriodoAcademicoAdmin(admin.ModelAdmin):
     search_fields = ('nombre', 'ano_lectivo__exact')
     ordering = ('-ano_lectivo', 'fecha_inicio')
 
-# ... (El resto de tus clases Admin sin cambios)
 @admin.register(AreaConocimiento)
 class AreaConocimientoAdmin(admin.ModelAdmin):
     list_display = ('nombre',)
@@ -55,12 +54,31 @@ class EstudianteAdmin(admin.ModelAdmin):
     @admin.display(description="Usuario", ordering='user__username')
     def get_username(self, obj): return obj.user.username
 
+# --- CLASE MODIFICADA PARA AÑADIR PONDERACIÓN ---
 @admin.register(AsignacionDocente)
 class AsignacionDocenteAdmin(admin.ModelAdmin):
-    list_display = ('docente', 'materia', 'curso', 'intensidad_horaria_semanal')
-    list_filter = ('docente', 'curso', 'materia')
+    list_display = ('docente', 'materia', 'curso', 'usar_ponderacion_equitativa', 'intensidad_horaria_semanal')
+    list_filter = ('curso', 'docente', 'materia')
     search_fields = ('docente__user__first_name', 'docente__user__last_name', 'materia__nombre', 'curso__nombre')
     autocomplete_fields = ['docente', 'materia', 'curso']
+
+    fieldsets = (
+        (None, {
+            'fields': ('docente', 'materia', 'curso', 'intensidad_horaria_semanal')
+        }),
+        ('Ponderación de Competencias', {
+            'classes': ('collapse',),
+            'fields': ('usar_ponderacion_equitativa', 'porcentaje_ser', 'porcentaje_saber', 'porcentaje_hacer'),
+            'description': """
+                <p>Aquí puede definir cómo se calculará la nota definitiva de esta materia.</p>
+                <ul>
+                    <li><strong>Si marca 'Usar ponderación equitativa':</strong> Las 3 competencias (Ser, Saber, Hacer) valdrán lo mismo automáticamente.</li>
+                    <li><strong>Si lo desmarca:</strong> Deberá ingresar los porcentajes manualmente y asegurarse de que la suma sea exactamente 100.</li>
+                </ul>
+            """
+        }),
+    )
+# --- FIN DE LA MODIFICACIÓN ---
 
 @admin.register(IndicadorLogroPeriodo)
 class IndicadorLogroPeriodoAdmin(admin.ModelAdmin):
@@ -80,6 +98,22 @@ class CalificacionAdmin(admin.ModelAdmin):
     list_filter = ('periodo', 'materia', 'docente', 'tipo_nota')
     search_fields = ('estudiante__user__first_name', 'estudiante__user__last_name', 'materia__nombre')
     autocomplete_fields = ['estudiante', 'materia', 'docente', 'periodo']
+
+# --- NUEVO REGISTRO PARA NOTAS DETALLADAS ---
+@admin.register(NotaDetallada)
+class NotaDetalladaAdmin(admin.ModelAdmin):
+    list_display = ('get_estudiante', 'get_materia', 'descripcion', 'valor_nota')
+    search_fields = ('calificacion_promedio__estudiante__user__first_name', 'descripcion')
+    raw_id_fields = ('calificacion_promedio',)
+
+    @admin.display(description='Estudiante', ordering='calificacion_promedio__estudiante')
+    def get_estudiante(self, obj):
+        return obj.calificacion_promedio.estudiante
+
+    @admin.display(description='Materia', ordering='calificacion_promedio__materia')
+    def get_materia(self, obj):
+        return obj.calificacion_promedio.materia
+# --- FIN DEL NUEVO REGISTRO ---
 
 @admin.register(Asistencia)
 class AsistenciaAdmin(admin.ModelAdmin):
@@ -110,8 +144,6 @@ class ReporteParcialAdmin(admin.ModelAdmin):
     search_fields = ('estudiante__user__first_name', 'estudiante__user__last_name')
 
 admin.site.register(InasistenciasManualesPeriodo)
-
-# --- NUEVA LÍNEA PARA REGISTRAR LA CONFIGURACIÓN ---
 admin.site.register(ConfiguracionSistema)
 
 admin.site.site_header = "Panel de Administración I.E.T. Alfonso Palacio Rudas"

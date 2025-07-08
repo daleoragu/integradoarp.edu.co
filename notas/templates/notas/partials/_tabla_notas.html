@@ -16,49 +16,26 @@
                 <tr>
                     <th class="text-center comp-ser">
                         SER ({{ asignacion_seleccionada.porcentaje_ser }}%)
-                        <button class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="ser" title="Añadir nota SER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="ser" title="Añadir nota SER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
                     </th>
                     <th class="text-center comp-saber">
                         SABER ({{ asignacion_seleccionada.porcentaje_saber }}%)
-                        <button class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="saber" title="Añadir nota SABER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="saber" title="Añadir nota SABER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
                     </th>
                     <th class="text-center comp-hacer">
                         HACER ({{ asignacion_seleccionada.porcentaje_hacer }}%)
-                        <button class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="hacer" title="Añadir nota HACER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="hacer" title="Añadir nota HACER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
                     </th>
                 </tr>
             </thead>
+            <!-- El cuerpo de la tabla será generado dinámicamente por JavaScript -->
             <tbody>
-                {% for estudiante_data in estudiantes_data_json %}
-                <tr data-estudiante-id="{{ estudiante_data.info.id }}">
-                    <td class="text-center">{{ forloop.counter }}</td>
-                    <td><span class="nombre-estudiante">{{ estudiante_data.info.full_name }}</span></td>
-                    
-                    <td class="notas-container" data-tipo="ser">
-                        <div class="promedio-display">Prom: <span>N/A</span></div>
-                    </td>
-                    <td class="notas-container" data-tipo="saber">
-                        <div class="promedio-display">Prom: <span>N/A</span></div>
-                    </td>
-                    <td class="notas-container" data-tipo="hacer">
-                        <div class="promedio-display">Prom: <span>N/A</span></div>
-                    </td>
-
-                    <td class="text-center fw-bold celda-definitiva">
-                        <span>N/A</span>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center text-muted py-4">No hay estudiantes en este curso.</td>
-                </tr>
-                {% endfor %}
             </tbody>
         </table>
     </div>
     <div class="card-footer text-end">
         {% if not periodo_cerrado %}
-            <button class="btn btn-primary" id="guardarTodoBtn">
+            <button class="btn btn-primary" id="guardarTodoBtn" disabled>
                 <i class="fas fa-save me-2"></i>Guardar Todos los Cambios
             </button>
         {% else %}
@@ -67,6 +44,6 @@
     </div>
 </div>
 
-<!-- Contenedor oculto para los datos JSON de los estudiantes -->
+<!-- Contenedor oculto para los datos JSON de los estudiantes que leerá el JavaScript -->
 <div id="estudiantes-data-json" style="display: none;">{{ estudiantes_data_json|safe }}</div>
 {% endif %}
