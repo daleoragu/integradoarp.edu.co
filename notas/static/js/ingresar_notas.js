@@ -2,32 +2,50 @@
  * Script para manejar la página de ingreso de notas.
  * Gestiona la creación dinámica de campos de nota, cálculos en tiempo real,
  * el manejo de inasistencias y el envío de datos al servidor.
+ * @version 3.0 - Con Inasistencias Automáticas
  */
 document.addEventListener('DOMContentLoaded', function () {
     const container = document.querySelector('.container-notas');
     if (!container) return;
 
+    // --- ELEMENTOS DEL DOM ---
     const tablaCalificaciones = document.getElementById('tabla-calificaciones');
     const tbody = tablaCalificaciones?.querySelector('tbody');
     const guardarTodoBtn = document.getElementById('guardarTodoBtn');
     const statusIndicator = document.getElementById('status-indicator');
+    const urlInasistenciasEl = document.getElementById('url-get-inasistencias');
     
+    // --- DATOS INICIALES (inyectados desde Django) ---
     const asignacionData = {
         id: container.dataset.asignacionId,
         materiaId: container.dataset.materiaId,
         periodoId: container.dataset.periodoId,
         csrfToken: container.dataset.csrfToken,
         guardarUrl: container.dataset.guardarUrl,
+        inasistenciasUrl: urlInasistenciasEl?.dataset.url
     };
 
     const estudiantesDataEl = document.getElementById('estudiantes-data-json');
     if (!estudiantesDataEl || !tbody) {
-        console.error("Elementos clave de la tabla (tbody o JSON data) no encontrados.");
+        console.error("Error crítico: No se encontraron los elementos #estudiantes-data-json o el tbody de la tabla.");
         return;
     }
     
-    const estudiantesData = JSON.parse(estudiantesDataEl.textContent || '[]');
+    let estudiantesData = [];
+    try {
+        const jsonData = estudiantesDataEl.textContent.trim();
+        if (jsonData) {
+            estudiantesData = JSON.parse(jsonData);
+        }
+    } catch (e) {
+        console.error("Error al parsear los datos de los estudiantes desde JSON:", e);
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Error al cargar los datos. Revise la consola (F12).</td></tr>';
+        return;
+    }
+
     let hayCambiosSinGuardar = false;
+
+    // --- FUNCIONES DE RENDERIZADO Y UI ---
 
     function actualizarStatus(estado) {
         if (!statusIndicator) return;
@@ -57,11 +75,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function crearElementoNota(nota = { desc: '', valor: '' }) {
         const div = document.createElement('div');
         div.className = 'nota-detallada-item';
-        div.innerHTML = `
-            <input type="text" class="form-control form-control-sm input-desc" placeholder='Descripción' value="${nota.desc || ''}">
-            <input type="text" class="form-control form-control-sm input-valor" inputmode="decimal" placeholder='Nota' value="${nota.valor || ''}">
-            <button type="button" class="btn btn-danger btn-sm btn-remove-nota" title="Eliminar nota">&times;</button>
-        `;
+        div.innerHTML = `<input type="text" class="form-control form-control-sm input-desc" placeholder='Descripción' value="${nota.desc || ''}"><input type="text" class="form-control form-control-sm input-valor" inputmode="decimal" placeholder='Nota' value="${nota.valor || ''}"><button type="button" class="btn btn-danger btn-sm btn-remove-nota" title="Eliminar nota">&times;</button>`;
         return div;
     }
 
@@ -75,9 +89,13 @@ document.addEventListener('DOMContentLoaded', function () {
             <td class="notas-container" data-tipo="saber"><div class="promedio-display">Prom: <span>N/A</span></div></td>
             <td class="notas-container" data-tipo="hacer"><div class="promedio-display">Prom: <span>N/A</span></div></td>
             <td class="text-center fw-bold celda-definitiva"><span>N/A</span></td>
-            <!-- Celda de Inasistencias reintegrada -->
             <td class="celda-inasistencias">
-                <input type="number" class="form-control form-control-sm input-inasistencia" min="0" value="${estudiante.inasistencias || ''}">
+                <div class="input-group">
+                    <input type="number" class="form-control form-control-sm input-inasistencia" min="0" value="${estudiante.inasistencias || ''}">
+                    <button class="btn btn-outline-secondary btn-sm sync-inasistencias" type="button" title="Calcular inasistencias automáticas del sistema de asistencia diario.">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
             </td>
         `;
         return fila;
@@ -86,7 +104,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderizarTablaCompleta() {
         tbody.innerHTML = '';
         if (estudiantesData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No hay estudiantes en este curso.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No hay estudiantes matriculados en este curso.</td></tr>';
             return;
         }
 
@@ -113,9 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function actualizarPromedio(contenedor) {
         const notasInputs = contenedor.querySelectorAll('.input-valor');
         const displaySpan = contenedor.querySelector('.promedio-display span');
-        let suma = 0;
-        let count = 0;
-
+        let suma = 0, count = 0;
         notasInputs.forEach(input => {
             const valor = parseFloat(input.value.replace(',', '.'));
             if (!isNaN(valor) && valor >= 1.0 && valor <= 5.0) {
@@ -123,10 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 count++;
             }
         });
-
-        const promedio = count > 0 ? (suma / count).toFixed(2) : 'N/A';
-        displaySpan.textContent = promedio;
-        
+        displaySpan.textContent = count > 0 ? (suma / count).toFixed(2) : 'N/A';
         const fila = contenedor.closest('tr');
         if(fila) actualizarDefinitiva(fila);
     }
@@ -144,34 +157,52 @@ document.addEventListener('DOMContentLoaded', function () {
         const promSaber = parseFloat(fila.querySelector('.notas-container[data-tipo="saber"] .promedio-display span').textContent);
         const promHacer = parseFloat(fila.querySelector('.notas-container[data-tipo="hacer"] .promedio-display span').textContent);
         const celdaDefinitiva = fila.querySelector('.celda-definitiva span');
-
         if (!isNaN(promSer) && !isNaN(promSaber) && !isNaN(promHacer)) {
-            const definitiva = (promSer * pSer) + (promSaber * pSaber) + (promHacer * pHacer);
-            celdaDefinitiva.textContent = definitiva.toFixed(2);
+            celdaDefinitiva.textContent = ((promSer * pSer) + (promSaber * pSaber) + (promHacer * pHacer)).toFixed(2);
         } else {
             celdaDefinitiva.textContent = 'N/A';
         }
     }
 
     if (tablaCalificaciones) {
-        tablaCalificaciones.addEventListener('click', (e) => {
-            if (e.target.classList.contains('btn-remove-nota')) {
+        tablaCalificaciones.addEventListener('click', async (e) => {
+            if (e.target.closest('.btn-remove-nota')) {
                 const item = e.target.closest('.nota-detallada-item');
                 const contenedor = item.parentElement;
                 item.remove();
                 actualizarPromedio(contenedor);
                 actualizarStatus('pending');
             }
-        });
-
-        tablaCalificaciones.addEventListener('input', (e) => {
-            if (e.target.classList.contains('input-valor') || e.target.classList.contains('input-desc')) {
-                const contenedor = e.target.closest('.notas-container');
-                if (contenedor) actualizarPromedio(contenedor);
-                actualizarStatus('pending');
+            if (e.target.closest('.sync-inasistencias')) {
+                const btn = e.target.closest('.sync-inasistencias');
+                const fila = btn.closest('tr');
+                const estudianteId = fila.dataset.estudianteId;
+                const inputInasistencia = fila.querySelector('.input-inasistencia');
+                btn.disabled = true;
+                btn.querySelector('i').classList.add('fa-spin');
+                try {
+                    const url = `${asignacionData.inasistenciasUrl}?estudiante_id=${estudianteId}&asignacion_id=${asignacionData.id}&periodo_id=${asignacionData.periodoId}`;
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if(data.status === 'success') {
+                        inputInasistencia.value = data.inasistencias;
+                        actualizarStatus('pending');
+                    } else { throw new Error(data.message); }
+                } catch (error) {
+                    alert('Error al calcular inasistencias: ' + error.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.querySelector('i').classList.remove('fa-spin');
+                }
             }
-            // Escuchar cambios en inasistencias
-            if (e.target.classList.contains('input-inasistencia')) {
+        });
+        tablaCalificaciones.addEventListener('input', (e) => {
+            const target = e.target;
+            if (target.classList.contains('input-valor') || target.classList.contains('input-desc') || target.classList.contains('input-inasistencia')) {
+                if (target.classList.contains('input-valor')) {
+                    const contenedor = target.closest('.notas-container');
+                    if (contenedor) actualizarPromedio(contenedor);
+                }
                 actualizarStatus('pending');
             }
         });
@@ -180,9 +211,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.btn-add-all').forEach(btn => {
         btn.addEventListener('click', function() {
             const tipo = this.dataset.tipo;
-            tablaCalificaciones.querySelectorAll(`.notas-container[data-tipo="${tipo}"]`).forEach(contenedor => {
-                contenedor.prepend(crearElementoNota());
-            });
+            tablaCalificaciones.querySelectorAll(`.notas-container[data-tipo="${tipo}"]`).forEach(contenedor => contenedor.prepend(crearElementoNota()));
             actualizarStatus('pending');
         });
     });
@@ -190,35 +219,28 @@ document.addEventListener('DOMContentLoaded', function () {
     guardarTodoBtn?.addEventListener('click', async function() {
         this.disabled = true;
         this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
-
         const payload = {
             periodo_id: asignacionData.periodoId,
             materia_id: asignacionData.materiaId,
             asignacion_id: asignacionData.id,
             estudiantes: []
         };
-
         tablaCalificaciones.querySelectorAll('tbody tr[data-estudiante-id]').forEach(fila => {
             const estudianteId = fila.dataset.estudianteId;
             const datosEstudiante = {
                 estudiante_id: estudianteId,
                 ser: [], saber: [], hacer: [],
-                // Se añade el campo de inasistencias al payload
                 inasistencias: fila.querySelector('.input-inasistencia').value.trim()
             };
-
             ['ser', 'saber', 'hacer'].forEach(tipo => {
                 fila.querySelectorAll(`.notas-container[data-tipo="${tipo}"] .nota-detallada-item`).forEach(item => {
                     const desc = item.querySelector('.input-desc').value.trim();
                     const valor = item.querySelector('.input-valor').value.trim();
-                    if (valor) {
-                        datosEstudiante[tipo].push({ desc, valor });
-                    }
+                    if (valor) datosEstudiante[tipo].push({ desc, valor });
                 });
             });
             payload.estudiantes.push(datosEstudiante);
         });
-
         try {
             const response = await fetch(asignacionData.guardarUrl, {
                 method: 'POST',
@@ -226,13 +248,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify(payload)
             });
             const result = await response.json();
-            
             if (response.ok && result.status === 'success') {
                 alert('¡Éxito! ' + result.message);
                 actualizarStatus('saved');
-            } else {
-                throw new Error(result.message || 'Error desconocido.');
-            }
+            } else { throw new Error(result.message || 'Error desconocido.'); }
         } catch (error) {
             alert('Error: ' + error.message);
             actualizarStatus('error');
@@ -249,5 +268,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
+    // Llama a la función principal para construir la tabla al cargar la página.
     renderizarTablaCompleta();
 });

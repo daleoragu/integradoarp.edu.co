@@ -12,7 +12,6 @@
                     <th rowspan="2" class="align-middle">Estudiante</th>
                     <th colspan="3" class="text-center">Competencias</th>
                     <th rowspan="2" class="text-center align-middle">Definitiva</th>
-                    <!-- Columna de Inasistencias reintegrada -->
                     <th rowspan="2" class="text-center align-middle">Inasistencias</th>
                 </tr>
                 <tr>
@@ -30,9 +29,8 @@
                     </th>
                 </tr>
             </thead>
-            <!-- El cuerpo de la tabla será generado dinámicamente por JavaScript -->
             <tbody>
-            </tbody>
+                </tbody>
         </table>
     </div>
     <div class="card-footer text-end">
@@ -41,11 +39,11 @@
                 <i class="fas fa-save me-2"></i>Guardar Todos los Cambios
             </button>
         {% else %}
-            <p class="mb-0 text-warning"><i class="fas fa-lock me-2"></i>El periodo está cerrado. No se pueden guardar cambios.</p>
+            <p class="mb-0 text-warning"><i class="fas fa-lock me-2"></i>El periodo está cerrado.</p>
         {% endif %}
     </div>
 </div>
 
-<!-- Contenedor oculto para los datos JSON de los estudiantes que leerá el JavaScript -->
 <div id="estudiantes-data-json" style="display: none;">{{ estudiantes_data_json|safe }}</div>
+<div id="url-get-inasistencias" data-url="{% url 'ajax_get_inasistencias_auto' %}"></div>
 {% endif %}

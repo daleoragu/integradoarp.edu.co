@@ -23,7 +23,7 @@ __all__ = [
     'Curso', 'Docente', 'Estudiante', 'FichaEstudiante', 'FichaDocente',
     'AreaConocimiento', 'Materia', 'PeriodoAcademico', 'AsignacionDocente',
     'Calificacion', 'IndicadorLogroPeriodo', 'ReporteParcial', 'Observacion',
-    'PlanDeMejoramiento', 'Asistencia', 'InasistenciasManualesPeriodo',
+    'PlanDeMejoramiento', 'Asistencia', 'InasistenciasManualesPeriodo','NotaDetallada'
     'ConfiguracionSistema', 'PublicacionBoletin', 'PublicacionBoletinFinal',
     'Mensaje', 'RegistroObservador', 'Notificacion',
     'DocumentoPublico', 'FotoGaleria', 'Noticia', 'ImagenCarrusel',

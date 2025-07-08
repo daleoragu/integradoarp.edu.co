@@ -68,6 +68,7 @@ urlpatterns = [
     path('panel-administrador/editar-imagen-carrusel/<int:pk>/', portal_admin_views.editar_imagen_carrusel_vista, name='editar_imagen_carrusel'),
     # --- Rutas del Panel Docente ---
     path('docente/ingresar-notas/', ingreso_notas_views.ingresar_notas_periodo_vista, name='ingresar_notas_periodo'),
+    path('ajax/get-inasistencias-auto/', ingreso_notas_views.ajax_get_inasistencias_automaticas, name='ajax_get_inasistencias_auto'),
     path('docente/reporte-parcial/', reporte_parcial_views.reporte_parcial_vista, name='reporte_parcial'),
     path('docente/planes-mejoramiento/', plan_mejoramiento_views.plan_mejoramiento_vista, name='plan_mejoramiento'),
     path('docente/asistencia/', asistencia_views.asistencia_vista, name='asistencia'),
@@ -191,6 +192,13 @@ urlpatterns = [
     path('ajax/recursos-educativos/', portal_views.ajax_recursos_educativos, name='ajax_recursos_educativos'),
     path('ajax/redes-sociales/', portal_views.ajax_redes_sociales, name='ajax_redes_sociales'),
     # --- FIN: NUEVAS RUTAS AJAX ---
+           
+     # --- Mantenemos todas tus rutas existentes ---
+    path('', auth_views.login_vista, name='login'), # Suponiendo que tienes una vista de login
+    path('logout/', auth_views.logout_vista, name='logout'),
+    path('dashboard/', dashboard_views.dashboard_vista, name='dashboard'),
     
-       
+ 
+    
+
 ]
