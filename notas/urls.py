@@ -67,7 +67,10 @@ urlpatterns = [
     path('panel-administrador/editar-imagen-carrusel/<int:pk>/', portal_admin_views.editar_imagen_carrusel_vista, name='editar_imagen_carrusel'),
     
     # --- Rutas del Panel Docente ---
-    path('docente/ingresar-notas/', ingreso_notas_views.ingresar_notas_periodo_vista, name='ingresar_notas_periodo'),
+    # CORRECCIÓN 1: Se reemplaza la vista de función por la vista basada en clases.
+    # Esta única ruta ahora maneja GET (mostrar la página) y POST (guardar los datos).
+    path('docente/ingresar-notas/', ingreso_notas_views.IngresoNotasView.as_view(), name='ingresar_notas_periodo'),
+    
     path('docente/reporte-parcial/', reporte_parcial_views.reporte_parcial_vista, name='reporte_parcial'),
     path('docente/planes-mejoramiento/', plan_mejoramiento_views.plan_mejoramiento_vista, name='plan_mejoramiento'),
     path('docente/asistencia/', asistencia_views.asistencia_vista, name='asistencia'),
@@ -86,8 +89,13 @@ urlpatterns = [
     path('reportes/individual-pdf/', reporte_views.generar_reporte_individual_pdf, name='generar_reporte_individual_pdf'),
 
     # --- Rutas para Lógica AJAX ---
-    path('ajax/guardar-todo/', ingreso_notas_views.guardar_todo_ajax, name='guardar_todo_ajax'),
-    path('ajax/get-inasistencias-auto/', ingreso_notas_views.ajax_get_inasistencias_automaticas, name='ajax_get_inasistencias_auto'),
+    # CORRECCIÓN 2: La ruta 'guardar_todo_ajax' se elimina porque la lógica de guardado
+    # ahora la maneja la vista IngresoNotasView a través de una petición POST.
+    # path('ajax/guardar-todo/', ingreso_notas_views.guardar_todo_ajax, name='guardar_todo_ajax'),
+
+    # CORRECCIÓN 3: Se asegura que la ruta apunte a la función correcta en el archivo de vistas.
+    path('ajax/get-inasistencias-auto/', ingreso_notas_views.ajax_get_inasistencias_auto, name='ajax_get_inasistencias_auto'),
+    
     path('ajax/obtener-meses/', reporte_views.obtener_meses_periodo_ajax, name='ajax_obtener_meses'),
     path('ajax/guardar-asistencia/', asistencia_views.guardar_inasistencia_ajax, name='guardar_inasistencia_ajax'),
     path('ajax/datos-graficos/', estadisticas_views.datos_graficos_ajax, name='datos_graficos_ajax'),

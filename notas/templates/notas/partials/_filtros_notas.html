@@ -1,4 +1,9 @@
-<form method="GET" class="form-filtros">
+{% comment %}
+  Parcial para los filtros de la página de ingreso de notas.
+  Versión corregida para asegurar que el formulario apunte a la URL correcta.
+{% endcomment %}
+
+<form method="GET" class="form-filtros" action="{% url 'ingresar_notas_periodo' %}">
     
     {% if user.is_superuser %}
     <div class="form-grupo">

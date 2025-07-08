@@ -1,229 +1,238 @@
 # notas/views/ingreso_notas_views.py
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
 import json
+from decimal import Decimal, ROUND_HALF_UP
+
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from decimal import Decimal, InvalidOperation
+from django.http import JsonResponse, HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, render
+from django.views import View
 
-from ..models import (
-    Docente, AsignacionDocente, PeriodoAcademico, Estudiante,
-    IndicadorLogroPeriodo, Calificacion, NotaDetallada, InasistenciasManualesPeriodo,
-    Asistencia
+# Importaciones de tus modelos
+from ..models.academicos import (
+    AsignacionDocente,
+    PeriodoAcademico,
+    Estudiante,
+    Calificacion,
+    NotaDetallada,
+    InasistenciasManualesPeriodo,
+    Asistencia,
+    IndicadorLogroPeriodo
 )
+from ..models.perfiles import Docente # Asegúrate que Docente esté disponible aquí
 
-# Clase auxiliar para convertir Decimal a string en JSON
-class DecimalEncoder(json.JSONEncoder):
-    def default(self, o):
-        if isinstance(o, Decimal):
-            return str(o)
-        return super(DecimalEncoder, self).default(o)
+# --- Vista Principal para el Ingreso de Notas ---
 
-@login_required
-def ingresar_notas_periodo_vista(request):
+class IngresoNotasView(LoginRequiredMixin, View):
     """
-    Gestiona la carga de la página de ingreso de notas.
-    Prepara y envía todos los datos necesarios a la plantilla.
+    Gestiona la página de ingreso de calificaciones e indicadores.
+    - GET: Muestra la interfaz, los estudiantes y los indicadores existentes.
+    - POST: Guarda los datos de calificaciones e inasistencias enviados vía AJAX.
     """
-    context = { 'periodo_cerrado': False }
-    user = request.user
+    template_name = 'notas/ingresar_notas_periodo.html' # Plantilla principal que incluye los parciales
+    login_url = '/login/' # Ajusta a tu URL de login
 
-    # Obtener los parámetros de los filtros GET
-    docente_seleccionado_id = request.GET.get('docente_id')
-    asignacion_seleccionada_id = request.GET.get('asignacion_id')
-    periodo_seleccionado_id = request.GET.get('periodo_id')
-
-    # Filtrar asignaciones según el tipo de usuario
-    if user.is_superuser:
-        context['todos_los_docentes'] = Docente.objects.all().order_by('user__last_name', 'user__first_name')
-        asignaciones_docente = AsignacionDocente.objects.filter(docente_id=docente_seleccionado_id) if docente_seleccionado_id else AsignacionDocente.objects.none()
-    else:
+    def get(self, request, *args, **kwargs):
+        # 1. OBTENER DATOS PARA LOS SELECTORES (DROPDOWNS)
         try:
-            docente_actual = Docente.objects.get(user=user)
-            asignaciones_docente = AsignacionDocente.objects.filter(docente=docente_actual)
-            context['docente_actual'] = docente_actual
-        except Docente.DoesNotExist:
-            messages.error(request, "Acceso denegado: su usuario no está asociado a un perfil de docente.")
-            return redirect('dashboard')
-    
-    # Preparar el contexto base
-    context['asignaciones'] = asignaciones_docente.select_related('curso', 'materia').order_by('curso__nombre', 'materia__nombre')
-    context['todos_los_periodos'] = PeriodoAcademico.objects.all().order_by('-ano_lectivo', 'nombre')
-    context['docente_seleccionado_id'] = docente_seleccionado_id
-    context['asignacion_seleccionada_id'] = asignacion_seleccionada_id
-    context['periodo_seleccionado_id'] = periodo_seleccionado_id
-    context['estudiantes_data_json'] = '[]'
-
-    # Si se han seleccionado todos los filtros, cargar los datos de los estudiantes
-    if asignacion_seleccionada_id and periodo_seleccionado_id:
-        asignacion = get_object_or_404(AsignacionDocente, id=asignacion_seleccionada_id)
-        periodo = get_object_or_404(PeriodoAcademico, id=periodo_seleccionado_id)
+            docente = request.user.docente
+            asignaciones_docente = AsignacionDocente.objects.filter(docente=docente).select_related('materia', 'curso')
+        except (Docente.DoesNotExist, AttributeError):
+            # Si el usuario no es un docente, no mostrar nada.
+            # Puedes redirigir o mostrar un mensaje claro.
+            return render(request, self.template_name, {
+                'error_message': 'No tiene un perfil de docente asignado para ver esta página.'
+            })
+            
+        periodos = PeriodoAcademico.objects.order_by('-ano_lectivo', 'nombre')
         
-        context.update({
-            'asignacion_seleccionada': asignacion,
-            'periodo_seleccionado': periodo,
-            'periodo_cerrado': not periodo.esta_activo,
-            'indicadores': IndicadorLogroPeriodo.objects.filter(asignacion=asignacion, periodo=periodo)
-        })
+        # 2. PROCESAR LA SELECCIÓN DEL USUARIO (CORREGIDO)
+        # Lee los parámetros con los nombres correctos del formulario de filtros.
+        asignacion_id = request.GET.get('asignacion_id')
+        periodo_id = request.GET.get('periodo_id')
+        
+        context = {
+            'asignaciones': asignaciones_docente, # Nombre usado en _filtros_notas.html
+            'todos_los_periodos': periodos,      # Nombre usado en _filtros_notas.html
+            'asignacion_seleccionada': None,
+            'periodo_seleccionado': None,
+            'asignacion_seleccionada_id': asignacion_id, # Para mantener la selección en el <select>
+            'periodo_seleccionado_id': periodo_id,       # Para mantener la selección en el <select>
+            'estudiantes_data_json': '[]',
+            'periodo_cerrado': False,
+            'indicadores': [],
+        }
 
-        if context['indicadores'].exists():
-            if context['periodo_cerrado']:
-                 messages.warning(request, f"El periodo '{periodo}' está cerrado. Las notas son de solo lectura.")
-
-            estudiantes = Estudiante.objects.filter(curso=asignacion.curso, is_active=True).order_by('user__last_name', 'user__first_name')
+        if asignacion_id and periodo_id:
+            asignacion_seleccionada = get_object_or_404(asignaciones_docente, id=asignacion_id)
+            periodo_seleccionado = get_object_or_404(PeriodoAcademico, id=periodo_id)
             
-            # Optimización: Cargar todas las calificaciones y notas detalladas en una sola consulta
-            calificaciones = Calificacion.objects.filter(materia=asignacion.materia, periodo=periodo).prefetch_related('notas_detalladas')
-            calificaciones_map = {
-                (c.estudiante_id, c.tipo_nota): {
-                    'promedio': c.valor_nota,
-                    'detalladas': [{'desc': n.descripcion, 'valor': n.valor_nota} for n in c.notas_detalladas.all()]
-                } for c in calificaciones
-            }
+            # Obtener los estudiantes del curso
+            estudiantes_del_curso = Estudiante.objects.filter(curso=asignacion_seleccionada.curso).select_related('user').order_by('user__last_name', 'user__first_name')
             
-            inasistencias_manuales_qs = InasistenciasManualesPeriodo.objects.filter(asignacion=asignacion, periodo=periodo)
-            inasistencias_map = {i.estudiante_id: i.cantidad for i in inasistencias_manuales_qs}
-            
-            # Construir la estructura de datos para cada estudiante
+            # 3. CONSTRUIR LA ESTRUCTURA DE DATOS PARA LA TABLA (CORREGIDO)
+            # Se genera el JSON con la estructura exacta que el JS espera.
             estudiantes_data = []
-            for est in estudiantes:
-                estudiantes_data.append({
-                    'info': {'id': est.id, 'full_name': est.user.get_full_name()},
-                    'calificaciones': {
-                        'SER': calificaciones_map.get((est.id, 'SER')),
-                        'SABER': calificaciones_map.get((est.id, 'SABER')),
-                        'HACER': calificaciones_map.get((est.id, 'HACER')),
-                        'PROM_PERIODO': calificaciones_map.get((est.id, 'PROM_PERIODO')),
-                    },
-                    'inasistencias': inasistencias_map.get(est.id)
-                })
-
-            # Convertir los datos a JSON para pasarlos al JavaScript
-            context['estudiantes_data_json'] = json.dumps(estudiantes_data, cls=DecimalEncoder)
-        
-        elif not context['periodo_cerrado']:
-             messages.info(request, 'Para ingresar notas, primero debe agregar al menos un indicador de logro para este periodo.')
-
-    return render(request, 'notas/docente/ingresar_notas_periodo.html', context)
-
-
-@login_required
-@transaction.atomic
-def guardar_todo_ajax(request):
-    """
-    Gestiona el guardado de todas las notas y las inasistencias enviadas desde la interfaz.
-    """
-    if request.method != 'POST':
-        return JsonResponse({'status': 'error', 'message': 'Método no permitido'}, status=405)
-
-    try:
-        data = json.loads(request.body)
-        all_student_data = data.get('estudiantes', [])
-        periodo = get_object_or_404(PeriodoAcademico, id=data.get('periodo_id'))
-        asignacion = get_object_or_404(AsignacionDocente, id=data.get('asignacion_id'))
-        
-        if not periodo.esta_activo:
-            return JsonResponse({'status': 'error', 'message': 'El periodo está cerrado.'}, status=403)
-
-        # Determinar los porcentajes a usar para el cálculo de la definitiva
-        if asignacion.usar_ponderacion_equitativa:
-            p_ser = p_saber = p_hacer = Decimal('1') / Decimal('3')
-        else:
-            p_ser = Decimal(asignacion.porcentaje_ser) / 100
-            p_saber = Decimal(asignacion.porcentaje_saber) / 100
-            p_hacer = Decimal(asignacion.porcentaje_hacer) / 100
-
-        for student_data in all_student_data:
-            estudiante = get_object_or_404(Estudiante, id=student_data.get('estudiante_id'))
-            promedios_competencias = {}
-
-            # Procesar cada competencia (SER, SABER, HACER)
-            for tipo_comp in ['ser', 'saber', 'hacer']:
-                calificacion_prom, _ = Calificacion.objects.get_or_create(
-                    estudiante=estudiante, materia_id=asignacion.materia.id, periodo=periodo,
-                    tipo_nota=tipo_comp.upper(),
-                    defaults={'valor_nota': Decimal('0.0'), 'docente': asignacion.docente}
-                )
-                calificacion_prom.notas_detalladas.all().delete()
+            for estudiante in estudiantes_del_curso:
+                data = {
+                    'id': estudiante.id,
+                    'nombre_completo': estudiante.user.get_full_name() or estudiante.user.username,
+                    'notas': {'ser': [], 'saber': [], 'hacer': []},
+                    'inasistencias': 0
+                }
                 
-                notas_validas = []
-                for nota_data in student_data.get(tipo_comp, []):
-                    try:
-                        valor = Decimal(str(nota_data.get('valor')).replace(',', '.'))
-                        if Decimal('1.0') <= valor <= Decimal('5.0'):
-                            NotaDetallada.objects.create(
-                                calificacion_promedio=calificacion_prom,
-                                descripcion=nota_data.get('desc', ''),
+                # Obtener calificaciones y notas detalladas
+                calificaciones = Calificacion.objects.filter(
+                    estudiante=estudiante, 
+                    materia=asignacion_seleccionada.materia, 
+                    periodo=periodo_seleccionado
+                ).prefetch_related('notas_detalladas')
+                
+                for cal in calificaciones:
+                    tipo_map = {'SER': 'ser', 'SABER': 'saber', 'HACER': 'hacer'}
+                    if cal.tipo_nota in tipo_map:
+                        key = tipo_map[cal.tipo_nota]
+                        # El JS espera 'descripcion' y 'valor'
+                        data['notas'][key] = [
+                            {'descripcion': n.descripcion, 'valor': str(n.valor_nota)} 
+                            for n in cal.notas_detalladas.all()
+                        ]
+
+                # Obtener inasistencias manuales
+                inasistencia_manual, _ = InasistenciasManualesPeriodo.objects.get_or_create(
+                    estudiante=estudiante,
+                    asignacion=asignacion_seleccionada,
+                    periodo=periodo_seleccionado,
+                    defaults={'cantidad': 0}
+                )
+                data['inasistencias'] = inasistencia_manual.cantidad
+
+                estudiantes_data.append(data)
+            
+            # Cargar indicadores de logro
+            indicadores = IndicadorLogroPeriodo.objects.filter(
+                asignacion=asignacion_seleccionada,
+                periodo=periodo_seleccionado
+            ).order_by('id')
+
+            # Actualizar el contexto para la plantilla
+            context.update({
+                'asignacion_seleccionada': asignacion_seleccionada,
+                'periodo_seleccionado': periodo_seleccionado,
+                'estudiantes_data_json': json.dumps(estudiantes_data),
+                'periodo_cerrado': not periodo_seleccionado.esta_activo,
+                'indicadores': indicadores,
+            })
+
+        return render(request, self.template_name, context)
+
+    @transaction.atomic
+    def post(self, request, *args, **kwargs):
+        # El método POST ahora procesa la estructura enviada por el JS corregido.
+        try:
+            data = json.loads(request.body)
+            asignacion_id = data.get('asignacion_id')
+            periodo_id = data.get('periodo_id')
+            estudiantes_data = data.get('estudiantes')
+            
+            if not all([asignacion_id, periodo_id, isinstance(estudiantes_data, list)]):
+                return JsonResponse({'status': 'error', 'message': 'Faltan datos clave en la solicitud.'}, status=400)
+            
+            asignacion = get_object_or_404(AsignacionDocente, id=asignacion_id)
+            periodo = get_object_or_404(PeriodoAcademico, id=periodo_id)
+            docente = request.user.docente
+
+            if asignacion.docente != docente:
+                return JsonResponse({'status': 'error', 'message': 'Permiso denegado.'}, status=403)
+
+            if not periodo.esta_activo:
+                return JsonResponse({'status': 'error', 'message': 'El periodo está cerrado.'}, status=403)
+
+            for est_data in estudiantes_data:
+                estudiante = get_object_or_404(Estudiante, id=est_data['id'])
+                definitiva_periodo = Decimal('0.0')
+
+                # Procesar cada competencia (ser, saber, hacer)
+                for comp_key, comp_map in {'ser': 'SER', 'saber': 'SABER', 'hacer': 'HACER'}.items():
+                    cal_prom, _ = Calificacion.objects.get_or_create(
+                        estudiante=estudiante, materia=asignacion.materia, periodo=periodo, tipo_nota=comp_map,
+                        defaults={'valor_nota': 0, 'docente': docente}
+                    )
+                    
+                    cal_prom.notas_detalladas.all().delete()
+                    
+                    notas_detalladas_list = []
+                    total_notas = Decimal('0.0')
+                    
+                    for nota_det_data in est_data['notas'][comp_key]:
+                        valor = Decimal(nota_det_data['valor'])
+                        notas_detalladas_list.append(
+                            NotaDetallada(
+                                calificacion_promedio=cal_prom,
+                                descripcion=nota_det_data['descripcion'],
                                 valor_nota=valor
                             )
-                            notas_validas.append(valor)
-                    except (InvalidOperation, TypeError):
-                        continue
+                        )
+                        total_notas += valor
+                    
+                    NotaDetallada.objects.bulk_create(notas_detalladas_list)
 
-                if notas_validas:
-                    promedio_comp = sum(notas_validas) / len(notas_validas)
-                    calificacion_prom.valor_nota = round(promedio_comp, 2)
-                    calificacion_prom.save()
-                    promedios_competencias[tipo_comp.upper()] = promedio_comp
-                else:
-                    calificacion_prom.delete()
+                    num_notas = len(notas_detalladas_list)
+                    promedio_comp = total_notas / num_notas if num_notas > 0 else Decimal('0.0')
+                    cal_prom.valor_nota = promedio_comp.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                    cal_prom.save()
+                    
+                    porcentajes = {
+                        'SER': Decimal(asignacion.porcentaje_ser) / 100,
+                        'SABER': Decimal(asignacion.porcentaje_saber) / 100,
+                        'HACER': Decimal(asignacion.porcentaje_hacer) / 100
+                    }
+                    definitiva_periodo += cal_prom.valor_nota * porcentajes[comp_map]
 
-            # Calcular y guardar la nota definitiva del periodo
-            if len(promedios_competencias) == 3:
-                definitiva = (
-                    promedios_competencias['SER'] * p_ser +
-                    promedios_competencias['SABER'] * p_saber +
-                    promedios_competencias['HACER'] * p_hacer
-                )
+                # Guardar la calificación definitiva del periodo
+                definitiva_periodo = definitiva_periodo.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 Calificacion.objects.update_or_create(
-                    estudiante=estudiante, materia_id=asignacion.materia.id, periodo=periodo, tipo_nota='PROM_PERIODO',
-                    defaults={'valor_nota': round(definitiva, 2), 'docente': asignacion.docente}
+                    estudiante=estudiante, materia=asignacion.materia, periodo=periodo, tipo_nota='PROM_PERIODO',
+                    defaults={'valor_nota': definitiva_periodo, 'docente': docente}
                 )
-            else:
-                Calificacion.objects.filter(estudiante=estudiante, materia_id=asignacion.materia.id, periodo=periodo, tipo_nota='PROM_PERIODO').delete()
 
-            # Guardar las inasistencias manuales
-            inasistencias_str = student_data.get('inasistencias', '').strip()
-            if inasistencias_str:
-                try:
-                    InasistenciasManualesPeriodo.objects.update_or_create(
-                        estudiante=estudiante, asignacion=asignacion, periodo=periodo,
-                        defaults={'cantidad': int(inasistencias_str)}
-                    )
-                except (ValueError, TypeError):
-                    InasistenciasManualesPeriodo.objects.filter(estudiante=estudiante, asignacion=asignacion, periodo=periodo).delete()
-            else:
-                InasistenciasManualesPeriodo.objects.filter(estudiante=estudiante, asignacion=asignacion, periodo=periodo).delete()
+                # Guardar inasistencias manuales
+                InasistenciasManualesPeriodo.objects.update_or_create(
+                    estudiante=estudiante, asignacion=asignacion, periodo=periodo,
+                    defaults={'cantidad': int(est_data['inasistencias'])}
+                )
 
-        return JsonResponse({'status': 'success', 'message': 'Calificaciones e inasistencias guardadas exitosamente.'})
+            return JsonResponse({'status': 'success', 'message': 'Calificaciones guardadas correctamente.'})
 
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': f'Error interno del servidor: {str(e)}'}, status=500)
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest('JSON mal formado.')
+        except Exception as e:
+            # Es buena práctica registrar el error para depuración
+            # import logging
+            # logging.exception("Error al guardar calificaciones")
+            return JsonResponse({'status': 'error', 'message': f'Ocurrió un error inesperado: {e}'}, status=500)
 
+
+# --- Vista AJAX para Inasistencias Automáticas ---
 
 @login_required
-def ajax_get_inasistencias_automaticas(request):
-    """
-    Calcula las inasistencias automáticas de un estudiante para una asignación
-    y periodo específicos, y devuelve el conteo en formato JSON.
-    """
-    estudiante_id = request.GET.get('estudiante_id')
-    asignacion_id = request.GET.get('asignacion_id')
-    periodo_id = request.GET.get('periodo_id')
-
+def ajax_get_inasistencias_auto(request):
     try:
+        asignacion_id = request.GET.get('asignacion_id')
+        periodo_id = request.GET.get('periodo_id')
+        estudiante_id = request.GET.get('estudiante_id')
+
         periodo = get_object_or_404(PeriodoAcademico, id=periodo_id)
         
-        # Cuenta las asistencias marcadas como 'A' (Ausente) dentro del rango de fechas del periodo
-        conteo = Asistencia.objects.filter(
+        cantidad = Asistencia.objects.filter(
             estudiante_id=estudiante_id,
             asignacion_id=asignacion_id,
-            estado='A',
-            fecha__range=(periodo.fecha_inicio, periodo.fecha_fin)
+            estado='A', # 'A' de Ausente
+            fecha__range=[periodo.fecha_inicio, periodo.fecha_fin]
         ).count()
         
-        return JsonResponse({'status': 'success', 'inasistencias': conteo})
+        return JsonResponse({'status': 'success', 'inasistencias_auto': cantidad})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
