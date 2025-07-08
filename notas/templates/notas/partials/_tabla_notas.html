@@ -1,68 +1,72 @@
-{% load nota_filters %}
-
-{% comment %}
-    Este parcial muestra la tabla principal para el ingreso de calificaciones,
-    el botón para guardar los cambios y los mensajes de estado condicionales
-    (ej: periodo cerrado, no hay estudiantes, etc.).
-{% endcomment %}
-
-{% if periodo_cerrado and estudiantes_data %}
-    <div class="alert alert-warning text-center">
-        <h4><i class="fas fa-lock me-2"></i>Periodo Cerrado</h4>
-        <p class="lead mb-0">No se pueden modificar calificaciones.</p>
+{% if asignacion_seleccionada and periodo_seleccionado %}
+<div class="card shadow-sm mt-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="h5 mb-0">Calificaciones para {{ asignacion_seleccionada.materia }} en {{ asignacion_seleccionada.curso }} - Periodo: {{ periodo_seleccionado }}</h3>
+        <div id="status-indicator" class="status-indicator" title="Estado de los cambios"></div>
     </div>
-{% endif %}
-
-{% if estudiantes_data %}
     <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle">
+        <table class="table table-bordered table-hover tabla-notas" id="tabla-calificaciones">
             <thead class="table-light">
                 <tr>
-                    <th class="text-center">#</th>
-                    <th>Estudiante</th>
-                    <th class="text-center">SER</th>
-                    <th class="text-center">SABER</th>
-                    <th class="text-center">HACER</th>
-                    <th class="text-center">Promedio</th>
-                    <th class="text-center" title="Inasistencias (Automático/Manual)">Inasistencias</th>
+                    <th rowspan="2" class="text-center align-middle">#</th>
+                    <th rowspan="2" class="align-middle">Estudiante</th>
+                    <th colspan="3" class="text-center">Competencias</th>
+                    <th rowspan="2" class="text-center align-middle">Definitiva</th>
+                </tr>
+                <tr>
+                    <th class="text-center comp-ser">
+                        SER ({{ asignacion_seleccionada.porcentaje_ser }}%)
+                        <button class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="ser" title="Añadir nota SER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
+                    </th>
+                    <th class="text-center comp-saber">
+                        SABER ({{ asignacion_seleccionada.porcentaje_saber }}%)
+                        <button class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="saber" title="Añadir nota SABER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
+                    </th>
+                    <th class="text-center comp-hacer">
+                        HACER ({{ asignacion_seleccionada.porcentaje_hacer }}%)
+                        <button class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="hacer" title="Añadir nota HACER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
+                    </th>
                 </tr>
             </thead>
-            <tbody id="tabla-notas-body">
-                {% for item in estudiantes_data %}
-                <tr id="fila-{{ item.info.id }}">
+            <tbody>
+                {% for estudiante_data in estudiantes_data_json %}
+                <tr data-estudiante-id="{{ estudiante_data.info.id }}">
                     <td class="text-center">{{ forloop.counter }}</td>
-                    <td>{{ item.info.user.last_name|upper }} {{ item.info.user.first_name|upper }}</td>
+                    <td><span class="nombre-estudiante">{{ estudiante_data.info.full_name }}</span></td>
                     
-                    <!-- INICIO: TAREA DE AJUSTE 2 - Campos de nota con filtro de coma decimal -->
-                    <td><input type="text" inputmode="decimal" class="form-control nota-input" value="{{ item.nota_ser|coma_decimal }}" data-estudiante-id="{{ item.info.id }}" {% if periodo_cerrado %}disabled{% endif %}></td>
-                    <td><input type="text" inputmode="decimal" class="form-control nota-input" value="{{ item.nota_saber|coma_decimal }}" data-estudiante-id="{{ item.info.id }}" {% if periodo_cerrado %}disabled{% endif %}></td>
-                    <td><input type="text" inputmode="decimal" class="form-control nota-input" value="{{ item.nota_hacer|coma_decimal }}" data-estudiante-id="{{ item.info.id }}" {% if periodo_cerrado %}disabled{% endif %}></td>
-                    <!-- FIN: TAREA DE AJUSTE 2 -->
-
-                    <td class="promedio-cell"></td>
-                    <td>
-                        <div class="input-group input-inasistencia-group">
-                            <input type="number" min="0" class="form-control input-inasistencia" value="{{ item.inasistencias|default_if_none:'' }}" data-estudiante-id="{{ item.info.id }}" {% if periodo_cerrado %}disabled{% endif %}>
-                            <button class="btn btn-outline-secondary sync-inasistencias" type="button" title="Restaurar conteo automático" {% if periodo_cerrado %}disabled{% endif %}>
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </div>
+                    <td class="notas-container" data-tipo="ser">
+                        <div class="promedio-display">Prom: <span>N/A</span></div>
                     </td>
+                    <td class="notas-container" data-tipo="saber">
+                        <div class="promedio-display">Prom: <span>N/A</span></div>
+                    </td>
+                    <td class="notas-container" data-tipo="hacer">
+                        <div class="promedio-display">Prom: <span>N/A</span></div>
+                    </td>
+
+                    <td class="text-center fw-bold celda-definitiva">
+                        <span>N/A</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">No hay estudiantes en este curso.</td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
-
-    <div class="d-flex justify-content-end align-items-center mt-3 gap-3">
-        <span id="guardar-status" class="text-muted" style="opacity: 0;"></span>
-        <button id="guardar-todo-btn" class="btn btn-success" {% if periodo_cerrado %}disabled{% else %}disabled{% endif %}>
-            <i class="fas fa-save me-2"></i>Guardar Cambios
-        </button>
+    <div class="card-footer text-end">
+        {% if not periodo_cerrado %}
+            <button class="btn btn-primary" id="guardarTodoBtn">
+                <i class="fas fa-save me-2"></i>Guardar Todos los Cambios
+            </button>
+        {% else %}
+            <p class="mb-0 text-warning"><i class="fas fa-lock me-2"></i>El periodo está cerrado. No se pueden guardar cambios.</p>
+        {% endif %}
     </div>
+</div>
 
-{% elif asignacion_seleccionada_id and periodo_seleccionado_id and not indicadores %}
-    <div class="alert alert-info">Agregue al menos un indicador para poder calificar.</div>
-{% elif asignacion_seleccionada_id and periodo_seleccionado_id and indicadores and not estudiantes_data %}
-    <div class="alert alert-secondary">No hay estudiantes matriculados en este curso.</div>
+<!-- Contenedor oculto para los datos JSON de los estudiantes -->
+<div id="estudiantes-data-json" style="display: none;">{{ estudiantes_data_json|safe }}</div>
 {% endif %}

@@ -122,24 +122,14 @@ def publicar_noticia_vista(request, pk):
 @user_passes_test(es_admin_o_docente)
 def gestion_carrusel_vista(request):
     if request.method == 'POST':
-        # Imprimimos los datos crudos que llegan para ver si el título está presente
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print("!!!!!!!!!! DATOS POST RECIBIDOS !!!!!!!!!!")
-        print(request.POST)
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-
         form = ImagenCarruselForm(request.POST, request.FILES)
         if form.is_valid():
             form.save()
             messages.success(request, 'Imagen añadida al carrusel.')
         else:
-            # Si el formulario no es válido, imprimimos los errores específicos en los logs.
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-            print("!!!!!!!!!! FORMULARIO NO VÁLIDO !!!!!!!!!!")
-            print(form.errors.as_json())
-            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            # Si el formulario no es válido, le muestra el error al usuario.
             messages.error(request, f"El formulario no es válido. Errores: {form.errors}")
-            
+        # Redirige en ambos casos para limpiar el formulario.
         return redirect('gestion_carrusel')
     else:
         form = ImagenCarruselForm()

@@ -10,7 +10,7 @@ from .academicos import (
     AreaConocimiento, Materia, PeriodoAcademico, AsignacionDocente,
     Calificacion, IndicadorLogroPeriodo, ReporteParcial, Observacion,
     PlanDeMejoramiento, Asistencia, InasistenciasManualesPeriodo,
-    ConfiguracionSistema, PublicacionBoletin, PublicacionBoletinFinal
+    ConfiguracionSistema, PublicacionBoletin, PublicacionBoletinFinal,NotaDetallada
 )
 from .comunicaciones import Mensaje, RegistroObservador, Notificacion
 from .portal_models import DocumentoPublico, FotoGaleria, Noticia, ImagenCarrusel
@@ -18,7 +18,7 @@ from .portal_models import DocumentoPublico, FotoGaleria, Noticia, ImagenCarruse
 # La variable __all__ es una buena práctica que define qué nombres
 # se exportan cuando se hace 'from .models import *'.
 
-# --- CORRECIÓN: Se añade FichaDocente a la lista __all__ ---
+# --- CORRECIÓN: Se añade FichaDocente a la lista __all__ ---S
 __all__ = [
     'Curso', 'Docente', 'Estudiante', 'FichaEstudiante', 'FichaDocente',
     'AreaConocimiento', 'Materia', 'PeriodoAcademico', 'AsignacionDocente',

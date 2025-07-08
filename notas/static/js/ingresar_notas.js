@@ -1,188 +1,231 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const container = document.querySelector('.container-notas');
     if (!container) return;
 
-    const csrfToken = container.dataset.csrfToken;
-    const asignacionId = container.dataset.asignacionId;
-    const materiaId = container.dataset.materiaId;
-    const periodoId = container.dataset.periodoId;
-    const guardarUrl = container.dataset.guardarUrl;
+    // --- ELEMENTOS DEL DOM ---
+    const tablaCalificaciones = document.getElementById('tabla-calificaciones');
+    const guardarTodoBtn = document.getElementById('guardarTodoBtn');
+    const statusIndicator = document.getElementById('status-indicator');
+    
+    // --- DATOS INICIALES (inyectados desde Django) ---
+    const asignacionData = {
+        id: container.dataset.asignacionId,
+        materiaId: container.dataset.materiaId,
+        periodoId: container.dataset.periodoId,
+        csrfToken: container.dataset.csrfToken,
+        guardarUrl: container.dataset.guardarUrl,
+    };
 
-    const tablaBody = document.getElementById('tabla-notas-body');
-    if (!tablaBody) return;
-
-    const guardarBtn = document.getElementById('guardar-todo-btn');
-    const statusMsg = document.getElementById('guardar-status');
-
-    tablaBody.querySelectorAll('tr').forEach(fila => {
-        const inputs = fila.querySelectorAll('.nota-input');
-        if (inputs.length === 3) {
-            inputs[0].dataset.tipo = 'ser';
-            inputs[1].dataset.tipo = 'saber';
-            inputs[2].dataset.tipo = 'hacer';
-        }
-    });
-
-    function calcularPromedio(fila) {
-        // Al leer los valores, siempre se reemplaza la coma por el punto para poder calcular.
-        const serValue = fila.querySelector('.nota-input[data-tipo="ser"]').value.replace(',', '.');
-        const saberValue = fila.querySelector('.nota-input[data-tipo="saber"]').value.replace(',', '.');
-        const hacerValue = fila.querySelector('.nota-input[data-tipo="hacer"]').value.replace(',', '.');
-        
-        const ser = parseFloat(serValue);
-        const saber = parseFloat(saberValue);
-        const hacer = parseFloat(hacerValue);
-
-        const celdaPromedio = fila.querySelector('.promedio-cell');
-
-        if (!isNaN(ser) && !isNaN(saber) && !isNaN(hacer)) {
-            const promedio = (ser + saber + hacer) / 3;
-            // CORREGIDO: Se muestra el promedio con coma para consistencia visual.
-            celdaPromedio.textContent = promedio.toFixed(1).replace('.', ',');
-        } else {
-            celdaPromedio.textContent = '';
-        }
+    const estudiantesDataEl = document.getElementById('estudiantes-data-json');
+    if (!estudiantesDataEl) {
+        console.error("Elemento con ID 'estudiantes-data-json' no encontrado.");
+        return;
     }
     
-    function validarAlSalir(e) {
-        const input = e.target;
-        if (!input.classList.contains('nota-input')) return;
+    const estudiantesData = JSON.parse(estudiantesDataEl.textContent || '[]');
+    let hayCambiosSinGuardar = false;
 
-        if (input.value.trim() === '') {
-            const fila = input.closest('tr');
-            if(fila) calcularPromedio(fila);
-            return;
-        }
-
-        let valor = input.value.replace(',', '.');
-        let valorNumerico = parseFloat(valor);
-
-        if (isNaN(valorNumerico)) {
-            input.value = '';
-        } else {
-            if (valorNumerico > 5.0) valorNumerico = 5.0;
-            if (valorNumerico < 1.0) valorNumerico = 1.0;
-            
-            // CORREGIDO: Se formatea el número a un solo decimal y se muestra con coma.
-            input.value = valorNumerico.toFixed(1).replace('.', ',');
-        }
-        
-        const fila = input.closest('tr');
-        if (fila) {
-            calcularPromedio(fila);
+    // --- FUNCIONES DE ESTADO Y UI ---
+    function actualizarStatus(estado) {
+        if (!statusIndicator) return;
+        statusIndicator.classList.remove('status-saved', 'status-pending', 'status-error');
+        switch (estado) {
+            case 'pending':
+                statusIndicator.classList.add('status-pending');
+                statusIndicator.title = 'Cambios sin guardar';
+                hayCambiosSinGuardar = true;
+                if(guardarTodoBtn) guardarTodoBtn.disabled = false;
+                break;
+            case 'saved':
+                statusIndicator.classList.add('status-saved');
+                statusIndicator.title = 'Todos los cambios guardados';
+                hayCambiosSinGuardar = false;
+                if(guardarTodoBtn) guardarTodoBtn.disabled = true;
+                break;
+            case 'error':
+                statusIndicator.classList.add('status-error');
+                statusIndicator.title = 'Error al guardar';
+                hayCambiosSinGuardar = true;
+                if(guardarTodoBtn) guardarTodoBtn.disabled = false;
+                break;
         }
     }
 
-    tablaBody.addEventListener('input', function(e) {
-        if (e.target.classList.contains('nota-input') || e.target.classList.contains('input-inasistencia')) {
-            guardarBtn.disabled = false;
-        }
-    });
+    // --- FUNCIONES DE RENDERIZADO Y CÁLCULO ---
+    function crearElementoNota(nota = { desc: '', valor: '' }) {
+        const div = document.createElement('div');
+        div.className = 'nota-detallada-item';
+        div.innerHTML = `
+            <input type="text" class="form-control form-control-sm input-desc" placeholder="Descripción (ej: Taller 1)" value="${nota.desc || ''}">
+            <input type="text" class="form-control form-control-sm input-valor" inputmode="decimal" placeholder="Nota" value="${nota.valor || ''}">
+            <button type="button" class="btn btn-danger btn-sm btn-remove-nota" title="Eliminar nota">&times;</button>
+        `;
+        return div;
+    }
 
-    tablaBody.addEventListener('blur', validarAlSalir, true);
-    
-    tablaBody.addEventListener('click', function(e) {
-        const syncButton = e.target.closest('.sync-inasistencias');
-        if (syncButton) {
-            const inputInasistencia = syncButton.previousElementSibling;
-            if (inputInasistencia) {
-                inputInasistencia.value = ''; 
-                inputInasistencia.dispatchEvent(new Event('input', { 'bubbles': true }));
-                statusMsg.textContent = 'Actualizando...';
-                statusMsg.className = 'text-primary';
-                statusMsg.style.opacity = '1';
-                guardarBtn.click();
-            }
-        }
-    });
+    function renderizarNotasIniciales() {
+        if (!tablaCalificaciones) return;
+        estudiantesData.forEach(estudiante => {
+            const fila = tablaCalificaciones.querySelector(`tr[data-estudiante-id="${estudiante.info.id}"]`);
+            if (!fila) return;
 
-    guardarBtn.addEventListener('click', async function() {
-        const estudiantesData = [];
-        tablaBody.querySelectorAll('tr').forEach(fila => {
-            // Se reemplaza la coma por el punto antes de enviar al backend.
-            estudiantesData.push({
-                estudiante_id: fila.querySelector('.nota-input').dataset.estudianteId,
-                nota_ser: fila.querySelector('[data-tipo="ser"]').value.replace(',', '.'),
-                nota_saber: fila.querySelector('[data-tipo="saber"]').value.replace(',', '.'),
-                nota_hacer: fila.querySelector('[data-tipo="hacer"]').value.replace(',', '.'),
-                inasistencias: fila.querySelector('.input-inasistencia').value,
+            ['SER', 'SABER', 'HACER'].forEach(tipo => {
+                const contenedor = fila.querySelector(`.notas-container[data-tipo="${tipo.toLowerCase()}"]`);
+                const notas = estudiante.calificaciones[tipo]?.detalladas || [];
+                
+                if (notas.length > 0) {
+                    notas.forEach(nota => contenedor.prepend(crearElementoNota(nota)));
+                } else {
+                    contenedor.prepend(crearElementoNota());
+                }
+                actualizarPromedio(contenedor);
             });
+            actualizarDefinitiva(fila);
+        });
+        actualizarStatus('saved');
+    }
+
+    function actualizarPromedio(contenedor) {
+        const notasInputs = contenedor.querySelectorAll('.input-valor');
+        const displaySpan = contenedor.querySelector('.promedio-display span');
+        let suma = 0;
+        let count = 0;
+
+        notasInputs.forEach(input => {
+            const valor = parseFloat(input.value.replace(',', '.'));
+            if (!isNaN(valor) && valor >= 1.0 && valor <= 5.0) {
+                suma += valor;
+                count++;
+            }
         });
 
-        const payload = { 
-            asignacion_id: asignacionId, materia_id: materiaId, 
-            periodo_id: periodoId, estudiantes: estudiantesData 
+        const promedio = count > 0 ? (suma / count).toFixed(2) : 'N/A';
+        displaySpan.textContent = promedio;
+        
+        const fila = contenedor.closest('tr');
+        if(fila) actualizarDefinitiva(fila);
+    }
+
+    function actualizarDefinitiva(fila) {
+        const pSerText = document.querySelector('.comp-ser')?.textContent || '33.33';
+        const pSaberText = document.querySelector('.comp-saber')?.textContent || '33.33';
+        const pHacerText = document.querySelector('.comp-hacer')?.textContent || '33.34';
+
+        const pSer = parseFloat(pSerText.match(/(\d+(\.\d+)?)/)?.[0] || 33.33) / 100;
+        const pSaber = parseFloat(pSaberText.match(/(\d+(\.\d+)?)/)?.[0] || 33.33) / 100;
+        const pHacer = parseFloat(pHacerText.match(/(\d+(\.\d+)?)/)?.[0] || 33.34) / 100;
+
+        const promSer = parseFloat(fila.querySelector('.notas-container[data-tipo="ser"] .promedio-display span').textContent);
+        const promSaber = parseFloat(fila.querySelector('.notas-container[data-tipo="saber"] .promedio-display span').textContent);
+        const promHacer = parseFloat(fila.querySelector('.notas-container[data-tipo="hacer"] .promedio-display span').textContent);
+        const celdaDefinitiva = fila.querySelector('.celda-definitiva span');
+
+        if (!isNaN(promSer) && !isNaN(promSaber) && !isNaN(promHacer)) {
+            const definitiva = (promSer * pSer) + (promSaber * pSaber) + (promHacer * pHacer);
+            celdaDefinitiva.textContent = definitiva.toFixed(2);
+        } else {
+            celdaDefinitiva.textContent = 'N/A';
+        }
+    }
+
+    // --- MANEJO DE EVENTOS ---
+
+    if (tablaCalificaciones) {
+        tablaCalificaciones.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-remove-nota')) {
+                const item = e.target.closest('.nota-detallada-item');
+                const contenedor = item.parentElement;
+                item.remove();
+                actualizarPromedio(contenedor);
+                actualizarStatus('pending');
+            }
+        });
+
+        tablaCalificaciones.addEventListener('input', function(e) {
+            if (e.target.classList.contains('input-valor') || e.target.classList.contains('input-desc')) {
+                const contenedor = e.target.closest('.notas-container');
+                if (contenedor) {
+                    actualizarPromedio(contenedor);
+                }
+                actualizarStatus('pending');
+            }
+        });
+    }
+
+    document.querySelectorAll('.btn-add-all').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tipo = this.dataset.tipo;
+            tablaCalificaciones.querySelectorAll(`.notas-container[data-tipo="${tipo}"]`).forEach(contenedor => {
+                contenedor.prepend(crearElementoNota());
+            });
+            actualizarStatus('pending');
+        });
+    });
+
+    guardarTodoBtn?.addEventListener('click', async function() {
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+
+        const payload = {
+            periodo_id: asignacionData.periodoId,
+            materia_id: asignacionData.materiaId,
+            asignacion_id: asignacionData.id,
+            estudiantes: []
         };
 
-        statusMsg.textContent = 'Guardando...';
-        statusMsg.className = 'text-primary';
-        statusMsg.style.opacity = '1';
-        this.disabled = true;
+        tablaCalificaciones.querySelectorAll('tbody tr[data-estudiante-id]').forEach(fila => {
+            const estudianteId = fila.dataset.estudianteId;
+            const datosEstudiante = {
+                estudiante_id: estudianteId,
+                ser: [],
+                saber: [],
+                hacer: []
+            };
+
+            ['ser', 'saber', 'hacer'].forEach(tipo => {
+                fila.querySelectorAll(`.notas-container[data-tipo="${tipo}"] .nota-detallada-item`).forEach(item => {
+                    const desc = item.querySelector('.input-desc').value.trim();
+                    const valor = item.querySelector('.input-valor').value.trim();
+                    if (valor) {
+                        datosEstudiante[tipo].push({ desc, valor });
+                    }
+                });
+            });
+            payload.estudiantes.push(datosEstudiante);
+        });
 
         try {
-            const response = await fetch(guardarUrl, {
+            const response = await fetch(asignacionData.guardarUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': asignacionData.csrfToken,
+                },
                 body: JSON.stringify(payload)
             });
             const result = await response.json();
-
-            if (result.status === 'success') {
-                statusMsg.textContent = '¡Guardado con éxito!';
-                statusMsg.className = 'text-success';
-                setTimeout(() => window.location.reload(), 1200);
-            } else if (result.status === 'success_with_errors') {
-                let errorHtml = `<p class="mb-1"><strong>${result.message}</strong></p><ul class="mb-0 ps-4" style="font-size: 0.9em;">`;
-                result.errors.forEach(err => { errorHtml += `<li>${err}</li>`; });
-                errorHtml += '</ul>';
-                statusMsg.innerHTML = errorHtml;
-                statusMsg.className = 'alert alert-warning p-2';
-                this.disabled = false;
+            
+            if (response.ok && result.status === 'success') {
+                alert('¡Éxito! ' + result.message);
+                actualizarStatus('saved');
             } else {
-                statusMsg.textContent = `Error: ${result.message}`;
-                statusMsg.className = 'alert alert-danger p-2';
-                this.disabled = false;
+                throw new Error(result.message || 'Error al guardar los datos.');
             }
         } catch (error) {
-            console.error('Error en la solicitud fetch:', error);
-            statusMsg.textContent = 'Error de red. Verifique su conexión.';
-            statusMsg.className = 'alert alert-danger p-2';
-            this.disabled = false;
+            alert('Error: ' + error.message);
+            actualizarStatus('error');
         } finally {
-            statusMsg.style.opacity = '1';
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Todos los Cambios';
+        }
+    });
+    
+    window.addEventListener('beforeunload', function (e) {
+        if (hayCambiosSinGuardar) {
+            e.preventDefault();
+            e.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
         }
     });
 
-    tablaBody.addEventListener('paste', function(e) {
-        e.preventDefault();
-        let pasteData = (e.clipboardData || window.clipboardData).getData('text');
-        if (!pasteData) return;
-        // Al pegar, no se cambia coma por punto, ya que la validación 'blur' lo hará.
-        const rows = pasteData.split(/\r\n|\n|\r/);
-        const activeElement = document.activeElement;
-        if (activeElement.tagName !== 'INPUT' || (!activeElement.classList.contains('nota-input') && !activeElement.classList.contains('input-inasistencia'))) return;
-        
-        let startCell = activeElement.parentElement;
-        let startRow = startCell.parentElement;
-        let startCellIndex = Array.from(startRow.children).indexOf(startCell);
-        let startRowIndex = Array.from(tablaBody.children).indexOf(startRow);
-        
-        rows.forEach((rowText, rowIndex) => {
-            const cells = rowText.split('\t');
-            const targetRow = tablaBody.children[startRowIndex + rowIndex];
-            if (!targetRow) return;
-            cells.forEach((cellText, cellIndex) => {
-                const targetCell = targetRow.children[startCellIndex + cellIndex];
-                if (!targetCell) return;
-                const input = targetCell.querySelector('.nota-input, .input-inasistencia');
-                if (input && !input.disabled) {
-                    input.value = cellText.trim();
-                    input.dispatchEvent(new Event('blur', { 'bubbles': true, cancelable: true }));
-                    input.dispatchEvent(new Event('input', { 'bubbles': true, cancelable: true }));
-                }
-            });
-        });
-    });
-    
-    tablaBody.querySelectorAll('tr').forEach(calcularPromedio);
+    renderizarNotasIniciales();
 });

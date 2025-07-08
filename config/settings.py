@@ -1,18 +1,9 @@
-# settings.py - Versión Final con Diagnóstico de Variables de Entorno
+# settings.py - Versión para desarrollo local con HTTPS y producción en Render
 import os
 from pathlib import Path
+import dj_database_url
 
-# --- INICIO DEL CÓDIGO DE DIAGNÓSTICO ---
-# Imprimimos el valor crudo de USE_B2 tal como lo ve el servidor al arrancar.
-# Esto nos dirá exactamente qué está leyendo Render.
-print("==================================================")
-print(f"DIAGNÓSTICO: Valor crudo de USE_B2: '{os.getenv('USE_B2')}'")
-print(f"DIAGNÓSTICO: Tipo de dato: {type(os.getenv('USE_B2'))}")
-print("==================================================")
-# --- FIN DEL CÓDIGO DE DIAGNÓSTICO ---
-
-
-# Carga de variables de entorno (a prueba de fallos para desarrollo local)
+# Carga de variables de entorno (útil para desarrollo local)
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -22,7 +13,6 @@ except ModuleNotFoundError:
 # --- Configuración Base ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-local-dev-key-fallback')
-# DEBUG se establece a False por defecto en producción.
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 
 # --- Configuración de Hosts ---
@@ -31,14 +21,12 @@ RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
-# Agrega tus dominios personalizados y los de desarrollo
 ALLOWED_HOSTS.extend([
     'integradoapr.edu.co',
     'www.integradoapr.edu.co',
     '127.0.0.1',
     'localhost',
 ])
-
 
 # --- Aplicaciones Instaladas ---
 INSTALLED_APPS = [
@@ -51,8 +39,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'notas.apps.NotasConfig',
     'storages',
+    'django_extensions',  # ✅ Agregada para runserver_plus
 ]
 
+# --- Middleware ---
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -67,6 +57,7 @@ MIDDLEWARE = [
 ROOT_URLCONF = 'config.urls'
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# --- Templates ---
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -84,12 +75,24 @@ TEMPLATES = [
 ]
 
 # --- Base de Datos ---
-if DEBUG:
-    DATABASES = {'default': {'ENGINE': 'django.db.backends.sqlite3', 'NAME': BASE_DIR / 'db.sqlite3'}}
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL:
+    print("🚀 MODO PRODUCCIÓN: Usando base de datos PostgreSQL desde DATABASE_URL.")
+    DATABASES['default'] = dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        ssl_require=True
+    )
 else:
-    import dj_database_url
-    DATABASES = {'default': dj_database_url.config(conn_max_age=60, ssl_require=True)}
+    print("✅ MODO DESARROLLO: Usando base de datos local SQLite.")
 
+# --- Validación de Contraseñas ---
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -97,43 +100,24 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# --- Internacionalización ---
 LANGUAGE_CODE = 'es-co'
 TIME_ZONE = 'America/Bogota'
 USE_I18N = True
 USE_TZ = True
 
-# --- Archivos Estáticos (CSS, JS) ---
+# --- Archivos Estáticos ---
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# --- Almacenamiento de Archivos (Media) ---
-USE_B2 = os.getenv("USE_B2", "false").lower() in ("true", "1", "yes")
+# --- Archivos de Medios ---
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
-if USE_B2:
-    print("✅ Usando almacenamiento en Backblaze B2.")
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    
-    AWS_ACCESS_KEY_ID = os.getenv("B2_APPLICATION_KEY_ID")
-    AWS_SECRET_ACCESS_KEY = os.getenv("B2_APPLICATION_KEY")
-    AWS_STORAGE_BUCKET_NAME = os.getenv("B2_BUCKET_NAME")
-    AWS_S3_REGION_NAME = os.getenv("B2_REGION")
-    
-    AWS_S3_ENDPOINT_URL = f'https://s3.{AWS_S3_REGION_NAME}.backblazeb2.com'
-    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.backblazeb2.com'
-    
-    AWS_S3_SIGNATURE_VERSION = 's3v4'
-    AWS_DEFAULT_ACL = 'public-read'
-    AWS_S3_FILE_OVERWRITE = False
-    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
-
-else:
-    print("✅ Usando almacenamiento local.")
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = BASE_DIR / 'media'
-
+# --- Campo por defecto ---
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- Seguridad en Producción ---

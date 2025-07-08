@@ -1,6 +1,8 @@
 # notas/models/academicos.py
 from django.db import models
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
+from decimal import Decimal
 import datetime
 
 from django.contrib.auth.models import User
@@ -26,17 +28,11 @@ class Materia(models.Model):
     )
     area = models.ForeignKey(AreaConocimiento, on_delete=models.CASCADE, related_name="materias", verbose_name="Área de Conocimiento")
     
-    # --- CORRECCIÓN: CAMPO INTENSIDAD_HORARIA ELIMINADO ---
-    # La intensidad horaria se manejará en el modelo AsignacionDocente,
-    # ya que depende de la materia Y el curso donde se dicta.
-
     def __str__(self): return self.nombre
     def save(self, *args, **kwargs):
         self.nombre = self.nombre.upper()
         if self.abreviatura:
             self.abreviatura = self.abreviatura.upper()
-        # Se elimina la lógica que creaba una abreviatura por defecto
-        # para dar más control al administrador.
         super().save(*args, **kwargs)
     class Meta:
         verbose_name = "Materia"; verbose_name_plural = "Materias"; ordering = ['area__nombre', 'nombre']
@@ -60,27 +56,81 @@ class AsignacionDocente(models.Model):
     materia = models.ForeignKey(Materia, on_delete=models.CASCADE, verbose_name="Materia")
     curso = models.ForeignKey(Curso, on_delete=models.CASCADE, verbose_name="Curso")
     intensidad_horaria_semanal = models.PositiveSmallIntegerField(default=0, verbose_name="Intensidad Horaria (IH)")
+    
+    # --- CAMPO NUEVO: SELECTOR DE PONDERACIÓN ---
+    usar_ponderacion_equitativa = models.BooleanField(
+        default=True,
+        verbose_name="Usar ponderación equitativa",
+        help_text="Si se marca, las 3 competencias (Ser, Saber, Hacer) valdrán lo mismo. Se ignorarán los porcentajes manuales."
+    )
+
+    # --- Campos para ponderación manual ---
+    porcentaje_ser = models.PositiveIntegerField(
+        default=30, 
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Porcentaje de la nota del SER (ej: 30). Solo aplica si la ponderación no es equitativa."
+    )
+    porcentaje_saber = models.PositiveIntegerField(
+        default=40,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Porcentaje de la nota del SABER (ej: 40). Solo aplica si la ponderación no es equitativa."
+    )
+    porcentaje_hacer = models.PositiveIntegerField(
+        default=30,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Porcentaje de la nota del HACER (ej: 30). Solo aplica si la ponderación no es equitativa."
+    )
+
     class Meta:
         unique_together = ('docente', 'materia', 'curso'); verbose_name = "Asignación Académica"; verbose_name_plural = "Asignaciones Académicas"; ordering = ['curso__nombre', 'materia__nombre']
+    
     def __str__(self): return f"{self.docente} - {self.materia} en {self.curso}"
+
+    def clean(self):
+        """
+        Añade validación para asegurar que los porcentajes manuales sumen 100,
+        pero solo si la opción de ponderación equitativa no está marcada.
+        """
+        super().clean()
+        if not self.usar_ponderacion_equitativa:
+            total_porcentaje = (self.porcentaje_ser or 0) + \
+                               (self.porcentaje_saber or 0) + \
+                               (self.porcentaje_hacer or 0)
+            if total_porcentaje != 100:
+                raise ValidationError(
+                    f"Cuando la ponderación no es equitativa, la suma de los porcentajes debe ser 100. Actualmente es {total_porcentaje}."
+                )
 
 class Calificacion(models.Model):
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
     materia = models.ForeignKey(Materia, on_delete=models.CASCADE)
-    docente = models.ForeignKey(Docente, on_delete=models.CASCADE)
     periodo = models.ForeignKey(PeriodoAcademico, on_delete=models.CASCADE)
+    docente = models.ForeignKey(Docente, on_delete=models.SET_NULL, null=True)
+    
     TIPO_NOTA_CHOICES = [
-        ('SER', 'Ser'), ('SABER', 'Saber'), ('HACER', 'Hacer'), 
-        ('PROM_PERIODO', 'Promedio Periodo'), ('NIVELACION', 'Nota de Nivelación')
+        ('SER', 'Promedio Ser'),
+        ('SABER', 'Promedio Saber'),
+        ('HACER', 'Promedio Hacer'),
+        ('PROM_PERIODO', 'Promedio del Periodo'),
     ]
-    tipo_nota = models.CharField(max_length=15, choices=TIPO_NOTA_CHOICES)
-    valor_nota = models.DecimalField(max_digits=4, decimal_places=2)
-    es_recuperada = models.BooleanField(default=False)
-    fecha_registro = models.DateTimeField(auto_now_add=True)
+    tipo_nota = models.CharField(max_length=12, choices=TIPO_NOTA_CHOICES)
+    valor_nota = models.DecimalField(max_digits=4, decimal_places=2, validators=[MinValueValidator(Decimal('1.0')), MaxValueValidator(Decimal('5.0'))])
+
     class Meta:
-        unique_together = ('estudiante', 'materia', 'periodo', 'tipo_nota'); verbose_name = "Calificación"; verbose_name_plural = "Calificaciones"
+        unique_together = ('estudiante', 'materia', 'periodo', 'tipo_nota'); verbose_name = "Calificación (Promedio)"; verbose_name_plural = "Calificaciones (Promedios)"
     def __str__(self): return f"{self.estudiante} | {self.materia} | {self.periodo.nombre} - {self.get_tipo_nota_display()}: {self.valor_nota}"
 
+class NotaDetallada(models.Model):
+    calificacion_promedio = models.ForeignKey(Calificacion, on_delete=models.CASCADE, related_name='notas_detalladas')
+    descripcion = models.CharField(max_length=100, help_text="Descripción de la nota (ej: 'Examen 1', 'Taller en clase')")
+    valor_nota = models.DecimalField(max_digits=4, decimal_places=2, validators=[MinValueValidator(Decimal('1.0')), MaxValueValidator(Decimal('5.0'))])
+    
+    class Meta:
+        verbose_name = "Nota Detallada"; verbose_name_plural = "Notas Detalladas"
+    def __str__(self):
+        return f"{self.descripcion}: {self.valor_nota}"
+
+# ... (El resto de tus modelos se mantienen igual)
 class IndicadorLogroPeriodo(models.Model):
     asignacion = models.ForeignKey(AsignacionDocente, on_delete=models.CASCADE)
     periodo = models.ForeignKey(PeriodoAcademico, on_delete=models.CASCADE)

@@ -4,6 +4,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const dynamicContentContainer = document.getElementById('dynamicMainContent');
     const dynamicContentBody = dynamicContentContainer.querySelector('.card-body');
 
+    // Botones del nuevo menú
+    const logoBtn = document.getElementById('logoBtn');
+    const inicioBtn = document.getElementById('inicioBtn');
+    const noticiasBtn = document.getElementById('noticiasBtn');
+    const misionBtn = document.getElementById('misionBtn');
+    const historiaBtn = document.getElementById('historiaBtn');
+    const modeloBtn = document.getElementById('modeloBtn');
+    const galeriaBtn = document.getElementById('galeriaBtn');
+    const directorioBtn = document.getElementById('directorioBtn');
+    const documentosBtn = document.getElementById('documentosBtn');
+    const recursosBtn = document.getElementById('recursosBtn');
+    const redesBtn = document.getElementById('redesBtn');
+
+    // --- Contenidos HTML Estáticos ---
+    const misionHTML = `<h2 class="h3 fw-bold text-center mb-4" style="color: var(--color-primario);">Misión y Visión</h2><p class="text-justify">La Institución Educativa Técnica Alfonso Palacio Rudas, fiel a su tradición democrática e integradora, inspirada en la tolerancia, autonomía, identidad, libertad y paz, tiene como misión relacionar el ser con el saber y el saber hacer; así como desarrollar la capacidad de sentir, pensar y actuar de quien aprende.</p><hr class="my-4"><p class="text-justify">La visión de futuro de la INSTITUCIÓN EDUCATIVA TÉCNICA ALFONSO PALACIO RUDAS se enmarca dentro del compromiso común de cada uno de los miembros de la Comunidad Educativa por formar hombres y mujeres íntegros(as) e integrales. Se pretende que demuestren liderazgo social, pronunciamiento y compromiso ante el mundo que les rodea, como agentes de cambio, íntegros, creativos y coherentes a través de lo que piensan, sienten dicen y hacen.</p>`;
+    const historiaHTML = `<h2 class="h3 fw-bold text-center mb-4" style="color: var(--color-primario);">Nuestra Historia</h2><p>Contenido sobre la historia del colegio...</p>`;
+    const modeloHTML = `<h2 class="h3 fw-bold text-center mb-4" style="color: var(--color-primario);">Modelo Pedagógico</h2><p>Contenido sobre el modelo pedagógico...</p>`;
+    const recursosHTML = `<h2 class="h3 fw-bold text-center mb-4" style="color: var(--color-primario);">Recursos Educativos</h2><div class="list-group"><a href="https://www.duolingo.com" target="_blank" class="list-group-item list-group-item-action">Duolingo - Aprender idiomas</a><a href="https://es.khanacademy.org/" target="_blank" class="list-group-item list-group-item-action">Khan Academy - Matemáticas, ciencias y más</a></div>`;
+    const redesHTML = `<h2 class="h3 fw-bold text-center mb-4" style="color: var(--color-primario);">Nuestras Redes Sociales</h2><div class="list-group"><a href="https://www.facebook.com/iet.alfonso.palacio.rudas.honda" target="_blank" class="list-group-item list-group-item-action fs-5"><i class="fab fa-facebook-square fa-fw me-3"></i>Facebook</a><a href="https://www.instagram.com/nombredeusuario" target="_blank" class="list-group-item list-group-item-action fs-5"><i class="fab fa-instagram-square fa-fw me-3"></i>Instagram</a></div>`;
+    
     // --- Plantillas HTML base para contenido dinámico ---
     const cofradiaTitleHTML = `<div class="text-center mb-4 border-bottom pb-3"><p class="text-uppercase small text-muted mb-0" style="letter-spacing: 2px;">Últimas Noticias</p><h2 class="display-5 fw-bold" style="color: var(--color-primario);">El Diario La Cofradía Informa</h2></div>`;
     const galeriaBaseHTML = `<h2 class="h3 fw-bold text-center mb-4" style="color: var(--color-primario);">GALERÍA DE FOTOS</h2><div id="galeria-grid" class="row g-3"></div>`;
@@ -12,23 +32,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     
     // --- Funciones Asíncronas para Cargar Datos del Backend ---
-
-    /**
-     * Función genérica para cargar contenido HTML simple desde una URL.
-     * @param {string} url - La URL de Django de la que se obtendrá el contenido.
-     */
-    async function cargarContenidoSimple(url) {
-        showDynamicView('<div class="text-center w-100"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Cargando...</p></div>');
-        try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Error de red al cargar el contenido.');
-            const contentHTML = await response.text();
-            dynamicContentBody.innerHTML = contentHTML;
-        } catch (error) {
-            dynamicContentBody.innerHTML = `<p class="text-center text-danger w-100">${error.message}</p>`;
-            console.error(`Error al cargar desde ${url}:`, error);
-        }
-    }
 
     async function cargarInicio() {
         showDefaultView();
@@ -195,30 +198,21 @@ document.addEventListener('DOMContentLoaded', function() {
         logoBtn: cargarInicio,
         inicioBtn: cargarInicio,
         noticiasBtn: cargarNoticias,
-        misionBtn: () => cargarContenidoSimple(DJANGO_URLS.mision),
-        historiaBtn: () => cargarContenidoSimple(DJANGO_URLS.historia),
-        modeloBtn: () => cargarContenidoSimple(DJANGO_URLS.modelo),
+        misionBtn: () => showDynamicView(misionHTML),
+        historiaBtn: () => showDynamicView(historiaHTML),
+        modeloBtn: () => showDynamicView(modeloHTML),
         galeriaBtn: cargarGaleria,
         directorioBtn: cargarDirectorio,
         documentosBtn: cargarDocumentos,
-        recursosBtn: () => cargarContenidoSimple(DJANGO_URLS.recursos),
-        redesBtn: () => cargarContenidoSimple(DJANGO_URLS.redes)
+        recursosBtn: () => showDynamicView(recursosHTML),
+        redesBtn: () => showDynamicView(redesHTML)
     };
 
-    // Itera sobre los botones y les asigna su función de click
     for (const btnId in menuActions) {
         const btn = document.getElementById(btnId);
         if (btn) {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                // Cierra el menú de hamburguesa en móvil si está abierto
-                const navbarCollapse = document.getElementById('main-navbar');
-                if (navbarCollapse.classList.contains('show')) {
-                    const bsCollapse = new bootstrap.Collapse(navbarCollapse, {
-                        toggle: false
-                    });
-                    bsCollapse.hide();
-                }
                 menuActions[btnId]();
             });
         }

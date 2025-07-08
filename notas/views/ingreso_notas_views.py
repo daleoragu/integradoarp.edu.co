@@ -5,14 +5,20 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 import json
-from django.db import transaction
-from django.db.models import Count
-from decimal import Decimal
+from django.db import transaction, models
+from decimal import Decimal, InvalidOperation
 
 from ..models import (
     Docente, AsignacionDocente, PeriodoAcademico, Estudiante,
-    IndicadorLogroPeriodo, Calificacion, InasistenciasManualesPeriodo, Asistencia
+    IndicadorLogroPeriodo, Calificacion, NotaDetallada
 )
+
+# Clase auxiliar para convertir Decimal a string en JSON
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, o):
+        if isinstance(o, Decimal):
+            return str(o)
+        return super(DecimalEncoder, self).default(o)
 
 @login_required
 def ingresar_notas_periodo_vista(request):
@@ -28,7 +34,7 @@ def ingresar_notas_periodo_vista(request):
         if docente_seleccionado_id:
             asignaciones_docente = AsignacionDocente.objects.filter(docente_id=docente_seleccionado_id)
         else:
-            asignaciones_docente = AsignacionDocente.objects.all()
+            asignaciones_docente = AsignacionDocente.objects.none()
     else:
         try:
             docente_actual = Docente.objects.get(user=user)
@@ -43,7 +49,7 @@ def ingresar_notas_periodo_vista(request):
     context['docente_seleccionado_id'] = docente_seleccionado_id
     context['asignacion_seleccionada_id'] = asignacion_seleccionada_id
     context['periodo_seleccionado_id'] = periodo_seleccionado_id
-    context['estudiantes_data'] = []
+    context['estudiantes_data_json'] = '[]' # Default to empty JSON array
 
     if asignacion_seleccionada_id and periodo_seleccionado_id:
         asignacion = get_object_or_404(AsignacionDocente, id=asignacion_seleccionada_id)
@@ -61,35 +67,31 @@ def ingresar_notas_periodo_vista(request):
                  messages.warning(request, f"El periodo '{periodo}' está cerrado. Las notas son de solo lectura.")
 
             estudiantes = Estudiante.objects.filter(curso=asignacion.curso, is_active=True).order_by('user__last_name', 'user__first_name')
-            calificaciones = Calificacion.objects.filter(materia=asignacion.materia, periodo=periodo)
-            calificaciones_map = {(c.estudiante_id, c.tipo_nota): c.valor_nota for c in calificaciones}
             
-            inasistencias_auto_qs = Asistencia.objects.filter(
-                asignacion=asignacion, fecha__range=(periodo.fecha_inicio, periodo.fecha_fin),
-                estado='A', justificada=False
-            ).values('estudiante_id').annotate(total=Count('id'))
-            inasistencias_auto_map = {i['estudiante_id']: i['total'] for i in inasistencias_auto_qs}
+            calificaciones = Calificacion.objects.filter(
+                materia=asignacion.materia, periodo=periodo
+            ).prefetch_related('notas_detalladas')
             
-            inasistencias_manuales_qs = InasistenciasManualesPeriodo.objects.filter(asignacion=asignacion, periodo=periodo)
-            inasistencias_manuales_map = {i.estudiante_id: i.cantidad for i in inasistencias_manuales_qs}
+            calificaciones_map = {
+                (c.estudiante_id, c.tipo_nota): {
+                    'promedio': c.valor_nota,
+                    'detalladas': [{'desc': n.descripcion, 'valor': n.valor_nota} for n in c.notas_detalladas.all()]
+                } for c in calificaciones
+            }
             
             estudiantes_data = []
             for est in estudiantes:
-                inasistencia_manual = inasistencias_manuales_map.get(est.id)
-                inasistencia_automatica = inasistencias_auto_map.get(est.id, 0)
-                valor_final_inasistencias = inasistencia_manual if inasistencia_manual is not None else inasistencia_automatica
-
-                # --- CORRECCIÓN: Se elimina el formateo de notas. Se pasa el valor numérico directamente. ---
                 estudiantes_data.append({
-                    'info': est,
-                    'nota_ser': calificaciones_map.get((est.id, 'SER')),
-                    'nota_saber': calificaciones_map.get((est.id, 'SABER')),
-                    'nota_hacer': calificaciones_map.get((est.id, 'HACER')),
-                    'inasistencias': valor_final_inasistencias,
+                    'info': {'id': est.id, 'full_name': est.user.get_full_name()},
+                    'calificaciones': {
+                        'SER': calificaciones_map.get((est.id, 'SER')),
+                        'SABER': calificaciones_map.get((est.id, 'SABER')),
+                        'HACER': calificaciones_map.get((est.id, 'HACER')),
+                        'PROM_PERIODO': calificaciones_map.get((est.id, 'PROM_PERIODO')),
+                    }
                 })
-                # --- FIN DE LA CORRECCIÓN ---
 
-            context['estudiantes_data'] = estudiantes_data
+            context['estudiantes_data_json'] = json.dumps(estudiantes_data, cls=DecimalEncoder)
         
         elif not context['periodo_cerrado']:
              messages.info(request, 'Para ingresar notas, primero debe agregar al menos un indicador de logro para este periodo.')
@@ -115,83 +117,77 @@ def guardar_todo_ajax(request):
             return JsonResponse({'status': 'error', 'message': 'El periodo está cerrado.'}, status=403)
 
         asignacion = get_object_or_404(AsignacionDocente, id=asignacion_id)
-        docente_asignado = asignacion.docente 
         
-        errors = []
+        # Determinar los porcentajes a usar
+        if asignacion.usar_ponderacion_equitativa:
+            p_ser = p_saber = p_hacer = Decimal('1') / Decimal('3')
+        else:
+            p_ser = Decimal(asignacion.porcentaje_ser) / 100
+            p_saber = Decimal(asignacion.porcentaje_saber) / 100
+            p_hacer = Decimal(asignacion.porcentaje_hacer) / 100
 
         for student_data in all_student_data:
-            estudiante_id = student_data.get('estudiante_id')
-            if not estudiante_id: continue
-            
-            try:
-                estudiante_obj = Estudiante.objects.select_related('user').get(id=estudiante_id)
-            except Estudiante.DoesNotExist:
-                continue
-            
-            notas_competencias = []
-            tipos_de_nota = ['nota_ser', 'nota_saber', 'nota_hacer']
+            estudiante = get_object_or_404(Estudiante, id=student_data.get('estudiante_id'))
+            promedios_competencias = {}
 
-            for tipo_nota_key in tipos_de_nota:
-                valor_str = student_data.get(tipo_nota_key, '').strip()
-                tipo_nota_db = tipo_nota_key.split('_')[1].upper()
+            # Procesar cada competencia (SER, SABER, HACER)
+            for tipo_comp in ['ser', 'saber', 'hacer']:
+                
+                # Obtener o crear la calificación promedio para esta competencia
+                calificacion_prom, _ = Calificacion.objects.get_or_create(
+                    estudiante=estudiante,
+                    materia_id=materia_id,
+                    periodo=periodo,
+                    tipo_nota=tipo_comp.upper(),
+                    defaults={'valor_nota': Decimal('0.0'), 'docente': asignacion.docente}
+                )
 
-                if valor_str:
+                # Borrar notas detalladas anteriores para empezar de cero
+                calificacion_prom.notas_detalladas.all().delete()
+                
+                notas_validas = []
+                for nota_data in student_data.get(tipo_comp, []):
                     try:
-                        valor_nota = Decimal(valor_str.replace(',', '.'))
-                        
-                        if not (Decimal('1.0') <= valor_nota <= Decimal('5.0')):
-                            errors.append(f"Nota inválida ({valor_nota}) para {estudiante_obj.user.get_full_name()}. Solo se permiten valores entre 1.0 y 5.0.")
-                            continue
-                        
-                        notas_competencias.append(valor_nota)
-                        Calificacion.objects.update_or_create(
-                            estudiante_id=estudiante_id, materia_id=materia_id,
-                            periodo_id=periodo_id, tipo_nota=tipo_nota_db,
-                            defaults={'valor_nota': valor_nota, 'docente': docente_asignado}
-                        )
-                    except Exception:
-                        errors.append(f"Valor no numérico para {estudiante_obj.user.get_full_name()}.")
-                        continue
+                        valor = Decimal(str(nota_data.get('valor')).replace(',', '.'))
+                        if Decimal('1.0') <= valor <= Decimal('5.0'):
+                            NotaDetallada.objects.create(
+                                calificacion_promedio=calificacion_prom,
+                                descripcion=nota_data.get('desc', ''),
+                                valor_nota=valor
+                            )
+                            notas_validas.append(valor)
+                    except (InvalidOperation, TypeError):
+                        continue # Ignorar notas no válidas
+
+                # Calcular y guardar el promedio de la competencia
+                if notas_validas:
+                    promedio_comp = sum(notas_validas) / len(notas_validas)
+                    calificacion_prom.valor_nota = round(promedio_comp, 2)
+                    calificacion_prom.save()
+                    promedios_competencias[tipo_comp.upper()] = promedio_comp
                 else:
-                    Calificacion.objects.filter(
-                        estudiante_id=estudiante_id, materia_id=materia_id,
-                        periodo_id=periodo_id, tipo_nota=tipo_nota_db
-                    ).delete()
-            
-            if len(notas_competencias) == len(tipos_de_nota):
-                promedio = sum(notas_competencias) / len(notas_competencias)
+                    # Si no hay notas, se borra el registro de promedio
+                    calificacion_prom.delete()
+
+            # Calcular la nota definitiva del periodo con la ponderación
+            if len(promedios_competencias) == 3:
+                definitiva = (
+                    promedios_competencias['SER'] * p_ser +
+                    promedios_competencias['SABER'] * p_saber +
+                    promedios_competencias['HACER'] * p_hacer
+                )
+                
                 Calificacion.objects.update_or_create(
-                    estudiante_id=estudiante_id, materia_id=materia_id,
-                    periodo_id=periodo_id, tipo_nota='PROM_PERIODO',
-                    defaults={'valor_nota': round(promedio, 3), 'docente': docente_asignado}
+                    estudiante=estudiante, materia_id=materia_id, periodo=periodo, tipo_nota='PROM_PERIODO',
+                    defaults={'valor_nota': round(definitiva, 2), 'docente': asignacion.docente}
                 )
             else:
+                # Si falta alguna competencia, no se puede calcular la definitiva
                 Calificacion.objects.filter(
-                    estudiante_id=estudiante_id, materia_id=materia_id,
-                    periodo_id=periodo_id, tipo_nota='PROM_PERIODO'
+                    estudiante=estudiante, materia_id=materia_id, periodo=periodo, tipo_nota='PROM_PERIODO'
                 ).delete()
 
-            cantidad_str = student_data.get('inasistencias', '').strip()
-            if cantidad_str:
-                cantidad = int(cantidad_str)
-                InasistenciasManualesPeriodo.objects.update_or_create(
-                    estudiante_id=estudiante_id, asignacion_id=asignacion_id,
-                    periodo_id=periodo_id, defaults={'cantidad': cantidad}
-                )
-            else:
-                InasistenciasManualesPeriodo.objects.filter(
-                    estudiante_id=estudiante_id, asignacion_id=asignacion_id,
-                    periodo_id=periodo_id
-                ).delete()
-
-        if errors:
-            return JsonResponse({
-                'status': 'success_with_errors',
-                'message': 'Se guardaron las notas válidas, pero se encontraron los siguientes errores:',
-                'errors': errors
-            })
-        else:
-            return JsonResponse({'status': 'success', 'message': 'Todos los cambios han sido guardados.'})
+        return JsonResponse({'status': 'success', 'message': 'Calificaciones guardadas exitosamente.'})
 
     except Exception as e:
-        return JsonResponse({'status': 'error', 'message': f'Error interno del servidor: {str(e)}'}, status=500)
+        return JsonResponse({'status': 'error', 'message': f'Error interno: {str(e)}'}, status=500)
