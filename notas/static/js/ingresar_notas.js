@@ -1,20 +1,17 @@
 /**
  * Script para manejar la página de ingreso de notas.
- * Gestiona la creación dinámica de campos de nota, cálculos en tiempo real
- * y el envío de datos al servidor.
+ * Gestiona la creación dinámica de campos de nota, cálculos en tiempo real,
+ * el manejo de inasistencias y el envío de datos al servidor.
  */
 document.addEventListener('DOMContentLoaded', function () {
-    // Contenedor principal que tiene los data-attributes con información clave.
     const container = document.querySelector('.container-notas');
     if (!container) return;
 
-    // --- ELEMENTOS DEL DOM ---
     const tablaCalificaciones = document.getElementById('tabla-calificaciones');
     const tbody = tablaCalificaciones?.querySelector('tbody');
     const guardarTodoBtn = document.getElementById('guardarTodoBtn');
     const statusIndicator = document.getElementById('status-indicator');
     
-    // --- DATOS INICIALES (inyectados desde Django) ---
     const asignacionData = {
         id: container.dataset.asignacionId,
         materiaId: container.dataset.materiaId,
@@ -32,15 +29,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const estudiantesData = JSON.parse(estudiantesDataEl.textContent || '[]');
     let hayCambiosSinGuardar = false;
 
-    // --- FUNCIONES DE RENDERIZADO Y UI ---
-
-    /**
-     * Actualiza el indicador visual de estado de guardado.
-     * @param {'saved'|'pending'|'error'} estado - El estado actual.
-     */
     function actualizarStatus(estado) {
         if (!statusIndicator) return;
-        statusIndicator.className = 'status-indicator'; // Reset classes
+        statusIndicator.className = 'status-indicator';
         switch (estado) {
             case 'pending':
                 statusIndicator.classList.add('status-pending');
@@ -63,29 +54,17 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    /**
-     * Crea un elemento HTML para una nota detallada.
-     * @param {object} nota - Objeto con 'desc' y 'valor'.
-     * @returns {HTMLElement} El div del item de la nota.
-     */
     function crearElementoNota(nota = { desc: '', valor: '' }) {
         const div = document.createElement('div');
         div.className = 'nota-detallada-item';
-        // Se usan comillas simples para los placeholders para evitar conflictos con el HTML.
         div.innerHTML = `
-            <input type="text" class="form-control form-control-sm input-desc" placeholder='Descripción (ej: Taller 1)' value="${nota.desc || ''}">
+            <input type="text" class="form-control form-control-sm input-desc" placeholder='Descripción' value="${nota.desc || ''}">
             <input type="text" class="form-control form-control-sm input-valor" inputmode="decimal" placeholder='Nota' value="${nota.valor || ''}">
             <button type="button" class="btn btn-danger btn-sm btn-remove-nota" title="Eliminar nota">&times;</button>
         `;
         return div;
     }
 
-    /**
-     * Crea una fila <tr> para un estudiante.
-     * @param {object} estudiante - El objeto del estudiante con su información.
-     * @param {number} index - El índice del estudiante para el contador #.
-     * @returns {HTMLElement} La fila <tr> creada.
-     */
     function crearFilaEstudiante(estudiante, index) {
         const fila = document.createElement('tr');
         fila.dataset.estudianteId = estudiante.info.id;
@@ -96,18 +75,18 @@ document.addEventListener('DOMContentLoaded', function () {
             <td class="notas-container" data-tipo="saber"><div class="promedio-display">Prom: <span>N/A</span></div></td>
             <td class="notas-container" data-tipo="hacer"><div class="promedio-display">Prom: <span>N/A</span></div></td>
             <td class="text-center fw-bold celda-definitiva"><span>N/A</span></td>
+            <!-- Celda de Inasistencias reintegrada -->
+            <td class="celda-inasistencias">
+                <input type="number" class="form-control form-control-sm input-inasistencia" min="0" value="${estudiante.inasistencias || ''}">
+            </td>
         `;
         return fila;
     }
 
-    /**
-     * Construye la tabla completa a partir de los datos iniciales.
-     */
     function renderizarTablaCompleta() {
-        tbody.innerHTML = ''; // Limpiar cualquier contenido previo.
-
+        tbody.innerHTML = '';
         if (estudiantesData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-4">No hay estudiantes en este curso.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No hay estudiantes en este curso.</td></tr>';
             return;
         }
 
@@ -131,12 +110,6 @@ document.addEventListener('DOMContentLoaded', function () {
         actualizarStatus('saved');
     }
 
-    // --- FUNCIONES DE CÁLCULO ---
-
-    /**
-     * Calcula y actualiza el promedio de una competencia para una fila.
-     * @param {HTMLElement} contenedor - El <td> que contiene las notas de una competencia.
-     */
     function actualizarPromedio(contenedor) {
         const notasInputs = contenedor.querySelectorAll('.input-valor');
         const displaySpan = contenedor.querySelector('.promedio-display span');
@@ -158,10 +131,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if(fila) actualizarDefinitiva(fila);
     }
 
-    /**
-     * Calcula y actualiza la nota definitiva ponderada para una fila.
-     * @param {HTMLElement} fila - La fila <tr> del estudiante.
-     */
     function actualizarDefinitiva(fila) {
         const pSerText = document.querySelector('.comp-ser')?.textContent || '33.33';
         const pSaberText = document.querySelector('.comp-saber')?.textContent || '33.33';
@@ -184,11 +153,8 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // --- MANEJO DE EVENTOS ---
-
     if (tablaCalificaciones) {
-        tablaCalificaciones.addEventListener('click', function(e) {
-            // Eliminar una nota individual.
+        tablaCalificaciones.addEventListener('click', (e) => {
             if (e.target.classList.contains('btn-remove-nota')) {
                 const item = e.target.closest('.nota-detallada-item');
                 const contenedor = item.parentElement;
@@ -198,19 +164,19 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
 
-        tablaCalificaciones.addEventListener('input', function(e) {
-            // Recalcular al cambiar una nota o descripción.
+        tablaCalificaciones.addEventListener('input', (e) => {
             if (e.target.classList.contains('input-valor') || e.target.classList.contains('input-desc')) {
                 const contenedor = e.target.closest('.notas-container');
-                if (contenedor) {
-                    actualizarPromedio(contenedor);
-                }
+                if (contenedor) actualizarPromedio(contenedor);
+                actualizarStatus('pending');
+            }
+            // Escuchar cambios en inasistencias
+            if (e.target.classList.contains('input-inasistencia')) {
                 actualizarStatus('pending');
             }
         });
     }
 
-    // Añadir una nueva nota a todos los estudiantes para una competencia.
     document.querySelectorAll('.btn-add-all').forEach(btn => {
         btn.addEventListener('click', function() {
             const tipo = this.dataset.tipo;
@@ -221,10 +187,9 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // Guardar todos los cambios.
     guardarTodoBtn?.addEventListener('click', async function() {
         this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
 
         const payload = {
             periodo_id: asignacionData.periodoId,
@@ -235,13 +200,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
         tablaCalificaciones.querySelectorAll('tbody tr[data-estudiante-id]').forEach(fila => {
             const estudianteId = fila.dataset.estudianteId;
-            const datosEstudiante = { estudiante_id: estudianteId, ser: [], saber: [], hacer: [] };
+            const datosEstudiante = {
+                estudiante_id: estudianteId,
+                ser: [], saber: [], hacer: [],
+                // Se añade el campo de inasistencias al payload
+                inasistencias: fila.querySelector('.input-inasistencia').value.trim()
+            };
 
             ['ser', 'saber', 'hacer'].forEach(tipo => {
                 fila.querySelectorAll(`.notas-container[data-tipo="${tipo}"] .nota-detallada-item`).forEach(item => {
                     const desc = item.querySelector('.input-desc').value.trim();
                     const valor = item.querySelector('.input-valor').value.trim();
-                    if (valor) { // Solo guardar si hay una nota.
+                    if (valor) {
                         datosEstudiante[tipo].push({ desc, valor });
                     }
                 });
@@ -252,10 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
         try {
             const response = await fetch(asignacionData.guardarUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': asignacionData.csrfToken,
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': asignacionData.csrfToken },
                 body: JSON.stringify(payload)
             });
             const result = await response.json();
@@ -264,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 alert('¡Éxito! ' + result.message);
                 actualizarStatus('saved');
             } else {
-                throw new Error(result.message || 'Error desconocido al guardar los datos.');
+                throw new Error(result.message || 'Error desconocido.');
             }
         } catch (error) {
             alert('Error: ' + error.message);
@@ -275,14 +242,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
     
-    // Advertir al usuario si intenta salir con cambios sin guardar.
-    window.addEventListener('beforeunload', function (e) {
+    window.addEventListener('beforeunload', (e) => {
         if (hayCambiosSinGuardar) {
             e.preventDefault();
             e.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
         }
     });
 
-    // --- INICIALIZACIÓN ---
     renderizarTablaCompleta();
 });

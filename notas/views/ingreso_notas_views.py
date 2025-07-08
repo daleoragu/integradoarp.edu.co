@@ -10,7 +10,7 @@ from decimal import Decimal, InvalidOperation
 
 from ..models import (
     Docente, AsignacionDocente, PeriodoAcademico, Estudiante,
-    IndicadorLogroPeriodo, Calificacion, NotaDetallada
+    IndicadorLogroPeriodo, Calificacion, NotaDetallada, InasistenciasManualesPeriodo
 )
 
 # Clase auxiliar para convertir Decimal a string en JSON
@@ -49,7 +49,7 @@ def ingresar_notas_periodo_vista(request):
     context['docente_seleccionado_id'] = docente_seleccionado_id
     context['asignacion_seleccionada_id'] = asignacion_seleccionada_id
     context['periodo_seleccionado_id'] = periodo_seleccionado_id
-    context['estudiantes_data_json'] = '[]' # Default to empty JSON array
+    context['estudiantes_data_json'] = '[]'
 
     if asignacion_seleccionada_id and periodo_seleccionado_id:
         asignacion = get_object_or_404(AsignacionDocente, id=asignacion_seleccionada_id)
@@ -68,16 +68,17 @@ def ingresar_notas_periodo_vista(request):
 
             estudiantes = Estudiante.objects.filter(curso=asignacion.curso, is_active=True).order_by('user__last_name', 'user__first_name')
             
-            calificaciones = Calificacion.objects.filter(
-                materia=asignacion.materia, periodo=periodo
-            ).prefetch_related('notas_detalladas')
-            
+            calificaciones = Calificacion.objects.filter(materia=asignacion.materia, periodo=periodo).prefetch_related('notas_detalladas')
             calificaciones_map = {
                 (c.estudiante_id, c.tipo_nota): {
                     'promedio': c.valor_nota,
                     'detalladas': [{'desc': n.descripcion, 'valor': n.valor_nota} for n in c.notas_detalladas.all()]
                 } for c in calificaciones
             }
+            
+            # --- LÓGICA DE INASISTENCIAS REINTEGRADA ---
+            inasistencias_manuales_qs = InasistenciasManualesPeriodo.objects.filter(asignacion=asignacion, periodo=periodo)
+            inasistencias_map = {i.estudiante_id: i.cantidad for i in inasistencias_manuales_qs}
             
             estudiantes_data = []
             for est in estudiantes:
@@ -88,7 +89,8 @@ def ingresar_notas_periodo_vista(request):
                         'SABER': calificaciones_map.get((est.id, 'SABER')),
                         'HACER': calificaciones_map.get((est.id, 'HACER')),
                         'PROM_PERIODO': calificaciones_map.get((est.id, 'PROM_PERIODO')),
-                    }
+                    },
+                    'inasistencias': inasistencias_map.get(est.id) # Se añade el dato de inasistencias
                 })
 
             context['estudiantes_data_json'] = json.dumps(estudiantes_data, cls=DecimalEncoder)
@@ -118,7 +120,6 @@ def guardar_todo_ajax(request):
 
         asignacion = get_object_or_404(AsignacionDocente, id=asignacion_id)
         
-        # Determinar los porcentajes a usar
         if asignacion.usar_ponderacion_equitativa:
             p_ser = p_saber = p_hacer = Decimal('1') / Decimal('3')
         else:
@@ -130,19 +131,12 @@ def guardar_todo_ajax(request):
             estudiante = get_object_or_404(Estudiante, id=student_data.get('estudiante_id'))
             promedios_competencias = {}
 
-            # Procesar cada competencia (SER, SABER, HACER)
             for tipo_comp in ['ser', 'saber', 'hacer']:
-                
-                # Obtener o crear la calificación promedio para esta competencia
                 calificacion_prom, _ = Calificacion.objects.get_or_create(
-                    estudiante=estudiante,
-                    materia_id=materia_id,
-                    periodo=periodo,
+                    estudiante=estudiante, materia_id=materia_id, periodo=periodo,
                     tipo_nota=tipo_comp.upper(),
                     defaults={'valor_nota': Decimal('0.0'), 'docente': asignacion.docente}
                 )
-
-                # Borrar notas detalladas anteriores para empezar de cero
                 calificacion_prom.notas_detalladas.all().delete()
                 
                 notas_validas = []
@@ -157,35 +151,45 @@ def guardar_todo_ajax(request):
                             )
                             notas_validas.append(valor)
                     except (InvalidOperation, TypeError):
-                        continue # Ignorar notas no válidas
+                        continue
 
-                # Calcular y guardar el promedio de la competencia
                 if notas_validas:
                     promedio_comp = sum(notas_validas) / len(notas_validas)
                     calificacion_prom.valor_nota = round(promedio_comp, 2)
                     calificacion_prom.save()
                     promedios_competencias[tipo_comp.upper()] = promedio_comp
                 else:
-                    # Si no hay notas, se borra el registro de promedio
                     calificacion_prom.delete()
 
-            # Calcular la nota definitiva del periodo con la ponderación
             if len(promedios_competencias) == 3:
                 definitiva = (
                     promedios_competencias['SER'] * p_ser +
                     promedios_competencias['SABER'] * p_saber +
                     promedios_competencias['HACER'] * p_hacer
                 )
-                
                 Calificacion.objects.update_or_create(
                     estudiante=estudiante, materia_id=materia_id, periodo=periodo, tipo_nota='PROM_PERIODO',
                     defaults={'valor_nota': round(definitiva, 2), 'docente': asignacion.docente}
                 )
             else:
-                # Si falta alguna competencia, no se puede calcular la definitiva
-                Calificacion.objects.filter(
-                    estudiante=estudiante, materia_id=materia_id, periodo=periodo, tipo_nota='PROM_PERIODO'
-                ).delete()
+                Calificacion.objects.filter(estudiante=estudiante, materia_id=materia_id, periodo=periodo, tipo_nota='PROM_PERIODO').delete()
+
+            # --- LÓGICA DE INASISTENCIAS REINTEGRADA ---
+            inasistencias_str = student_data.get('inasistencias', '').strip()
+            if inasistencias_str:
+                try:
+                    cantidad = int(inasistencias_str)
+                    InasistenciasManualesPeriodo.objects.update_or_create(
+                        estudiante=estudiante, asignacion=asignacion, periodo=periodo,
+                        defaults={'cantidad': cantidad}
+                    )
+                except (ValueError, TypeError):
+                    # Si el valor no es un número válido, se elimina el registro
+                    InasistenciasManualesPeriodo.objects.filter(estudiante=estudiante, asignacion=asignacion, periodo=periodo).delete()
+            else:
+                # Si el campo está vacío, se elimina el registro
+                InasistenciasManualesPeriodo.objects.filter(estudiante=estudiante, asignacion=asignacion, periodo=periodo).delete()
+
 
         return JsonResponse({'status': 'success', 'message': 'Calificaciones guardadas exitosamente.'})
 
