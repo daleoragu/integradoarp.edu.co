@@ -1,3 +1,9 @@
+{% comment %}
+  Plantilla para la tabla de calificaciones.
+  El cuerpo de la tabla (tbody) se deja vacío intencionadamente,
+  ya que será construido dinámicamente por el archivo 'ingresar_notas.js'.
+{% endcomment %}
+
 {% if asignacion_seleccionada and periodo_seleccionado %}
 <div class="card shadow-sm mt-4">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -30,7 +36,8 @@
                 </tr>
             </thead>
             <tbody>
-                </tbody>
+                <!-- El JavaScript llenará esta sección con las filas de los estudiantes. -->
+            </tbody>
         </table>
     </div>
     <div class="card-footer text-end">
@@ -44,6 +51,8 @@
     </div>
 </div>
 
+<!-- Este div oculto es crucial. Contiene los datos de los estudiantes para que el JavaScript los lea. -->
 <div id="estudiantes-data-json" style="display: none;">{{ estudiantes_data_json|safe }}</div>
+<!-- Este div oculto guarda la URL para la función de recargar inasistencias. -->
 <div id="url-get-inasistencias" data-url="{% url 'ajax_get_inasistencias_auto' %}"></div>
 {% endif %}

@@ -1,6 +1,5 @@
 # notas/urls.py
 from django.urls import path
-# --- Se actualizan las importaciones de las vistas ---
 from .views import (
     auth_views,
     dashboard_views,
@@ -66,9 +65,9 @@ urlpatterns = [
     path('panel-administrador/gestion-carrusel/', portal_admin_views.gestion_carrusel_vista, name='gestion_carrusel'),
     path('panel-administrador/eliminar-imagen-carrusel/<int:pk>/', portal_admin_views.eliminar_imagen_carrusel_vista, name='eliminar_imagen_carrusel'),
     path('panel-administrador/editar-imagen-carrusel/<int:pk>/', portal_admin_views.editar_imagen_carrusel_vista, name='editar_imagen_carrusel'),
+    
     # --- Rutas del Panel Docente ---
     path('docente/ingresar-notas/', ingreso_notas_views.ingresar_notas_periodo_vista, name='ingresar_notas_periodo'),
-    path('ajax/get-inasistencias-auto/', ingreso_notas_views.ajax_get_inasistencias_automaticas, name='ajax_get_inasistencias_auto'),
     path('docente/reporte-parcial/', reporte_parcial_views.reporte_parcial_vista, name='reporte_parcial'),
     path('docente/planes-mejoramiento/', plan_mejoramiento_views.plan_mejoramiento_vista, name='plan_mejoramiento'),
     path('docente/asistencia/', asistencia_views.asistencia_vista, name='asistencia'),
@@ -88,6 +87,7 @@ urlpatterns = [
 
     # --- Rutas para Lógica AJAX ---
     path('ajax/guardar-todo/', ingreso_notas_views.guardar_todo_ajax, name='guardar_todo_ajax'),
+    path('ajax/get-inasistencias-auto/', ingreso_notas_views.ajax_get_inasistencias_automaticas, name='ajax_get_inasistencias_auto'),
     path('ajax/obtener-meses/', reporte_views.obtener_meses_periodo_ajax, name='ajax_obtener_meses'),
     path('ajax/guardar-asistencia/', asistencia_views.guardar_inasistencia_ajax, name='guardar_inasistencia_ajax'),
     path('ajax/datos-graficos/', estadisticas_views.datos_graficos_ajax, name='datos_graficos_ajax'),
@@ -96,12 +96,11 @@ urlpatterns = [
     path('ajax/galeria-fotos/', portal_views.galeria_fotos_json, name='ajax_galeria_fotos'),
     path('ajax/noticias/', portal_views.noticias_json, name='ajax_noticias'),
     path('ajax/carrusel/', portal_views.carrusel_imagenes_json, name='ajax_carrusel'),
-    
-    # --- INICIO: NUEVAS RUTAS AJAX PARA SECCIONES DEL COLEGIO ---
     path('ajax/historia/', portal_views.ajax_historia, name='ajax_historia'),
     path('ajax/mision-vision/', portal_views.ajax_mision_vision, name='ajax_mision_vision'),
     path('ajax/modelo-pedagogico/', portal_views.ajax_modelo_pedagogico, name='ajax_modelo_pedagogico'),
-    # --- FIN: NUEVAS RUTAS AJAX ---
+    path('ajax/recursos-educativos/', portal_views.ajax_recursos_educativos, name='ajax_recursos_educativos'),
+    path('ajax/redes-sociales/', portal_views.ajax_redes_sociales, name='ajax_redes_sociales'),
 
     # --- Rutas de Boletines y Sábanas ---
     path('docente/selector-boletines/', boletin_views.selector_boletin_vista, name='selector_boletines'),
@@ -138,10 +137,6 @@ urlpatterns = [
     path('notificaciones/', notificaciones_views.lista_notificaciones_vista, name='lista_notificaciones'),
     path('ajax/obtener-notificaciones/', notificaciones_views.obtener_notificaciones_dropdown_ajax, name='obtener_notificaciones_dropdown'),
     path('ajax/marcar-leida/', notificaciones_views.marcar_notificacion_leida_ajax, name='marcar_notificacion_leida'),
-
-    # ===============================================================
-    # RUTAS ACTUALIZADAS APUNTANDO A LOS NUEVOS ARCHIVOS DE VISTAS
-    # ===============================================================
 
     # --- Rutas de Suplantación ---
     path('suplantar/iniciar/<int:user_id>/', impersonation_views.iniciar_suplantacion, name='iniciar_suplantacion'),
@@ -187,18 +182,4 @@ urlpatterns = [
     path('panel-administrador/exportar-materias/', export_views.exportar_materias_excel, name='exportar_materias_excel'),
     path('panel-administrador/descargar-plantilla-materias/', export_views.descargar_plantilla_materias, name='descargar_plantilla_materias'),
     path('panel-administrador/descargar-plantilla-docentes/', export_views.descargar_plantilla_docentes, name='descargar_plantilla_docentes'),   
-
-     # --- INICIO: NUEVAS RUTAS AJAX PARA COMUNIDAD ---
-    path('ajax/recursos-educativos/', portal_views.ajax_recursos_educativos, name='ajax_recursos_educativos'),
-    path('ajax/redes-sociales/', portal_views.ajax_redes_sociales, name='ajax_redes_sociales'),
-    # --- FIN: NUEVAS RUTAS AJAX ---
-           
-     # --- Mantenemos todas tus rutas existentes ---
-    path('', auth_views.login_vista, name='login'), # Suponiendo que tienes una vista de login
-    path('logout/', auth_views.logout_vista, name='logout'),
-    path('dashboard/', dashboard_views.dashboard_vista, name='dashboard'),
-    
- 
-    
-
 ]
