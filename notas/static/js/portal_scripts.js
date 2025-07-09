@@ -1,16 +1,16 @@
 /**
  * portal_scripts.js
- * * Este script maneja la navegación dinámica del portal público, cargando
- * contenido de manera asíncrona desde el backend de Django.
+ * This script handles the dynamic navigation of the public portal,
+ * loading content asynchronously from the Django backend.
  */
 document.addEventListener('DOMContentLoaded', function() {
     
-    // --- SELECTORES DE ELEMENTOS DEL DOM ---
+    // --- DOM ELEMENT SELECTORS ---
     const defaultContentContainer = document.getElementById('defaultMainContent');
     const dynamicContentContainer = document.getElementById('dynamicMainContent');
     const dynamicContentBody = dynamicContentContainer.querySelector('.card-body');
 
-    // --- PLANTILLAS HTML PARA CONTENIDO DINÁMICO ---
+    // --- HTML TEMPLATES FOR DYNAMIC CONTENT ---
     const loadingSpinner = `
         <div class="text-center w-100 py-5">
             <div class="spinner-border" style="width: 3rem; height: 3rem; color: var(--color-vinotinto);" role="status">
@@ -20,10 +20,10 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>`;
     const errorAlert = (message) => `<div class="alert alert-danger text-center">${message}</div>`;
     
-    // --- FUNCIONES DE MANEJO DE VISTAS ---
+    // --- VIEW MANAGEMENT FUNCTIONS ---
 
     /**
-     * Oculta el contenedor de contenido dinámico y muestra el contenedor por defecto (el del carrusel).
+     * Hides the dynamic content container and shows the default one (for the carousel).
      */
     function showDefaultView() {
         defaultContentContainer.classList.remove('d-none');
@@ -32,8 +32,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Muestra el contenedor de contenido dinámico y oculta el contenedor por defecto.
-     * @param {string} content - El contenido HTML que se insertará en el cuerpo del contenedor dinámico.
+     * Shows the dynamic content container and hides the default one.
+     * @param {string} content - The HTML content to be inserted into the dynamic container's body.
      */
     function showDynamicView(content) {
         defaultContentContainer.classList.add('d-none');
@@ -41,21 +41,21 @@ document.addEventListener('DOMContentLoaded', function() {
         dynamicContentBody.innerHTML = content;
     }
 
-    // --- FUNCIONES ASÍNCRONAS PARA CARGAR DATOS (FETCH) ---
+    // --- ASYNCHRONOUS DATA LOADING FUNCTIONS (FETCH) ---
 
     /**
-     * Carga y muestra el carrusel principal en la vista por defecto.
+     * Loads and displays the main carousel in the default view.
      */
     async function cargarInicio() {
         showDefaultView();
         defaultContentContainer.innerHTML = loadingSpinner;
         try {
             const response = await fetch(DJANGO_URLS.carrusel);
-            if (!response.ok) throw new Error('Error de red al cargar el carrusel.');
+            if (!response.ok) throw new Error('Network error while loading the carousel.');
             const imagenes = await response.json();
 
             if (imagenes.length === 0) {
-                defaultContentContainer.innerHTML = errorAlert('No hay imágenes configuradas para el carrusel.');
+                defaultContentContainer.innerHTML = errorAlert('No images configured for the carousel.');
                 return;
             }
 
@@ -86,41 +86,42 @@ document.addEventListener('DOMContentLoaded', function() {
             
             defaultContentContainer.innerHTML = carruselHTML;
         } catch (error) {
-            defaultContentContainer.innerHTML = errorAlert('No se pudo cargar el carrusel de imágenes.');
-            console.error("Error en cargarInicio:", error);
+            defaultContentContainer.innerHTML = errorAlert('Could not load the image carousel.');
+            console.error("Error in cargarInicio:", error);
         }
     }
     
     /**
-     * Función genérica para obtener contenido HTML desde una URL de Django y mostrarlo.
-     * @param {string} url - La URL del endpoint de Django que devuelve HTML.
+     * Generic function to fetch HTML content from a Django URL and display it.
+     * This is the corrected function that loads content from partial HTML files.
+     * @param {string} url - The URL of the Django endpoint that returns HTML.
      */
     async function fetchAndShow(url) {
         showDynamicView(loadingSpinner);
         try {
             const response = await fetch(url);
-            if (!response.ok) throw new Error('Error de red.');
+            if (!response.ok) throw new Error('Network error.');
             const htmlContent = await response.text();
             showDynamicView(htmlContent);
         } catch (error) {
-            showDynamicView(errorAlert('No se pudo cargar el contenido solicitado.'));
-            console.error(`Error al hacer fetch a ${url}:`, error);
+            showDynamicView(errorAlert('Could not load the requested content.'));
+            console.error(`Error fetching from ${url}:`, error);
         }
     }
     
     /**
-     * Carga y muestra el listado de noticias.
+     * Loads and displays the list of news articles.
      */
     async function cargarNoticias() {
         showDynamicView(loadingSpinner);
         try {
             const response = await fetch(DJANGO_URLS.noticias);
-            if (!response.ok) throw new Error('Error de red.');
+            if (!response.ok) throw new Error('Network error.');
             const noticias = await response.json();
             
             let noticiasHTML = '';
             if (noticias.length === 0) {
-                noticiasHTML = '<div class="card"><div class="card-body text-center text-muted">No hay noticias publicadas en este momento.</div></div>';
+                noticiasHTML = '<div class="card"><div class="card-body text-center text-muted">There are no news articles published at the moment.</div></div>';
             } else {
                 noticiasHTML = noticias.map(noticia => {
                     const imagenHTML = noticia.url_imagen ? `<img src="${noticia.url_imagen}" class="card-img-top" alt="${noticia.titulo}" style="max-height: 250px; object-fit: cover;">` : '';
@@ -129,24 +130,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             ${imagenHTML}
                             <div class="card-body">
                                 <h4 class="card-title">${noticia.titulo}</h4>
-                                <p class="card-text"><small class="text-muted">Publicado por ${noticia.autor} el ${noticia.fecha}</small></p>
+                                <p class="card-text"><small class="text-muted">Published by ${noticia.autor} on ${noticia.fecha}</small></p>
                                 <p class="card-text">${noticia.resumen}</p>
-                                <a href="${noticia.url_detalle}" class="btn text-white" style="background-color: var(--color-vinotinto);">Leer más...</a>
+                                <a href="${noticia.url_detalle}" class="btn text-white" style="background-color: var(--color-vinotinto);">Read more...</a>
                             </div>
                         </div>`;
                 }).join('');
             }
-            const finalHTML = `<h2 class="card-title mb-4 border-bottom pb-3">Últimas Noticias</h2> ${noticiasHTML}`;
+            const finalHTML = `<h2 class="card-title mb-4 border-bottom pb-3">Latest News</h2> ${noticiasHTML}`;
             showDynamicView(finalHTML);
         } catch (error) {
-            showDynamicView(errorAlert('No se pudieron cargar las noticias.'));
+            showDynamicView(errorAlert('Could not load news articles.'));
         }
     }
 
 
-    // --- ASIGNACIÓN DE EVENTOS A LOS BOTONES DEL MENÚ ---
+    // --- EVENT LISTENERS FOR MENU BUTTONS ---
     
-    // Mapeo de IDs de botones a las funciones que deben ejecutar.
+    // Map of button IDs to the functions they should execute.
     const menuActions = {
         'logoBtn': cargarInicio,
         'inicioBtn': cargarInicio,
@@ -159,16 +160,18 @@ document.addEventListener('DOMContentLoaded', function() {
         'documentosBtn': () => fetchAndShow(DJANGO_URLS.documentos),
         'recursosBtn': () => fetchAndShow(DJANGO_URLS.recursos),
         'redesBtn': () => fetchAndShow(DJANGO_URLS.redes),
+        // The new floating button for documents also calls the same function.
+        'documentosFloatBtn': () => fetchAndShow(DJANGO_URLS.documentos),
     };
 
-    // Asigna el evento 'click' a cada botón del menú.
+    // Assigns the 'click' event to each button in the map.
     for (const btnId in menuActions) {
         const btn = document.getElementById(btnId);
         if (btn) {
             btn.addEventListener('click', (e) => {
-                e.preventDefault(); // Previene la navegación por defecto del enlace.
+                e.preventDefault(); // Prevents the default link navigation.
                 
-                // Cierra el menú de hamburguesa en móviles si está abierto.
+                // Closes the mobile hamburger menu if it's open.
                 const navbarCollapse = document.getElementById('main-navbar');
                 if (navbarCollapse.classList.contains('show')) {
                     const bsCollapse = new bootstrap.Collapse(navbarCollapse, {
@@ -177,12 +180,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     bsCollapse.hide();
                 }
 
-                menuActions[btnId](); // Ejecuta la acción correspondiente.
+                menuActions[btnId](); // Executes the corresponding action.
             });
         }
     }
 
-    // --- CARGA INICIAL ---
-    // Carga el carrusel tan pronto como la página esté lista.
+    // --- INITIAL LOAD ---
+    // Loads the carousel as soon as the page is ready.
     cargarInicio();
 });

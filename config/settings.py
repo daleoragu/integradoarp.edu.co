@@ -17,7 +17,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-local-dev-key-fallback')
 # --- INICIO DE LA CORRECCIÓN ---
 # Se comenta la línea original y se fuerza DEBUG = True para depuración.
 # DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
-DEBUG = False
+DEBUG = True
 # ¡IMPORTANTE! Recuerda volver a la línea original después de resolver el error.
 # --- FIN DE LA CORRECCIÓN ---
 

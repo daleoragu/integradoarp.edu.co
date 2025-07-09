@@ -4,20 +4,17 @@
 <head>
     {% include "notas/includes/_head.html" %}
     
-    <!-- Librería de Íconos Font Awesome (necesaria para el nuevo diseño) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
     <style>
-        /* ------------------------------------------- */
-        /* --- PALETA DE COLORES Y ESTILOS GLOBALES --- */
-        /* ------------------------------------------- */
         :root {
-            --color-vinotinto: #8E1F4C; /* Tono principal vinotinto */
+            --color-vinotinto: #8E1F4C;
             --color-vinotinto-oscuro: #6A1B3C;
-            --color-oro: #DAA520; /* Tono principal oro/mostaza */
-            --color-oro-claro: #FFD700; /* Tono oro más brillante para hover */
+            --color-oro: #DAA520;
+            --color-oro-claro: #FFD700;
             --color-fondo: #f8f9fa;
             --color-texto-principal: #343a40;
+            --color-verde-escudo: #01573A;
         }
 
         body {
@@ -27,154 +24,72 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* ------------------------------------------- */
-        /* --- NUEVO HEADER (TIPO COLEGIO CISNEROS) --- */
-        /* ------------------------------------------- */
+        /* --- Estilos del Encabezado (Sin cambios) --- */
+        .top-bar { background-color: #f1f1f1; padding: 0.3rem 1rem; font-size: 0.85rem; }
+        .top-bar .social-icons a { color: #777; margin: 0 8px; transition: color 0.3s ease; }
+        .top-bar .social-icons a:hover { color: var(--color-vinotinto); }
+        .main-header { padding: 1rem 1.5rem; background-color: white; border-bottom: 1px solid #eee; }
+        .main-header .navbar-brand { font-size: 1.5rem; font-weight: 700; color: var(--color-vinotinto); }
+        .header-nav { background-color: var(--color-vinotinto); color: white; padding: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .header-nav .navbar-nav .nav-link { color: white; font-weight: 600; padding: 1rem 1.2rem; text-transform: uppercase; font-size: 0.9rem; transition: background-color 0.3s ease, color 0.3s ease; }
+        .header-nav .navbar-nav .nav-link:hover, .header-nav .navbar-nav .nav-item.dropdown:hover .nav-link { background-color: var(--color-vinotinto-oscuro); color: var(--color-oro-claro); }
+        .header-nav .dropdown-menu { background-color: var(--color-vinotinto); border: none; border-top: 3px solid var(--color-oro); border-radius: 0; margin-top: 0; }
+        .header-nav .dropdown-item { color: white; padding: 0.7rem 1.2rem; transition: background-color 0.3s ease, color 0.3s ease; }
+        .header-nav .dropdown-item:hover { background-color: var(--color-vinotinto-oscuro); color: var(--color-oro-claro); }
+        .login-btn { background-color: var(--color-oro); color: var(--color-vinotinto); font-weight: bold; border-radius: 20px; border: none; transition: background-color 0.3s ease, color 0.3s ease; }
+        .login-btn:hover { background-color: var(--color-oro-claro); color: var(--color-vinotinto-oscuro); }
+        .dropdown-menu-login { width: 280px; border: 1px solid #ddd; }
 
-        /* 1. Barra superior de redes sociales */
-        .top-bar {
-            background-color: #f1f1f1;
-            padding: 0.3rem 1rem;
-            font-size: 0.85rem;
-        }
-        .top-bar .social-icons a {
-            color: #777;
-            margin: 0 8px;
-            transition: color 0.3s ease;
-        }
-        .top-bar .social-icons a:hover {
-            color: var(--color-vinotinto);
-        }
-
-        /* 2. Barra principal del logo y nombre */
-        .main-header {
-            padding: 1rem 1.5rem;
-            background-color: white;
-            border-bottom: 1px solid #eee;
-        }
-
-        .main-header .navbar-brand {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--color-vinotinto);
-        }
-
-        /* 3. Barra de navegación principal */
-        .header-nav {
-            background-color: var(--color-vinotinto);
+        /* --- PIE DE PÁGINA (Footer) --- */
+        .portal-footer {
+            background-color: var(--color-verde-escudo);
             color: white;
-            padding: 0;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
-        .header-nav .navbar-nav .nav-link {
-            color: white;
-            font-weight: 600;
-            padding: 1rem 1.2rem;
-            text-transform: uppercase;
-            font-size: 0.9rem;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        .header-nav .navbar-nav .nav-link:hover,
-        .header-nav .navbar-nav .nav-item.dropdown:hover .nav-link {
-            background-color: var(--color-vinotinto-oscuro);
-            color: var(--color-oro-claro);
-        }
-
-        .header-nav .dropdown-menu {
-            background-color: var(--color-vinotinto);
-            border: none;
-            border-top: 3px solid var(--color-oro);
-            border-radius: 0;
-            margin-top: 0;
-        }
-
-        .header-nav .dropdown-item {
-            color: white;
-            padding: 0.7rem 1.2rem;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-
-        .header-nav .dropdown-item:hover {
-            background-color: var(--color-vinotinto-oscuro);
-            color: var(--color-oro-claro);
-        }
-        
-        /* Botón de login */
-        .login-btn {
-            background-color: var(--color-oro);
-            color: var(--color-vinotinto);
-            font-weight: bold;
-            border-radius: 20px;
-            border: none;
-            transition: background-color 0.3s ease, color 0.3s ease;
-        }
-        .login-btn:hover {
-            background-color: var(--color-oro-claro);
-            color: var(--color-vinotinto-oscuro);
-        }
-        
-        /* Ajustes para el formulario de login */
-        .dropdown-menu-login {
-            width: 280px;
-            border: 1px solid #ddd;
-        }
-
-        /* ------------------------------------------- */
-        /* --- BOTÓN FLOTANTE DE WHATSAPP --- */
-        /* ------------------------------------------- */
-        .whatsapp-float {
+        /* --- BOTONES FLOTANTES DE REDES Y ACCIONES --- */
+        .floating-action-buttons {
             position: fixed;
-            width: 60px;
-            height: 60px;
             bottom: 40px;
             right: 40px;
-            background-color: #25d366;
+            z-index: 1030;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .floating-action-buttons a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 60px;
+            height: 60px;
+            margin-top: 10px;
             color: #FFF;
-            border-radius: 50px;
-            text-align: center;
+            border-radius: 50%;
             font-size: 30px;
-            box-shadow: 2px 2px 6px rgba(0,0,0,0.3);
-            z-index: 1000;
+            text-decoration: none;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.25);
             transition: transform 0.3s ease;
         }
-        .whatsapp-float:hover {
+        .floating-action-buttons a:hover {
             transform: scale(1.1);
             color: white;
         }
-        .whatsapp-float i {
-            margin-top: 15px;
-        }
+        /* Colores específicos para cada botón */
+        .whatsapp-float { background-color: #25d366; }
+        .messenger-float { background-color: #00B2FF; }
+        .facebook-float { background-color: #1877F2; }
+        .instagram-float { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%,#d6249f 60%,#285AEB 90%); }
+        .documents-float { background-color: #6c757d; } /* Color gris para documentos */
 
-        /* ------------------------------------------- */
-        /* --- AJUSTES PARA MÓVILES --- */
-        /* ------------------------------------------- */
+
+        /* --- Ajustes para Móviles --- */
         @media (max-width: 991.98px) {
-            .main-header {
-                justify-content: space-between;
-            }
-            .header-nav .navbar-nav .nav-link {
-                padding: 0.8rem 1rem;
-                border-bottom: 1px solid var(--color-vinotinto-oscuro);
-            }
-            .header-nav .dropdown-menu {
-                 border-top: none;
-                 background-color: var(--color-vinotinto-oscuro);
-            }
-            .header-nav .dropdown-item {
-                padding-left: 2rem;
-            }
-            .whatsapp-float {
-                width: 50px;
-                height: 50px;
-                bottom: 20px;
-                right: 20px;
-                font-size: 24px;
-            }
-            .whatsapp-float i {
-                margin-top: 13px;
-            }
+            .main-header { justify-content: space-between; }
+            .header-nav .navbar-nav .nav-link { padding: 0.8rem 1rem; border-bottom: 1px solid var(--color-vinotinto-oscuro); }
+            .header-nav .dropdown-menu { border-top: none; background-color: var(--color-vinotinto-oscuro); }
+            .header-nav .dropdown-item { padding-left: 2rem; }
+            .floating-action-buttons { bottom: 20px; right: 20px; }
+            .floating-action-buttons a { width: 50px; height: 50px; font-size: 24px; }
         }
     </style>
 </head>
@@ -182,16 +97,28 @@
 
     {% block portal_content %}{% endblock portal_content %}
 
-    <!-- BOTÓN FLOTANTE DE WHATSAPP -->
-    <!-- IMPORTANTE: Reemplaza el número 1234567890 con el número de WhatsApp de tu institución -->
-    <a href="https://api.whatsapp.com/send?phone=1234567890&text=Hola,%20quisiera%20solicitar%20más%20información." class="whatsapp-float" target="_blank" title="Contáctanos por WhatsApp">
-        <i class="fab fa-whatsapp"></i>
-    </a>
+    <!-- BOTONES FLOTANTES DE ACCIONES -->
+    <div class="floating-action-buttons">
+        <!-- IMPORTANTE: Reemplaza los enlaces y el número de teléfono -->
+        <a href="https://www.facebook.com/iet.alfonso.palacio.rudas.honda" target="_blank" class="facebook-float" title="Síguenos en Facebook">
+            <i class="fab fa-facebook-f"></i>
+        </a>
+        <a href="https://www.instagram.com/tu-usuario-de-instagram" target="_blank" class="instagram-float" title="Síguenos en Instagram">
+            <i class="fab fa-instagram"></i>
+        </a>
+         <a href="http://m.me/iet.alfonso.palacio.rudas.honda" target="_blank" class="messenger-float" title="Contáctanos por Messenger">
+            <i class="fab fa-facebook-messenger"></i>
+        </a>
+        <a href="https://api.whatsapp.com/send?phone=573102753412&text=Hola,%20quisiera%20más%20información." class="whatsapp-float" target="_blank" title="Contáctanos por WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+        <a href="#" id="documentosFloatBtn" class="documents-float" title="Ver Documentos Públicos">
+            <i class="fas fa-file-alt"></i>
+        </a>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
     <script>
-        // Objeto global con las URLs de Django para que el script externo las pueda usar.
         const DJANGO_URLS = {
             directorio: "{% url 'ajax_directorio_docentes' %}",
             documentos: "{% url 'ajax_documentos_publicos' %}",
@@ -205,7 +132,6 @@
             redes: "{% url 'ajax_redes_sociales' %}"
         };
     </script>
-    
     <script src="{% static 'js/portal_scripts.js' %}"></script>
 
 </body>

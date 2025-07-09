@@ -2,15 +2,18 @@
 {% load static %}
 
 {% block portal_content %}
-<div class="portal-publico-container">
+{# Este nuevo div contenedor es clave para el "sticky footer" #}
+<div class="d-flex flex-column min-vh-100 portal-publico-container">
     
-    {# Incluimos la nueva barra de navegación superior #}
+    {# Incluimos la barra de navegación superior #}
     {% include "notas/portal_components/_portal_header.html" %}
 
-    {# Incluimos el nuevo contenido principal con el carrusel #}
-    {% include "notas/portal_components/_portal_main_content.html" %}
+    {# El contenido principal ahora crecerá para ocupar el espacio disponible #}
+    <main class="flex-grow-1">
+        {% include "notas/portal_components/_portal_main_content.html" %}
+    </main>
     
-    {# Incluimos el pie de página que no ha cambiado #}
+    {# Incluimos el pie de página que ahora se quedará abajo #}
     {% include "notas/portal_components/_portal_footer.html" %}
 
 </div>
