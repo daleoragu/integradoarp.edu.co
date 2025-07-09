@@ -1,56 +1,42 @@
 {% comment %}
-  Plantilla para la tabla de calificaciones.
-  CORREGIDA para usar las propiedades del modelo para los porcentajes.
+  Plantilla rediseñada para la tabla de calificaciones con un estilo de hoja de cálculo.
+  La estructura de la tabla (encabezados y cuerpo) es construida dinámicamente por JavaScript.
 {% endcomment %}
 
 {% if asignacion_seleccionada and periodo_seleccionado %}
 <div class="card shadow-sm mt-4">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h3 class="h5 mb-0">Calificaciones para {{ asignacion_seleccionada.materia }} en {{ asignacion_seleccionada.curso }} - Periodo: {{ periodo_seleccionado }}</h3>
+        <h5 class="mb-0">Calificaciones: {{ asignacion_seleccionada.materia }} en {{ asignacion_seleccionada.curso }}</h5>
         <div id="status-indicator" class="status-indicator" title="Estado de los cambios"></div>
     </div>
     <div class="table-responsive">
-        <table class="table table-bordered table-hover tabla-notas" id="tabla-calificaciones">
-            <thead class="table-light">
-                <tr>
-                    <th rowspan="2" class="text-center align-middle">#</th>
-                    <th rowspan="2" class="align-middle">Estudiante</th>
-                    <th colspan="3" class="text-center">Competencias</th>
-                    <th rowspan="2" class="text-center align-middle">Definitiva</th>
-                    <th rowspan="2" class="text-center align-middle">Inasistencias</th>
-                </tr>
-                <tr>
-                    {# CORRECCIÓN: Usamos las nuevas propiedades del modelo #}
-                    <th class="text-center comp-ser">
-                        SER ({{ asignacion_seleccionada.ser_calc }}%)
-                        <button type="button" class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="ser" title="Añadir nota SER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
-                    </th>
-                    <th class="text-center comp-saber">
-                        SABER ({{ asignacion_seleccionada.saber_calc }}%)
-                        <button type="button" class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="saber" title="Añadir nota SABER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
-                    </th>
-                    <th class="text-center comp-hacer">
-                        HACER ({{ asignacion_seleccionada.hacer_calc }}%)
-                        <button type="button" class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="hacer" title="Añadir nota HACER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- El JavaScript llenará esta sección con las filas de los estudiantes. -->
-            </tbody>
+        <table class="table table-bordered table-hover tabla-notas-excel" id="tabla-calificaciones">
+            {# El JavaScript construirá aquí el thead y el tbody completos. #}
         </table>
     </div>
-    <div class="card-footer text-end">
-        {% if not periodo_cerrado %}
-            <button class="btn btn-primary" id="guardarTodoBtn" disabled>
-                <i class="fas fa-save me-2"></i>Guardar Todos los Cambios
-            </button>
-        {% else %}
-            <p class="mb-0 text-warning"><i class="fas fa-lock me-2"></i>El periodo está cerrado.</p>
-        {% endif %}
+    <div class="card-footer d-flex justify-content-between align-items-center">
+        <small class="text-muted">Haga clic en los encabezados (N1, N2...) para describirlos.</small>
+        <div>
+            {% if not periodo_cerrado %}
+                <button class="btn btn-primary" id="guardarTodoBtn" disabled>
+                    <i class="fas fa-save me-2"></i>Guardar Cambios
+                </button>
+            {% else %}
+                <p class="mb-0 text-warning"><i class="fas fa-lock me-2"></i>El periodo está cerrado.</p>
+            {% endif %}
+        </div>
     </div>
 </div>
 
+<!-- Datos JSON para que JavaScript los lea. -->
 <div id="estudiantes-data-json" style="display: none;">{{ estudiantes_data_json|safe }}</div>
 <div id="url-get-inasistencias" data-url="{% url 'ajax_get_inasistencias_auto' %}"></div>
+
+<!-- Datos de la asignación para que JavaScript los use para la nueva lógica. -->
+<div id="asignacion-details" 
+     data-usar-ponderacion-equitativa="{{ asignacion_seleccionada.usar_ponderacion_equitativa|yesno:'true,false' }}"
+     data-p-ser="{{ asignacion_seleccionada.ser_calc }}"
+     data-p-saber="{{ asignacion_seleccionada.saber_calc }}"
+     data-p-hacer="{{ asignacion_seleccionada.hacer_calc }}">
+</div>
 {% endif %}

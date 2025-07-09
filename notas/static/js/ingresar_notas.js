@@ -1,8 +1,6 @@
 /**
- * Script para manejar la página de ingreso de notas.
- * Gestiona la creación dinámica de campos de nota, cálculos en tiempo real,
- * el manejo de inasistencias y el envío de datos al servidor.
- * @version 4.0 - Corregida y Sincronizada con Django
+ * Script para manejar la página de ingreso de notas con estilo de hoja de cálculo.
+ * @version 6.0 - Con coloreado de notas y gestión de porcentajes.
  */
 document.addEventListener('DOMContentLoaded', function () {
     // --- ELEMENTOS DEL DOM Y DATOS INICIALES ---
@@ -10,279 +8,246 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!container) return;
 
     const tablaCalificaciones = document.getElementById('tabla-calificaciones');
-    const tbody = tablaCalificaciones?.querySelector('tbody');
     const guardarTodoBtn = document.getElementById('guardarTodoBtn');
     const statusIndicator = document.getElementById('status-indicator');
-    const urlInasistenciasEl = document.getElementById('url-get-inasistencias');
     const estudiantesDataEl = document.getElementById('estudiantes-data-json');
+    const asignacionDetailsEl = document.getElementById('asignacion-details');
 
-    // Valida que los elementos esenciales existan antes de continuar.
-    if (!tablaCalificaciones || !tbody || !estudiantesDataEl) {
-        console.error("Error crítico: No se encontraron elementos HTML esenciales (tabla, tbody o contenedor de datos JSON).");
+    if (!tablaCalificaciones || !estudiantesDataEl || !asignacionDetailsEl) {
+        console.error("Faltan elementos HTML esenciales: #tabla-calificaciones, #estudiantes-data-json o #asignacion-details.");
         return;
     }
 
-    // Lee los datos inyectados desde los atributos data-* de Django.
     const asignacionData = {
         id: container.dataset.asignacionId,
         periodoId: container.dataset.periodoId,
         csrfToken: container.dataset.csrfToken,
         guardarUrl: container.dataset.guardarUrl,
-        inasistenciasUrl: urlInasistenciasEl?.dataset.url
+        // Datos para la nueva lógica de visualización
+        esPonderacionEquitativa: asignacionDetailsEl.dataset.usarPonderacionEquitativa === 'true',
+        pSer: parseFloat(asignacionDetailsEl.dataset.pSer),
+        pSaber: parseFloat(asignacionDetailsEl.dataset.pSaber),
+        pHacer: parseFloat(asignacionDetailsEl.dataset.pHacer)
     };
 
     let estudiantesData = [];
     try {
-        const jsonData = estudiantesDataEl.textContent.trim();
-        // Solo intenta parsear si el JSON no está vacío.
-        if (jsonData) {
-            estudiantesData = JSON.parse(jsonData);
-        }
+        estudiantesData = JSON.parse(estudiantesDataEl.textContent.trim() || '[]');
     } catch (e) {
-        console.error("Error al parsear los datos de los estudiantes desde JSON:", e);
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger py-4">Error al cargar los datos. Revise la consola (F12).</td></tr>';
+        console.error("Error al parsear JSON de estudiantes:", e);
+        tablaCalificaciones.innerHTML = '<p class="text-danger">Error al cargar datos de estudiantes.</p>';
         return;
     }
 
     let hayCambiosSinGuardar = false;
+    // Almacena las descripciones de las columnas de notas.
+    let descripcionesColumnas = { ser: {}, saber: {}, hacer: {} };
 
     // --- FUNCIONES DE RENDERIZADO Y UI ---
 
-    /**
-     * Actualiza el indicador visual de estado (guardado, pendiente, error).
-     * @param {'saved' | 'pending' | 'error'} estado El estado a mostrar.
-     */
     function actualizarStatus(estado) {
         if (!statusIndicator) return;
-        statusIndicator.className = 'status-indicator'; // Resetea clases
+        statusIndicator.className = 'status-indicator';
+        const periodoCerrado = document.querySelector('.card-footer .text-warning');
         switch (estado) {
             case 'pending':
                 statusIndicator.classList.add('status-pending');
                 statusIndicator.title = 'Cambios sin guardar';
                 hayCambiosSinGuardar = true;
-                if (guardarTodoBtn) guardarTodoBtn.disabled = false;
+                if (guardarTodoBtn && !periodoCerrado) guardarTodoBtn.disabled = false;
                 break;
             case 'saved':
                 statusIndicator.classList.add('status-saved');
-                statusIndicator.title = 'Todos los cambios guardados';
+                statusIndicator.title = 'Cambios guardados';
                 hayCambiosSinGuardar = false;
                 if (guardarTodoBtn) guardarTodoBtn.disabled = true;
                 break;
             case 'error':
                 statusIndicator.classList.add('status-error');
-                statusIndicator.title = 'Error al guardar. Intente de nuevo.';
+                statusIndicator.title = 'Error al guardar';
                 hayCambiosSinGuardar = true;
-                if (guardarTodoBtn) guardarTodoBtn.disabled = false;
+                if (guardarTodoBtn && !periodoCerrado) guardarTodoBtn.disabled = false;
                 break;
         }
     }
 
-    /**
-     * Crea un elemento HTML para una nota detallada (descripción y valor).
-     * @param {object} nota - Objeto con {descripcion, valor}.
-     * @returns {HTMLDivElement} El elemento div del item de nota.
-     */
-    function crearElementoNota(nota = { descripcion: '', valor: '' }) {
-        const div = document.createElement('div');
-        div.className = 'nota-detallada-item d-flex align-items-center mb-1';
-        div.innerHTML = `
-            <input type="text" class="form-control form-control-sm input-desc me-1" placeholder="Descripción" value="${nota.descripcion || ''}">
-            <input type="text" class="form-control form-control-sm input-valor" inputmode="decimal" placeholder="Nota" value="${nota.valor || ''}">
-            <button type="button" class="btn btn-danger btn-sm btn-remove-nota ms-1" title="Eliminar nota">&times;</button>
-        `;
-        return div;
-    }
-    
-    /**
-     * Crea una fila (TR) completa para un estudiante.
-     * @param {object} estudiante - El objeto del estudiante con sus datos.
-     * @param {number} index - El índice del estudiante para el contador #.
-     * @returns {HTMLTableRowElement} La fila de la tabla.
-     */
-    function crearFilaEstudiante(estudiante, index) {
-        const fila = document.createElement('tr');
-        fila.dataset.estudianteId = estudiante.id;
-        fila.innerHTML = `
-            <td class="text-center align-middle">${index + 1}</td>
-            <td class="align-middle"><span class="nombre-estudiante">${estudiante.nombre_completo}</span></td>
-            <td class="notas-container" data-tipo="ser"><div class="promedio-display text-center small text-muted">Prom: <span>N/A</span></div></td>
-            <td class="notas-container" data-tipo="saber"><div class="promedio-display text-center small text-muted">Prom: <span>N/A</span></div></td>
-            <td class="notas-container" data-tipo="hacer"><div class="promedio-display text-center small text-muted">Prom: <span>N/A</span></div></td>
-            <td class="text-center fw-bold align-middle celda-definitiva"><span>N/A</span></td>
-            <td class="celda-inasistencias align-middle">
-                <div class="input-group">
-                    <input type="number" class="form-control form-control-sm input-inasistencia" min="0" value="${estudiante.inasistencias || 0}">
-                    <button class="btn btn-outline-secondary btn-sm sync-inasistencias" type="button" title="Calcular inasistencias automáticas del sistema de asistencia diario.">
-                        <i class="fas fa-sync-alt"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        return fila;
-    }
-
-    /**
-     * Renderiza la tabla completa a partir de los datos de los estudiantes.
-     */
-    function renderizarTablaCompleta() {
-        tbody.innerHTML = '';
-        if (estudiantesData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No hay estudiantes matriculados en este curso.</td></tr>';
-            return;
-        }
-
-        estudiantesData.forEach((estudiante, index) => {
-            const fila = crearFilaEstudiante(estudiante, index);
-            tbody.appendChild(fila);
-
-            // Itera sobre las competencias para agregar las notas detalladas
-            ['ser', 'saber', 'hacer'].forEach(tipo => {
-                const contenedor = fila.querySelector(`.notas-container[data-tipo="${tipo}"]`);
-                const notas = estudiante.notas[tipo] || [];
-                
-                if (notas.length > 0) {
-                    notas.forEach(nota => contenedor.prepend(crearElementoNota(nota)));
-                } else {
-                    // Si no hay notas, agrega un campo vacío para empezar a calificar
-                    contenedor.prepend(crearElementoNota());
+    function renderizarTabla() {
+        // 1. Determinar el número máximo de columnas necesarias para cada competencia
+        const maxNotas = { ser: 0, saber: 0, hacer: 0 };
+        estudiantesData.forEach(est => {
+            for (const tipo in maxNotas) {
+                const notasCount = est.notas[tipo]?.length || 0;
+                if (notasCount > maxNotas[tipo]) {
+                    maxNotas[tipo] = notasCount;
                 }
-                actualizarPromedio(contenedor);
-            });
-            actualizarDefinitiva(fila);
-        });
-        actualizarStatus('saved'); // Estado inicial: sin cambios
-    }
-    
-    // --- FUNCIONES DE CÁLCULO ---
-
-    /**
-     * Calcula y actualiza el promedio de una competencia (SER, SABER, HACER).
-     * @param {HTMLElement} contenedor - El TD que contiene las notas de una competencia.
-     */
-    function actualizarPromedio(contenedor) {
-        const notasInputs = contenedor.querySelectorAll('.input-valor');
-        const displaySpan = contenedor.querySelector('.promedio-display span');
-        let suma = 0, count = 0;
-        
-        notasInputs.forEach(input => {
-            // Reemplaza la coma por punto para asegurar el parseo correcto
-            const valor = parseFloat(input.value.replace(',', '.'));
-            if (!isNaN(valor) && valor >= 1.0 && valor <= 5.0) {
-                suma += valor;
-                count++;
+                // Poblar las descripciones iniciales desde los datos
+                est.notas[tipo]?.forEach((nota, i) => {
+                    if (nota.descripcion && !descripcionesColumnas[tipo][i]) {
+                        descripcionesColumnas[tipo][i] = nota.descripcion;
+                    }
+                });
             }
         });
 
-        const promedio = count > 0 ? (suma / count).toFixed(2) : 'N/A';
-        displaySpan.textContent = promedio;
+        // Asegurar al menos una columna si no hay notas
+        for (const tipo in maxNotas) {
+            if (maxNotas[tipo] === 0) maxNotas[tipo] = 1;
+        }
+
+        // 2. Construir el HTML del encabezado (thead)
+        let headerHtml = `<thead class="table-light"><tr><th rowspan="2" class="text-center align-middle">#</th><th rowspan="2" class="align-middle">Estudiante</th>`;
         
-        const fila = contenedor.closest('tr');
-        if (fila) actualizarDefinitiva(fila);
+        // Lógica para mostrar u ocultar porcentajes
+        const porcentajes = { ser: asignacionData.pSer, saber: asignacionData.pSaber, hacer: asignacionData.pHacer };
+        for (const tipo of ['ser', 'saber', 'hacer']) {
+            const porcentajeStr = asignacionData.esPonderacionEquitativa ? '' : ` (${porcentajes[tipo]}%)`;
+            headerHtml += `<th colspan="${maxNotas[tipo] + 1}" class="text-center comp-${tipo}">${tipo.toUpperCase()}${porcentajeStr} 
+                <button class="btn btn-outline-success btn-sm btn-add-col" data-tipo="${tipo}" title="Añadir columna de nota">+</button>
+                <button class="btn btn-outline-danger btn-sm btn-remove-col" data-tipo="${tipo}" title="Quitar última columna">-</button>
+            </th>`;
+        }
+        headerHtml += `<th rowspan="2" class="text-center align-middle">Definitiva</th><th rowspan="2" class="text-center align-middle">Inasistencias</th></tr><tr>`;
+
+        for (const tipo of ['ser', 'saber', 'hacer']) {
+            for (let i = 0; i < maxNotas[tipo]; i++) {
+                const desc = descripcionesColumnas[tipo][i] || `N${i + 1}`;
+                headerHtml += `<th class="text-center th-nota" data-tipo="${tipo}" data-col-index="${i}" title="Clic para describir esta nota">${desc}</th>`;
+            }
+            headerHtml += `<th class="text-center align-middle prom-header">Prom.</th>`;
+        }
+        headerHtml += `</tr></thead>`;
+
+        // 3. Construir el HTML del cuerpo (tbody)
+        let bodyHtml = `<tbody>`;
+        if (estudiantesData.length === 0) {
+            const colspan = 4 + maxNotas.ser + maxNotas.saber + maxNotas.hacer;
+            bodyHtml += `<tr><td colspan="${colspan}" class="text-center text-muted py-4">No hay estudiantes en este curso.</td></tr>`;
+        } else {
+            estudiantesData.forEach((estudiante, index) => {
+                bodyHtml += `<tr data-estudiante-id="${estudiante.id}"><td class="text-center align-middle">${index + 1}</td><td class="align-middle">${estudiante.nombre_completo}</td>`;
+                for (const tipo of ['ser', 'saber', 'hacer']) {
+                    for (let i = 0; i < maxNotas[tipo]; i++) {
+                        const nota = estudiante.notas[tipo]?.[i]?.valor || '';
+                        bodyHtml += `<td><input type="text" class="form-control form-control-sm input-nota" data-tipo="${tipo}" value="${nota}" inputmode="decimal"></td>`;
+                    }
+                    bodyHtml += `<td class="text-center align-middle fw-bold prom-celda" data-tipo="${tipo}">0.00</td>`;
+                }
+                bodyHtml += `<td class="text-center align-middle fw-bolder def-celda">0.00</td><td class="align-middle"><input type="number" class="form-control form-control-sm input-inasistencia" min="0" value="${estudiante.inasistencias || 0}"></td></tr>`;
+            });
+        }
+        bodyHtml += `</tbody>`;
+        tablaCalificaciones.innerHTML = headerHtml + bodyHtml;
+
+        // 4. Calcular todos los promedios y definitivas iniciales
+        tablaCalificaciones.querySelectorAll('tbody tr[data-estudiante-id]').forEach(actualizarTodosLosPromedios);
     }
 
-    /**
-     * Calcula y actualiza la nota definitiva del periodo para un estudiante.
-     * @param {HTMLTableRowElement} fila - La fila del estudiante.
-     */
+    // --- FUNCIONES DE CÁLCULO ---
+
+    function actualizarTodosLosPromedios(fila) {
+        ['ser', 'saber', 'hacer'].forEach(tipo => {
+            const inputs = fila.querySelectorAll(`.input-nota[data-tipo="${tipo}"]`);
+            const promCelda = fila.querySelector(`.prom-celda[data-tipo="${tipo}"]`);
+            let suma = 0, count = 0;
+            inputs.forEach(input => {
+                const valor = parseFloat(input.value.replace(',', '.'));
+                if (!isNaN(valor) && valor >= 1.0 && valor <= 5.0) {
+                    suma += valor;
+                    count++;
+                }
+            });
+            promCelda.textContent = count > 0 ? (suma / count).toFixed(2) : '0.00';
+        });
+        actualizarDefinitiva(fila);
+    }
+
     function actualizarDefinitiva(fila) {
-        // Extrae los porcentajes desde el encabezado de la tabla
-        const pSerText = document.querySelector('.comp-ser')?.textContent || '0';
-        const pSaberText = document.querySelector('.comp-saber')?.textContent || '0';
-        const pHacerText = document.querySelector('.comp-hacer')?.textContent || '0';
+        const defCelda = fila.querySelector('.def-celda');
+        let definitiva = 0;
+        const porcentajes = { ser: asignacionData.pSer / 100, saber: asignacionData.pSaber / 100, hacer: asignacionData.pHacer / 100 };
+        
+        ['ser', 'saber', 'hacer'].forEach(tipo => {
+            const prom = parseFloat(fila.querySelector(`.prom-celda[data-tipo="${tipo}"]`).textContent);
+            if (!isNaN(prom)) {
+                definitiva += prom * porcentajes[tipo];
+            }
+        });
+        
+        defCelda.textContent = definitiva.toFixed(2);
 
-        const pSer = parseFloat(pSerText.match(/(\d+(\.\d+)?)/)?.[0] || 0) / 100;
-        const pSaber = parseFloat(pSaberText.match(/(\d+(\.\d+)?)/)?.[0] || 0) / 100;
-        const pHacer = parseFloat(pHacerText.match(/(\d+(\.\d+)?)/)?.[0] || 0) / 100;
+        // Lógica de coloreado de la celda de definitiva
+        defCelda.classList.remove('nota-roja', 'nota-amarilla', 'nota-verde', 'nota-azul');
+        const notaFinal = parseFloat(defCelda.textContent);
 
-        const promSer = parseFloat(fila.querySelector('.notas-container[data-tipo="ser"] .promedio-display span').textContent);
-        const promSaber = parseFloat(fila.querySelector('.notas-container[data-tipo="saber"] .promedio-display span').textContent);
-        const promHacer = parseFloat(fila.querySelector('.notas-container[data-tipo="hacer"] .promedio-display span').textContent);
-        const celdaDefinitiva = fila.querySelector('.celda-definitiva span');
-
-        if (!isNaN(promSer) && !isNaN(promSaber) && !isNaN(promHacer)) {
-            const definitiva = (promSer * pSer) + (promSaber * pSaber) + (promHacer * pHacer);
-            celdaDefinitiva.textContent = definitiva.toFixed(2);
+        if (notaFinal < 3.0) {
+            defCelda.classList.add('nota-roja');
+        } else if (notaFinal < 4.0) {
+            defCelda.classList.add('nota-amarilla');
+        } else if (notaFinal < 4.6) {
+            defCelda.classList.add('nota-verde');
         } else {
-            celdaDefinitiva.textContent = 'N/A';
+            defCelda.classList.add('nota-azul');
         }
     }
 
     // --- MANEJADORES DE EVENTOS ---
 
-    if (tablaCalificaciones) {
-        // Delegación de eventos en la tabla para manejar clics y cambios
-        tablaCalificaciones.addEventListener('click', async (e) => {
-            const btnEliminar = e.target.closest('.btn-remove-nota');
-            const btnSync = e.target.closest('.sync-inasistencias');
-
-            if (btnEliminar) {
-                const item = btnEliminar.closest('.nota-detallada-item');
-                const contenedor = item.parentElement;
-                item.remove();
-                actualizarPromedio(contenedor);
-                actualizarStatus('pending');
+    tablaCalificaciones.addEventListener('input', e => {
+        if (e.target.classList.contains('input-nota') || e.target.classList.contains('input-inasistencia')) {
+            if (e.target.classList.contains('input-nota')) {
+                const fila = e.target.closest('tr');
+                actualizarTodosLosPromedios(fila);
             }
-            
-            if (btnSync) {
-                const fila = btnSync.closest('tr');
-                const estudianteId = fila.dataset.estudianteId;
-                const inputInasistencia = fila.querySelector('.input-inasistencia');
-                
-                btnSync.disabled = true;
-                btnSync.querySelector('i').classList.add('fa-spin');
-                
-                try {
-                    const url = `${asignacionData.inasistenciasUrl}?estudiante_id=${estudianteId}&asignacion_id=${asignacionData.id}&periodo_id=${asignacionData.periodoId}`;
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error(`Error del servidor: ${response.statusText}`);
-                    
-                    const data = await response.json();
-                    if (data.status === 'success') {
-                        inputInasistencia.value = data.inasistencias_auto;
-                        actualizarStatus('pending');
-                    } else {
-                        throw new Error(data.message || 'Respuesta no exitosa del servidor.');
-                    }
-                } catch (error) {
-                    console.error('Error al sincronizar inasistencias:', error);
-                    alert('Error al calcular inasistencias: ' + error.message);
-                } finally {
-                    btnSync.disabled = false;
-                    btnSync.querySelector('i').classList.remove('fa-spin');
-                }
-            }
-        });
-
-        tablaCalificaciones.addEventListener('input', (e) => {
-            const target = e.target;
-            // Si se modifica cualquier campo de nota o inasistencia, marca como pendiente.
-            if (target.classList.contains('input-valor') || target.classList.contains('input-desc') || target.classList.contains('input-inasistencia')) {
-                if (target.classList.contains('input-valor')) {
-                    const contenedor = target.closest('.notas-container');
-                    if (contenedor) actualizarPromedio(contenedor);
-                }
-                actualizarStatus('pending');
-            }
-        });
-    }
-
-    // Evento para los botones "+" que añaden campos de nota a todos los estudiantes.
-    document.querySelectorAll('.btn-add-all').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const tipo = this.dataset.tipo;
-            tablaCalificaciones.querySelectorAll(`.notas-container[data-tipo="${tipo}"]`).forEach(contenedor => {
-                contenedor.prepend(crearElementoNota());
-            });
             actualizarStatus('pending');
-        });
+        }
     });
 
-    // Evento para el botón principal de "Guardar Todos los Cambios".
+    tablaCalificaciones.addEventListener('click', e => {
+        const target = e.target;
+        if (target.classList.contains('btn-add-col')) {
+            const tipo = target.dataset.tipo;
+            // Añade una nota vacía al primer estudiante para forzar una nueva columna
+            if (estudiantesData.length > 0) {
+                if (!estudiantesData[0].notas[tipo]) estudiantesData[0].notas[tipo] = [];
+                estudiantesData[0].notas[tipo].push({ valor: '', descripcion: '' });
+            }
+            renderizarTabla();
+            actualizarStatus('pending');
+        }
+        if (target.classList.contains('btn-remove-col')) {
+            const tipo = target.dataset.tipo;
+            // Elimina la última nota de todos los estudiantes para esa competencia
+            estudiantesData.forEach(est => {
+                if (est.notas[tipo]?.length > 0) {
+                    est.notas[tipo].pop();
+                }
+            });
+            // Limpia la descripción de la columna eliminada
+            const lastIndex = Object.keys(descripcionesColumnas[tipo]).length - 1;
+            if (lastIndex >= 0) {
+                delete descripcionesColumnas[tipo][lastIndex];
+            }
+            renderizarTabla();
+            actualizarStatus('pending');
+        }
+        if (target.classList.contains('th-nota')) {
+            const th = target;
+            const tipo = th.dataset.tipo;
+            const colIndex = th.dataset.colIndex;
+            const descActual = descripcionesColumnas[tipo][colIndex] || '';
+            const nuevaDesc = prompt(`Descripción para la columna ${th.textContent.trim()}:`, descActual);
+            if (nuevaDesc !== null) {
+                descripcionesColumnas[tipo][colIndex] = nuevaDesc.trim();
+                th.textContent = nuevaDesc.trim() || `N${parseInt(colIndex) + 1}`;
+                actualizarStatus('pending');
+            }
+        }
+    });
+    
     guardarTodoBtn?.addEventListener('click', async function() {
         this.disabled = true;
-        this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Guardando...';
+        this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
 
-        // Construye el objeto de datos (payload) para enviar al servidor
         const payload = {
             asignacion_id: asignacionData.id,
             periodo_id: asignacionData.periodoId,
@@ -290,62 +255,44 @@ document.addEventListener('DOMContentLoaded', function () {
         };
 
         tablaCalificaciones.querySelectorAll('tbody tr[data-estudiante-id]').forEach(fila => {
-            const estudianteId = fila.dataset.estudianteId;
-            const datosEstudiante = {
-                id: estudianteId,
-                notas: { ser: [], saber: [], hacer: [] },
-                inasistencias: fila.querySelector('.input-inasistencia').value.trim() || '0'
-            };
-
-            ['ser', 'saber', 'hacer'].forEach(tipo => {
-                fila.querySelectorAll(`.notas-container[data-tipo="${tipo}"] .nota-detallada-item`).forEach(item => {
-                    const descripcion = item.querySelector('.input-desc').value.trim();
-                    const valor = item.querySelector('.input-valor').value.trim().replace(',', '.');
-                    // Solo añade la nota si tiene un valor
+            const estId = fila.dataset.estudianteId;
+            const datosEst = { id: estId, notas: { ser: [], saber: [], hacer: [] }, inasistencias: fila.querySelector('.input-inasistencia').value };
+            
+            for (const tipo of ['ser', 'saber', 'hacer']) {
+                fila.querySelectorAll(`.input-nota[data-tipo="${tipo}"]`).forEach((input, index) => {
+                    const valor = input.value.replace(',', '.').trim();
                     if (valor) {
-                        datosEstudiante.notas[tipo].push({ descripcion, valor });
+                        const descripcion = descripcionesColumnas[tipo][index] || `Nota ${index + 1}`;
+                        datosEst.notas[tipo].push({ descripcion, valor });
                     }
                 });
-            });
-            payload.estudiantes.push(datosEstudiante);
+            }
+            payload.estudiantes.push(datosEst);
         });
 
         try {
             const response = await fetch(asignacionData.guardarUrl, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': asignacionData.csrfToken
-                },
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': asignacionData.csrfToken },
                 body: JSON.stringify(payload)
             });
             const result = await response.json();
+            if (!response.ok) throw new Error(result.message || 'Error del servidor');
             
-            if (response.ok && result.status === 'success') {
-                alert('¡Éxito! ' + result.message);
-                actualizarStatus('saved');
-            } else {
-                throw new Error(result.message || 'Error desconocido al guardar.');
-            }
+            actualizarStatus('saved');
+            alert('¡Guardado con éxito!');
+
         } catch (error) {
-            console.error('Error al guardar todo:', error);
-            alert('Error: ' + error.message);
+            console.error('Error al guardar:', error);
+            alert('Error al guardar: ' + error.message);
             actualizarStatus('error');
         } finally {
             this.disabled = false;
-            this.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Todos los Cambios';
-        }
-    });
-    
-    // Advierte al usuario si intenta salir con cambios sin guardar.
-    window.addEventListener('beforeunload', (e) => {
-        if (hayCambiosSinGuardar) {
-            e.preventDefault();
-            e.returnValue = 'Tienes cambios sin guardar. ¿Estás seguro de que quieres salir?';
+            this.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Cambios';
         }
     });
 
     // --- INICIALIZACIÓN ---
-    // Llama a la función principal para construir la tabla al cargar la página.
-    renderizarTablaCompleta();
+    renderizarTabla();
+    actualizarStatus('saved');
 });

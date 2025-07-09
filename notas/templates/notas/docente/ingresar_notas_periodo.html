@@ -5,8 +5,21 @@
 {% block title %}Ingreso de Notas e Indicadores{% endblock %}
 
 {% block extra_css %}
-    {# Carga la hoja de estilos específica para esta página #}
     <link rel="stylesheet" href="{% static 'css/ingresar_notas.css' %}">
+    
+    {# --- INICIO DE LA MEJORA: ESTILOS PARA LAS NOTAS --- #}
+    <style>
+        .def-celda {
+            font-weight: bolder;
+            color: #fff; /* Color de texto blanco para buen contraste */
+            transition: background-color 0.3s ease;
+        }
+        .def-celda.nota-roja { background-color: #dc3545; } /* Rojo */
+        .def-celda.nota-amarilla { background-color: #ffc107; color: #212529; } /* Amarillo con texto oscuro */
+        .def-celda.nota-verde { background-color: #28a745; } /* Verde */
+        .def-celda.nota-azul { background-color: #0d6efd; } /* Azul */
+    </style>
+    {# --- FIN DE LA MEJORA --- #}
 {% endblock %}
 
 {% block page_title %}
@@ -14,34 +27,24 @@
 {% endblock %}
 
 {% block content %}
-<div class="container-notas" 
-    {% if asignacion_seleccionada and periodo_seleccionado %}
-        {# Estos atributos data-* son leídos por el archivo JS para las peticiones AJAX #}
-        data-csrf-token="{{ csrf_token }}"
-        data-asignacion-id="{{ asignacion_seleccionada.id }}"
-        data-materia-id="{{ asignacion_seleccionada.materia.id }}"
-        data-periodo-id="{{ periodo_seleccionado.id }}"
-        {# --- INICIO DE LA CORRECCIÓN --- #}
-        {# Se usa la URL correcta que maneja tanto GET como POST #}
-        data-guardar-url="{% url 'ingresar_notas_periodo' %}"
-        {# --- FIN DE LA CORRECCIÓN --- #}
-    {% endif %}>
+    <div class="container-notas" 
+        {% if asignacion_seleccionada and periodo_seleccionado %}
+            data-csrf-token="{{ csrf_token }}"
+            data-asignacion-id="{{ asignacion_seleccionada.id }}"
+            data-periodo-id="{{ periodo_seleccionado.id }}"
+            data-guardar-url="{% url 'ingresar_notas_periodo' %}"
+        {% endif %}>
 
-    {# 1. Carga el formulario de filtros (docente, asignación, periodo) #}
-    {% include 'notas/partials/_filtros_notas.html' %}
-    
-    <hr class="separador">
-    
-    {# 2. Carga la sección para agregar y listar indicadores de logro #}
-    {% include 'notas/partials/_gestion_indicadores.html' %}
-    
-    {# 3. Carga la tabla principal para el ingreso de calificaciones y el botón de guardado #}
-    {% include 'notas/partials/_tabla_notas.html' %}
-
-</div>
+        {% include 'notas/partials/_filtros_notas.html' %}
+        <hr class="separador">
+        {% include 'notas/partials/_gestion_indicadores.html' %}
+        
+        {# Este es el parcial que actualizaremos a continuación #}
+        {% include 'notas/partials/_tabla_notas.html' %}
+    </div>
 {% endblock %}
 
 {% block extra_js %}
-    {# Carga el archivo JavaScript específico para esta página #}
+    {# Este es el archivo JS que también actualizaremos #}
     <script src="{% static 'js/ingresar_notas.js' %}"></script>
 {% endblock %}
