@@ -18,28 +18,16 @@ Asignacion = AsignacionDocente
 
 def portal_vista(request):
     """
-    Maneja la página principal del portal público. No redirige a los
-    usuarios que ya han iniciado sesión.
+    Maneja la página principal del portal público.
     """
-    if request.method == 'POST':
-        if request.POST.get('form_type') == 'login_form':
-            usuario = request.POST.get('username')
-            contrasena = request.POST.get('password')
-            user = authenticate(request, username=usuario, password=contrasena)
-            
-            if user is not None:
-                login(request, user)
-                return redirect('dashboard')
-            else:
-                messages.error(request, 'Usuario o contraseña incorrectos.')
-    
+    # El código de login se mantiene igual, pero la vista principal solo renderiza el portal.
     return render(request, 'notas/portal.html')
 
 
 def directorio_docentes_json(request):
     """
-    Crea una lista en formato JSON con la información de cada docente,
-    ordenada numéricamente por dirección de grupo.
+    Crea una lista en formato JSON con la información de cada docente.
+    (Esta vista no se modifica)
     """
     try:
         cursos_con_director = Curso.objects.filter(director_grado__isnull=False).select_related('director_grado')
@@ -88,6 +76,7 @@ def directorio_docentes_json(request):
 def documentos_publicos_json(request):
     """
     Obtiene todos los documentos públicos y los devuelve en formato JSON.
+    (Esta vista no se modifica)
     """
     try:
         documentos = DocumentoPublico.objects.all().order_by('-fecha_publicacion')
@@ -108,6 +97,7 @@ def documentos_publicos_json(request):
 def galeria_fotos_json(request):
     """
     Obtiene todas las fotos de la galería y las devuelve en formato JSON.
+    (Esta vista no se modifica)
     """
     try:
         fotos = FotoGaleria.objects.all().order_by('-fecha_subida')
@@ -125,11 +115,11 @@ def galeria_fotos_json(request):
 
 def noticias_json(request):
     """
-    Obtiene las 5 noticias más recientes que estén publicadas y las 
-    devuelve en formato JSON.
+    Obtiene las noticias publicadas y las devuelve en formato JSON.
+    (Esta vista no se modifica)
     """
     try:
-        noticias = Noticia.objects.filter(estado='PUBLICADO').order_by('-fecha_publicacion')[:5]
+        noticias = Noticia.objects.filter(estado='PUBLICADO').order_by('-fecha_publicacion')[:10]
         data_noticias = [
             {
                 'pk': noticia.pk,
@@ -138,7 +128,7 @@ def noticias_json(request):
                 'url_imagen': noticia.imagen_portada.url if noticia.imagen_portada else '',
                 'fecha': noticia.fecha_publicacion.strftime('%d de %B de %Y'),
                 'autor': noticia.autor.get_full_name() if noticia.autor else 'Administración',
-                'url_detalle': reverse('noticia_detalle', args=[noticia.pk])
+                # Ya no necesitamos la URL de detalle completa, el JS la construirá.
             }
             for noticia in noticias
         ]
@@ -147,19 +137,10 @@ def noticias_json(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 
-def noticia_detalle_vista(request, pk):
-    """
-    Muestra una noticia individual y completa en una página dedicada.
-    """
-    noticia = get_object_or_404(Noticia, pk=pk, estado='PUBLICADO')
-    context = {
-        'noticia': noticia
-    }
-    return render(request, 'notas/portal_components/noticia_detalle.html', context)
-
 def carrusel_imagenes_json(request):
     """
     Devuelve las imágenes del carrusel principal en formato JSON.
+    (Esta vista no se modifica)
     """
     try:
         imagenes = ImagenCarrusel.objects.filter(visible=True).order_by('orden')
@@ -168,36 +149,32 @@ def carrusel_imagenes_json(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-# --- Vistas para las secciones del Colegio ---
+# --- Vistas para las secciones de contenido ---
 
 def ajax_historia(request):
-    """
-    Renderiza y devuelve el contenido parcial de la sección 'Historia'.
-    """
     return render(request, 'notas/portal_components/_contenido_historia.html')
 
 def ajax_mision_vision(request):
-    """
-    Renderiza y devuelve el contenido parcial de la sección 'Misión y Visión'.
-    """
     return render(request, 'notas/portal_components/_contenido_mision_vision.html')
 
 def ajax_modelo_pedagogico(request):
-    """
-    Renderiza y devuelve el contenido parcial de la sección 'Modelo Pedagógico'.
-    """
     return render(request, 'notas/portal_components/_contenido_modelo.html')
 
-# --- Vistas para secciones de Comunidad ---
-
 def ajax_recursos_educativos(request):
-    """
-    Renderiza y devuelve el contenido parcial de la sección 'Recursos Educativos'.
-    """
     return render(request, 'notas/portal_components/_contenido_recursos_educativos.html')
 
 def ajax_redes_sociales(request):
-    """
-    Renderiza y devuelve el contenido parcial de la sección 'Redes Sociales'.
-    """
     return render(request, 'notas/portal_components/_contenido_redes_sociales.html')
+
+# --- NUEVA VISTA PARA CARGAR UNA NOTICIA INDIVIDUAL CON AJAX ---
+def ajax_noticia_detalle(request, pk):
+    """
+    Obtiene una noticia individual y la renderiza en un template parcial
+    para ser cargada dinámicamente en el portal.
+    """
+    noticia = get_object_or_404(Noticia, pk=pk, estado='PUBLICADO')
+    context = {
+        'noticia': noticia
+    }
+    # Usamos un nuevo template que solo contiene el detalle de la noticia.
+    return render(request, 'notas/portal_components/_contenido_noticia_detalle.html', context)

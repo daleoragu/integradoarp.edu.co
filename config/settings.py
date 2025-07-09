@@ -122,27 +122,22 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # ==============================================================================
 
 # --- Configuración del Bucket y Proyecto ---
-# Reemplaza 'media-supercolegios-plataforma' con el nombre EXACTO de tu bucket.
 GS_BUCKET_NAME = 'media-supercolegios-plataforma'
-# Reemplaza 'supercolegios' con el ID EXACTO de tu proyecto.
 GS_PROJECT_ID = 'supercolegios'
 
-# --- Gestión de Credenciales (MUY IMPORTANTE) ---
-# Lee las credenciales desde la variable de entorno 'GS_CREDENTIALS_JSON'
+# --- Gestión de Credenciales ---
 gs_credentials_json_str = os.environ.get('GS_CREDENTIALS_JSON')
 if gs_credentials_json_str:
     GS_CREDENTIALS = json.loads(gs_credentials_json_str)
 
 # --- Configuración del Almacenamiento por Defecto para Archivos de Medios ---
-# Le decimos a Django que use la clase que creamos en notas/storages.py
 DEFAULT_FILE_STORAGE = 'notas.storages.GoogleCloudMediaStorage'
 
-# La URL base desde donde se servirán los archivos multimedia (uploads).
-MEDIA_URL = f'https://storage.googleapis.com/{GS_BUCKET_NAME}/media/'
-# En producción con GCS, MEDIA_ROOT no se usa, por eso se deja vacío.
-MEDIA_ROOT = ''
+# CORRECCIÓN FINAL: La URL base apunta a la raíz del bucket.
+# Django se encargará de añadir la ruta completa del archivo (ej: media/documentos_publicos/archivo.docx)
+MEDIA_URL = f'https://storage.googleapis.com/{GS_BUCKET_NAME}/'
+MEDIA_ROOT = '' # No se usa en producción con GCS
 
-# Para asegurar que no se sobreescriban los archivos con el mismo nombre.
 GS_FILE_OVERWRITE = False
 
 
@@ -150,7 +145,6 @@ GS_FILE_OVERWRITE = False
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- Seguridad en Producción ---
-# Estas configuraciones se activan cuando DEBUG es False
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

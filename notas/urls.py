@@ -60,11 +60,11 @@ urlpatterns = [
     path('panel-administrador/crear-noticia/', portal_admin_views.crear_noticia_vista, name='crear_noticia'),
     path('panel-administrador/editar-noticia/<int:pk>/', portal_admin_views.editar_noticia_vista, name='editar_noticia'),
     path('panel-administrador/eliminar-noticia/<int:pk>/', portal_admin_views.eliminar_noticia_vista, name='eliminar_noticia'),
-    path('portal/noticia/<int:pk>/', portal_views.noticia_detalle_vista, name='noticia_detalle'),
-    path('panel-administrador/publicar-noticia/<int:pk>/', portal_admin_views.publicar_noticia_vista, name='publicar_noticia'),
+       path('panel-administrador/publicar-noticia/<int:pk>/', portal_admin_views.publicar_noticia_vista, name='publicar_noticia'),
     path('panel-administrador/gestion-carrusel/', portal_admin_views.gestion_carrusel_vista, name='gestion_carrusel'),
     path('panel-administrador/eliminar-imagen-carrusel/<int:pk>/', portal_admin_views.eliminar_imagen_carrusel_vista, name='eliminar_imagen_carrusel'),
     path('panel-administrador/editar-imagen-carrusel/<int:pk>/', portal_admin_views.editar_imagen_carrusel_vista, name='editar_imagen_carrusel'),
+    path('ajax/noticia/<int:pk>/', portal_views.ajax_noticia_detalle, name='ajax_noticia_detalle'),
     
     # --- Rutas del Panel Docente ---
     # CORRECCIÓN 1: Se reemplaza la vista de función por la vista basada en clases.
@@ -91,14 +91,8 @@ urlpatterns = [
     path('reportes/individual-excel/', reporte_views.generar_reporte_individual_excel, name='generar_reporte_individual_excel'),
     path('reportes/individual-pdf/', reporte_views.generar_reporte_individual_pdf, name='generar_reporte_individual_pdf'),
 
-    # --- Rutas para Lógica AJAX ---
-    # CORRECCIÓN 2: La ruta 'guardar_todo_ajax' se elimina porque la lógica de guardado
-    # ahora la maneja la vista IngresoNotasView a través de una petición POST.
-    # path('ajax/guardar-todo/', ingreso_notas_views.guardar_todo_ajax, name='guardar_todo_ajax'),
-
     # CORRECCIÓN 3: Se asegura que la ruta apunte a la función correcta en el archivo de vistas.
     path('ajax/get-inasistencias-auto/', ingreso_notas_views.ajax_get_inasistencias_auto, name='ajax_get_inasistencias_auto'),
-    
     path('ajax/obtener-meses/', reporte_views.obtener_meses_periodo_ajax, name='ajax_obtener_meses'),
     path('ajax/guardar-asistencia/', asistencia_views.guardar_inasistencia_ajax, name='guardar_inasistencia_ajax'),
     path('ajax/datos-graficos/', estadisticas_views.datos_graficos_ajax, name='datos_graficos_ajax'),

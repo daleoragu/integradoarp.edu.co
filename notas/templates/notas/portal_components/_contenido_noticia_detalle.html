@@ -1,0 +1,71 @@
+{% load static %}
+
+{% comment %}
+Este template muestra el detalle de una noticia para ser cargado con AJAX.
+Ahora incluye los estilos de periódico y las fuentes personalizadas.
+{% endcomment %}
+
+<!-- Fuentes de Google para el estilo de periódico -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,700;1,400&family=Roboto:wght@700;900&display=swap" rel="stylesheet">
+
+<div class="noticia-detalle-container">
+
+    <!-- Encabezado estilo periódico -->
+    <div class="noticia-header d-flex align-items-center justify-content-center border-bottom border-2 border-dark pb-3 mb-4">
+        <div class="text-center">
+            <p class="text-uppercase small text-muted mb-1" style="letter-spacing: 2px;">El Diario La Cofradía</p>
+            <h1 class="noticia-titulo d-inline-block align-middle me-3">{{ noticia.titulo }}</h1>
+        </div>
+        <img src="{% static 'img/logo_colegio.png' %}" alt="Logo del Colegio" style="max-height: 80px; margin-left: 20px;">
+    </div>
+
+    <p class="text-muted text-center mb-4">
+        <i class="fas fa-user-edit me-1"></i> Publicado por <strong>{{ noticia.autor.get_full_name|default:"Administración" }}</strong>
+        <span class="mx-2">|</span>
+        <i class="fas fa-calendar-alt me-1"></i> {{ noticia.fecha_publicacion|date:"d \d\e F \d\e Y" }}
+    </p>
+
+    {% if noticia.imagen_portada %}
+        <img src="{{ noticia.imagen_portada.url }}" class="img-fluid rounded shadow-sm my-4" alt="{{ noticia.titulo }}" style="max-height: 400px; width: 100%; object-fit: cover;">
+    {% endif %}
+    
+    <div class="cuerpo-noticia">
+        {{ noticia.cuerpo|linebreaksbr }}
+    </div>
+
+    <hr class="my-4">
+
+    <div class="text-center">
+        {# Este botón tiene una clase especial que el JS usará para volver a la lista #}
+        <button class="btn btn-dark volver-noticias-btn"><i class="fas fa-arrow-left me-2"></i>Volver a Noticias</button>
+    </div>
+
+</div>
+
+<!-- Estilos específicos para el formato de periódico -->
+<style>
+    .noticia-titulo {
+        font-family: 'Roboto', sans-serif;
+        font-weight: 900;
+        color: #212529;
+        font-size: 2.5rem;
+        line-height: 1.1;
+    }
+    .cuerpo-noticia {
+        font-family: 'Lora', serif;
+        font-size: 1.15rem;
+        line-height: 1.9;
+        color: #343a40;
+        text-align: justify;
+    }
+    .cuerpo-noticia::first-letter {
+        font-size: 3.5rem;
+        font-weight: bold;
+        float: left;
+        line-height: 1;
+        margin-right: 0.5rem;
+        color: var(--color-vinotinto);
+    }
+</style>
