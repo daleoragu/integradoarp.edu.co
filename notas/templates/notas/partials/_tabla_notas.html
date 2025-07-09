@@ -1,7 +1,6 @@
 {% comment %}
   Plantilla para la tabla de calificaciones.
-  El cuerpo de la tabla (tbody) se deja vacío intencionadamente,
-  ya que será construido dinámicamente por el archivo 'ingresar_notas.js'.
+  CORREGIDA para usar las propiedades del modelo para los porcentajes.
 {% endcomment %}
 
 {% if asignacion_seleccionada and periodo_seleccionado %}
@@ -21,16 +20,17 @@
                     <th rowspan="2" class="text-center align-middle">Inasistencias</th>
                 </tr>
                 <tr>
+                    {# CORRECCIÓN: Usamos las nuevas propiedades del modelo #}
                     <th class="text-center comp-ser">
-                        SER ({{ asignacion_seleccionada.porcentaje_ser }}%)
+                        SER ({{ asignacion_seleccionada.ser_calc }}%)
                         <button type="button" class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="ser" title="Añadir nota SER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
                     </th>
                     <th class="text-center comp-saber">
-                        SABER ({{ asignacion_seleccionada.porcentaje_saber }}%)
+                        SABER ({{ asignacion_seleccionada.saber_calc }}%)
                         <button type="button" class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="saber" title="Añadir nota SABER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
                     </th>
                     <th class="text-center comp-hacer">
-                        HACER ({{ asignacion_seleccionada.porcentaje_hacer }}%)
+                        HACER ({{ asignacion_seleccionada.hacer_calc }}%)
                         <button type="button" class="btn btn-outline-secondary btn-sm btn-add-all" data-tipo="hacer" title="Añadir nota HACER a todos" {% if periodo_cerrado %}disabled{% endif %}>+</button>
                     </th>
                 </tr>
@@ -51,8 +51,6 @@
     </div>
 </div>
 
-<!-- Este div oculto es crucial. Contiene los datos de los estudiantes para que el JavaScript los lea. -->
 <div id="estudiantes-data-json" style="display: none;">{{ estudiantes_data_json|safe }}</div>
-<!-- Este div oculto guarda la URL para la función de recargar inasistencias. -->
 <div id="url-get-inasistencias" data-url="{% url 'ajax_get_inasistencias_auto' %}"></div>
 {% endif %}

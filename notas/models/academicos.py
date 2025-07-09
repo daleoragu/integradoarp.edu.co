@@ -57,14 +57,12 @@ class AsignacionDocente(models.Model):
     curso = models.ForeignKey(Curso, on_delete=models.CASCADE, verbose_name="Curso")
     intensidad_horaria_semanal = models.PositiveSmallIntegerField(default=0, verbose_name="Intensidad Horaria (IH)")
     
-    # --- CAMPO NUEVO: SELECTOR DE PONDERACIÓN ---
     usar_ponderacion_equitativa = models.BooleanField(
         default=True,
         verbose_name="Usar ponderación equitativa",
         help_text="Si se marca, las 3 competencias (Ser, Saber, Hacer) valdrán lo mismo. Se ignorarán los porcentajes manuales."
     )
 
-    # --- Campos para ponderación manual ---
     porcentaje_ser = models.PositiveIntegerField(
         default=30, 
         validators=[MinValueValidator(0), MaxValueValidator(100)],
@@ -87,19 +85,26 @@ class AsignacionDocente(models.Model):
     def __str__(self): return f"{self.docente} - {self.materia} en {self.curso}"
 
     def clean(self):
-        """
-        Añade validación para asegurar que los porcentajes manuales sumen 100,
-        pero solo si la opción de ponderación equitativa no está marcada.
-        """
         super().clean()
         if not self.usar_ponderacion_equitativa:
-            total_porcentaje = (self.porcentaje_ser or 0) + \
-                               (self.porcentaje_saber or 0) + \
-                               (self.porcentaje_hacer or 0)
+            total_porcentaje = (self.porcentaje_ser or 0) + (self.porcentaje_saber or 0) + (self.porcentaje_hacer or 0)
             if total_porcentaje != 100:
-                raise ValidationError(
-                    f"Cuando la ponderación no es equitativa, la suma de los porcentajes debe ser 100. Actualmente es {total_porcentaje}."
-                )
+                raise ValidationError(f"Cuando la ponderación no es equitativa, la suma de los porcentajes debe ser 100. Actualmente es {total_porcentaje}.")
+
+    # --- INICIO DE LA MEJORA AÑADIDA ---
+    # Estas propiedades calculan el porcentaje correcto automáticamente.
+    @property
+    def ser_calc(self):
+        return Decimal('33.33') if self.usar_ponderacion_equitativa else Decimal(self.porcentaje_ser)
+
+    @property
+    def saber_calc(self):
+        return Decimal('33.33') if self.usar_ponderacion_equitativa else Decimal(self.porcentaje_saber)
+
+    @property
+    def hacer_calc(self):
+        return Decimal('33.34') if self.usar_ponderacion_equitativa else Decimal(self.porcentaje_hacer)
+    # --- FIN DE LA MEJORA AÑADIDA ---
 
 class Calificacion(models.Model):
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
@@ -107,12 +112,7 @@ class Calificacion(models.Model):
     periodo = models.ForeignKey(PeriodoAcademico, on_delete=models.CASCADE)
     docente = models.ForeignKey(Docente, on_delete=models.SET_NULL, null=True)
     
-    TIPO_NOTA_CHOICES = [
-        ('SER', 'Promedio Ser'),
-        ('SABER', 'Promedio Saber'),
-        ('HACER', 'Promedio Hacer'),
-        ('PROM_PERIODO', 'Promedio del Periodo'),
-    ]
+    TIPO_NOTA_CHOICES = [('SER', 'Promedio Ser'), ('SABER', 'Promedio Saber'), ('HACER', 'Promedio Hacer'), ('PROM_PERIODO', 'Promedio del Periodo')]
     tipo_nota = models.CharField(max_length=12, choices=TIPO_NOTA_CHOICES)
     valor_nota = models.DecimalField(max_digits=4, decimal_places=2, validators=[MinValueValidator(Decimal('1.0')), MaxValueValidator(Decimal('5.0'))])
 
@@ -130,7 +130,6 @@ class NotaDetallada(models.Model):
     def __str__(self):
         return f"{self.descripcion}: {self.valor_nota}"
 
-# ... (El resto de tus modelos se mantienen igual)
 class IndicadorLogroPeriodo(models.Model):
     asignacion = models.ForeignKey(AsignacionDocente, on_delete=models.CASCADE)
     periodo = models.ForeignKey(PeriodoAcademico, on_delete=models.CASCADE)
