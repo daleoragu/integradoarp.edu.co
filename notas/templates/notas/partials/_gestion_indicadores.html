@@ -10,12 +10,23 @@
     {% if periodo_cerrado %}
         <p class="text-muted">No se pueden añadir o editar indicadores porque el periodo está cerrado.</p>
     {% else %}
-        <form method="POST" action="{% url 'crear_indicador' %}" class="form-indicador my-3">
+        {# El formulario ahora apunta a la URL correcta del nuevo sistema #}
+        <form method="POST" action="{% url 'crear_indicador_vista' %}" class="form-indicador my-3">
             {% csrf_token %}
             <input type="hidden" name="asignacion_id" value="{{ asignacion_seleccionada.id }}">
             <input type="hidden" name="periodo_id" value="{{ periodo_seleccionado.id }}">
-            <textarea name="descripcion" class="form-control" rows="3" placeholder="Escriba aquí un nuevo indicador..." required></textarea>
-            <button class="btn btn-primary" type="submit">Agregar Indicador</button>
+            
+            {# --- INICIO DE LA MEJORA: Campo oculto para el admin --- #}
+            {# Si el usuario es un admin y ha seleccionado un docente, enviamos ese ID #}
+            {% if request.user.is_superuser and docente_seleccionado_id %}
+                <input type="hidden" name="docente_id" value="{{ docente_seleccionado_id }}">
+            {% endif %}
+            {# --- FIN DE LA MEJORA --- #}
+            
+            <textarea name="descripcion" class="form-control" rows="2" placeholder="Escriba aquí un nuevo indicador y presione 'Agregar'..." required></textarea>
+            <div class="text-end mt-2">
+                <button class="btn btn-primary" type="submit">Agregar Indicador</button>
+            </div>
         </form>
     {% endif %}
     
@@ -25,22 +36,25 @@
         <ul class="list-group">
             {% for indicador in indicadores %}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                    {{ indicador.descripcion }}
+                    <span>{{ indicador.descripcion }}</span>
                     {% if not periodo_cerrado %}
-                        <div>
-                            <a href="{% url 'editar_indicador' indicador.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Editar">
+                        <div class="d-flex">
+                            <a href="{% url 'editar_indicador' indicador.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1 me-1" title="Editar">
                                 <i class="fas fa-pencil-alt"></i>
                             </a>
-                            <a href="{% url 'eliminar_indicador' indicador.id %}" class="btn btn-sm btn-outline-danger py-0 px-1" title="Eliminar" onclick="return confirm('¿Está seguro de que desea eliminar este indicador?');">
-                                <i class="fas fa-trash-alt"></i>
-                            </a>
+                            <form action="{% url 'eliminar_indicador' indicador.id %}" method="post" class="d-inline" onsubmit="return confirm('¿Está seguro de que desea eliminar este indicador?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Eliminar">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </form>
                         </div>
                     {% endif %}
                 </li>
             {% endfor %}
         </ul>
     {% else %}
-        <p class="text-muted fst-italic">Aún no hay indicadores definidos.</p>
+        <p class="text-muted fst-italic">Aún no hay indicadores definidos para esta asignación.</p>
     {% endif %}
 </div>
 <hr class="separador">

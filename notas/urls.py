@@ -78,7 +78,10 @@ urlpatterns = [
     path('docente/importar-asistencia/', importar_asistencia_views.importar_asistencia_excel_vista, name='importar_asistencia_excel'),
 
     # --- Rutas para CRUD de Indicadores ---
-    path('indicador/crear/', indicador_views.crear_indicador_vista, name='crear_indicador'),
+    
+    path('indicador/<int:indicador_id>/editar/', indicador_views.editar_indicador_vista, name='editar_indicador'),
+    path('indicador/<int:indicador_id>/eliminar/', indicador_views.eliminar_indicador_vista, name='eliminar_indicador'),
+    path('indicador/crear/', indicador_views.crear_indicador_vista, name='crear_indicador_vista'),
     path('indicador/<int:indicador_id>/editar/', indicador_views.editar_indicador_vista, name='editar_indicador'),
     path('indicador/<int:indicador_id>/eliminar/', indicador_views.eliminar_indicador_vista, name='eliminar_indicador'),
 
