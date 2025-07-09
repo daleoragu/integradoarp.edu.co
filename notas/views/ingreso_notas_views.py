@@ -30,7 +30,7 @@ class IngresoNotasView(LoginRequiredMixin, View):
     Gestiona la página de ingreso de calificaciones.
     AHORA ES COMPATIBLE CON DOCENTES Y SUPERUSUARIOS.
     """
-    template_name = 'notas/ingresar_notas_periodo.html'
+    template_name = 'notas/docente/ingresar_notas_periodo.html'
     login_url = '/login/'
 
     def get(self, request, *args, **kwargs):
