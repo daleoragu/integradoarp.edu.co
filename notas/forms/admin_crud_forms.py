@@ -5,7 +5,7 @@ from ..models import (
     Estudiante, FichaEstudiante, Curso, Docente, AreaConocimiento, Materia, FichaDocente
 )
 
-# --- Formularios para Cursos / Grados ---
+# --- Formularios para Cursos / Grados (Sin cambios) ---
 class CursoForm(forms.ModelForm):
     class Meta:
         model = Curso
@@ -19,7 +19,7 @@ class CursoForm(forms.ModelForm):
             'director_grado': 'Director de Grado (Opcional)',
         }
 
-# --- Formularios para Gestión de Docentes ---
+# --- Formularios para Gestión de Docentes (Sin cambios) ---
 class AdminCrearDocenteForm(forms.Form):
     nombres = forms.CharField(label="Nombres Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     apellidos = forms.CharField(label="Apellidos Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -70,14 +70,10 @@ class AdminEditarDocenteForm(forms.ModelForm):
             ficha.save()
         return ficha
 
-# ===============================================================
-# FORMULARIOS PARA GESTIÓN DE ESTUDIANTES (ACTUALIZADOS)
-# ===============================================================
-
+# --- Formularios para Gestión de Estudiantes (Sin cambios) ---
 class AdminCrearEstudianteForm(forms.Form):
     nombres = forms.CharField(label="Nombres Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     apellidos = forms.CharField(label="Apellidos Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    # --- CAMBIO: El número de documento ahora es opcional ---
     tipo_documento = forms.ChoiceField(label="Tipo de Documento (Opcional)", required=False, choices=FichaEstudiante.TIPO_DOCUMENTO_CHOICES, widget=forms.Select(attrs={'class': 'form-select'}))
     numero_documento = forms.CharField(label="Número de Documento (Opcional)", required=False, max_length=20, widget=forms.TextInput(attrs={'class': 'form-control'}))
     curso = forms.ModelChoiceField(label="Asignar al Curso", queryset=Curso.objects.all(), widget=forms.Select(attrs={'class': 'form-select'}))
@@ -134,18 +130,14 @@ class AdminEditarEstudianteForm(forms.ModelForm):
         ficha = super().save(commit=False)
         estudiante_profile = ficha.estudiante
         user = estudiante_profile.user
-        
         user.first_name = self.cleaned_data['first_name'].upper()
         user.last_name = self.cleaned_data['last_name'].upper()
-        
         estudiante_profile.curso = self.cleaned_data['curso']
         estudiante_profile.is_active = self.cleaned_data['is_active']
-        
         if commit:
             user.save()
             estudiante_profile.save()
             ficha.save()
-            
         return ficha
 
 # --- Formularios para Materias y Áreas ---
@@ -153,9 +145,31 @@ class AreaConocimientoForm(forms.ModelForm):
     class Meta:
         model = AreaConocimiento
         fields = ['nombre']
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+        }
 
+# --- INICIO DE LA CORRECCIÓN ---
+# Se actualiza el MateriaForm para incluir los nuevos campos de ponderación.
 class MateriaForm(forms.ModelForm):
     class Meta:
         model = Materia
-        fields = ['nombre', 'abreviatura', 'area']
-
+        fields = [
+            'nombre', 
+            'abreviatura', 
+            'area', 
+            'usar_ponderacion_equitativa', 
+            'porcentaje_ser', 
+            'porcentaje_saber', 
+            'porcentaje_hacer'
+        ]
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'abreviatura': forms.TextInput(attrs={'class': 'form-control'}),
+            'area': forms.Select(attrs={'class': 'form-select'}),
+            'usar_ponderacion_equitativa': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'porcentaje_ser': forms.NumberInput(attrs={'class': 'form-control'}),
+            'porcentaje_saber': forms.NumberInput(attrs={'class': 'form-control'}),
+            'porcentaje_hacer': forms.NumberInput(attrs={'class': 'form-control'}),
+        }
+# --- FIN DE LA CORRECCIÓN ---

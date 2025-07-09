@@ -7,7 +7,7 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row justify-content-center">
-        <div class="col-lg-7">
+        <div class="col-lg-8">
             <div class="card shadow-sm">
                 <div class="card-body p-4">
                     <form method="post" novalidate>
@@ -16,32 +16,51 @@
                         <div class="alert alert-danger">
                             <p class="mb-1"><strong>Por favor, corrige los errores a continuación:</strong></p>
                             <ul class="mb-0">
-                                {% if form.non_field_errors %}
-                                    {% for error in form.non_field_errors %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                {% endif %}
+                                {% if form.non_field_errors %}{% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}{% endif %}
                                 {% for field in form %}{% if field.errors %}<li>{{ field.label }}: {{ field.errors|striptags }}</li>{% endif %}{% endfor %}
                             </ul>
                         </div>
                         {% endif %}
 
-                        <div class="mb-3">
-                            {{ form.nombre.label_tag }}
-                            {{ form.nombre }}
-                        </div>
-                        
-                        <!-- ============================================= -->
-                        <!-- CORRECCIÓN: Se elimina el campo que no existe -->
-                        <!-- ============================================= -->
+                        <h5 class="mb-3">Información Básica</h5>
                         <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.nombre.label_tag }}
+                                {{ form.nombre }}
+                            </div>
                             <div class="col-md-6 mb-3">
                                 {{ form.abreviatura.label_tag }}
                                 {{ form.abreviatura }}
                             </div>
-                            <div class="col-md-6 mb-3">
-                                {{ form.area.label_tag }}
-                                {{ form.area }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.area.label_tag }}
+                            {{ form.area }}
+                        </div>
+
+                        <hr class="my-4">
+
+                        <h5 class="mb-3">Ponderación por Defecto</h5>
+                        <div class="form-check mb-3">
+                            {{ form.usar_ponderacion_equitativa }}
+                            <label class="form-check-label" for="{{ form.usar_ponderacion_equitativa.id_for_label }}">
+                                {{ form.usar_ponderacion_equitativa.label }}
+                            </label>
+                            <small class="form-text text-muted d-block">{{ form.usar_ponderacion_equitativa.help_text }}</small>
+                        </div>
+                        
+                        <div class="row" id="porcentajes-manuales">
+                            <div class="col-md-4 mb-3">
+                                {{ form.porcentaje_ser.label_tag }}
+                                {{ form.porcentaje_ser }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                {{ form.porcentaje_saber.label_tag }}
+                                {{ form.porcentaje_saber }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                {{ form.porcentaje_hacer.label_tag }}
+                                {{ form.porcentaje_hacer }}
                             </div>
                         </div>
 
@@ -58,4 +77,22 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const equitativaCheckbox = document.getElementById('{{ form.usar_ponderacion_equitativa.id_for_label }}');
+    const porcentajesDiv = document.getElementById('porcentajes-manuales');
+
+    function togglePorcentajes() {
+        if (equitativaCheckbox && porcentajesDiv) {
+            porcentajesDiv.style.display = equitativaCheckbox.checked ? 'none' : 'flex';
+        }
+    }
+
+    if (equitativaCheckbox) {
+        equitativaCheckbox.addEventListener('change', togglePorcentajes);
+        togglePorcentajes(); // Run on page load
+    }
+});
+</script>
 {% endblock %}

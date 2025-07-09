@@ -7,7 +7,9 @@ from django.db import transaction, IntegrityError
 from django.db.models import Sum
 from django.views.decorators.http import require_POST
 
+# Se importan los modelos necesarios
 from ..models import Curso, AreaConocimiento, Materia, Docente, AsignacionDocente
+# Se importan los formularios, incluyendo el nuevo MateriaForm
 from ..forms import CursoForm, AreaConocimientoForm, MateriaForm, AsignacionDocenteForm
 
 def es_personal_admin(user):
@@ -15,7 +17,7 @@ def es_personal_admin(user):
     return user.is_superuser or user.groups.filter(name='Administradores').exists()
 
 # ===============================================================
-# VISTA PRINCIPAL DE ASIGNACIÓN ACADÉMICA
+# VISTA PRINCIPAL DE ASIGNACIÓN ACADÉMICA (Sin cambios)
 # ===============================================================
 @user_passes_test(es_personal_admin)
 def gestion_asignacion_academica_vista(request):
@@ -64,12 +66,12 @@ def eliminar_asignacion_vista(request, asignacion_id):
 
 
 # ===============================================================
-# VISTAS PARA GESTIÓN DE CURSOS / GRADOS
+# VISTAS PARA GESTIÓN DE CURSOS / GRADOS (Sin cambios)
 # ===============================================================
 @user_passes_test(es_personal_admin)
 def gestion_cursos_vista(request):
     cursos = Curso.objects.select_related('director_grado__user').all()
-    context = {'cursos': cursos}
+    context = {'cursos': cursos, 'titulo': 'Gestión de Cursos y Grados'}
     return render(request, 'notas/admin_crud/gestion_cursos.html', context)
 
 @user_passes_test(es_personal_admin)
@@ -117,13 +119,13 @@ def eliminar_curso_vista(request, curso_id):
 @user_passes_test(es_personal_admin)
 def gestion_materias_vista(request):
     materias = Materia.objects.select_related('area').all().order_by('area__nombre', 'nombre')
-    context = {'materias': materias}
+    context = {'materias': materias, 'titulo': 'Gestión de Materias'}
     return render(request, 'notas/admin_crud/gestion_materias.html', context)
 
 @user_passes_test(es_personal_admin)
 def gestion_areas_vista(request):
     areas = AreaConocimiento.objects.all().order_by('nombre')
-    context = {'areas': areas}
+    context = {'areas': areas, 'titulo': 'Gestión de Áreas'}
     return render(request, 'notas/admin_crud/gestion_areas.html', context)
 
 @user_passes_test(es_personal_admin)
@@ -165,6 +167,8 @@ def eliminar_area_vista(request, area_id):
         messages.success(request, f"Área '{nombre_area}' eliminada con éxito.")
     return redirect('gestion_areas')
 
+# --- VISTA DE CREAR MATERIA ACTUALIZADA ---
+# Usa el nuevo MateriaForm para incluir los campos de ponderación.
 @user_passes_test(es_personal_admin)
 @transaction.atomic
 def crear_materia_vista(request):
@@ -177,8 +181,11 @@ def crear_materia_vista(request):
     else:
         form = MateriaForm()
     context = {'form': form, 'titulo': 'Añadir Nueva Materia'}
+    # Apunta a la plantilla que creamos, la cual sabe cómo renderizar los nuevos campos.
     return render(request, 'notas/admin_crud/formulario_materia.html', context)
 
+# --- VISTA DE EDITAR MATERIA ACTUALIZADA ---
+# Usa el nuevo MateriaForm para incluir los campos de ponderación.
 @user_passes_test(es_personal_admin)
 @transaction.atomic
 def editar_materia_vista(request, materia_id):
@@ -191,7 +198,8 @@ def editar_materia_vista(request, materia_id):
             return redirect('gestion_materias')
     else:
         form = MateriaForm(instance=materia)
-    context = {'form': form, 'titulo': f"Editar Materia: {materia.nombre}", 'materia': materia}
+    context = {'form': form, 'titulo': f"Editar Materia: {materia.nombre}"}
+    # Apunta a la plantilla que creamos, la cual sabe cómo renderizar los nuevos campos.
     return render(request, 'notas/admin_crud/formulario_materia.html', context)
 
 @user_passes_test(es_personal_admin)
@@ -200,6 +208,7 @@ def eliminar_materia_vista(request, materia_id):
     materia = get_object_or_404(Materia, id=materia_id)
     nombre_materia = materia.nombre
     try:
+        # Usamos un bloque try-except para manejar el caso en que una materia no se pueda borrar.
         materia.delete()
         messages.success(request, f"Materia '{nombre_materia}' eliminada con éxito.")
     except IntegrityError:
