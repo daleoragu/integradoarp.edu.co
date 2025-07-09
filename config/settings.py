@@ -13,7 +13,14 @@ except ModuleNotFoundError:
 # --- Configuración Base ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-local-dev-key-fallback')
-DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
+
+# --- INICIO DE LA CORRECCIÓN ---
+# Se comenta la línea original y se fuerza DEBUG = True para depuración.
+# DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
+DEBUG = True
+# ¡IMPORTANTE! Recuerda volver a la línea original después de resolver el error.
+# --- FIN DE LA CORRECCIÓN ---
+
 
 # --- Configuración de Hosts ---
 ALLOWED_HOSTS = []
@@ -39,7 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'notas.apps.NotasConfig',
     'storages',
-    'django_extensions',  # ✅ Agregada para runserver_plus
+    'django_extensions',
 ]
 
 # --- Middleware ---
