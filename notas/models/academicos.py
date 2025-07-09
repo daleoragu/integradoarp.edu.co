@@ -5,7 +5,11 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
 import datetime
 
+# --- INICIO DE LA CORRECCIÓN ---
+# Se importa el modelo User que faltaba.
 from django.contrib.auth.models import User
+# --- FIN DE LA CORRECCIÓN ---
+
 from .perfiles import Docente, Estudiante, Curso
 
 class AreaConocimiento(models.Model):
@@ -19,21 +23,26 @@ class AreaConocimiento(models.Model):
 
 class Materia(models.Model):
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre de la Materia")
-    abreviatura = models.CharField(
-        max_length=10, 
-        blank=True, 
-        null=True,
-        verbose_name="Abreviatura",
-        help_text="Abreviatura para reportes (ej: MAT, C.NAT)"
-    )
+    abreviatura = models.CharField(max_length=10, blank=True, null=True, verbose_name="Abreviatura")
     area = models.ForeignKey(AreaConocimiento, on_delete=models.CASCADE, related_name="materias", verbose_name="Área de Conocimiento")
-    
+
+    usar_ponderacion_equitativa = models.BooleanField(
+        default=True,
+        verbose_name="Usar ponderación equitativa por defecto",
+        help_text="Si se marca, las nuevas asignaciones de esta materia usarán 33.33% para cada competencia."
+    )
+    porcentaje_ser = models.PositiveIntegerField(default=30, validators=[MinValueValidator(0), MaxValueValidator(100)], verbose_name="Porcentaje SER por defecto")
+    porcentaje_saber = models.PositiveIntegerField(default=40, validators=[MinValueValidator(0), MaxValueValidator(100)], verbose_name="Porcentaje SABER por defecto")
+    porcentaje_hacer = models.PositiveIntegerField(default=30, validators=[MinValueValidator(0), MaxValueValidator(100)], verbose_name="Porcentaje HACER por defecto")
+
     def __str__(self): return self.nombre
-    def save(self, *args, **kwargs):
-        self.nombre = self.nombre.upper()
-        if self.abreviatura:
-            self.abreviatura = self.abreviatura.upper()
-        super().save(*args, **kwargs)
+    
+    def clean(self):
+        super().clean()
+        if not self.usar_ponderacion_equitativa:
+            if (self.porcentaje_ser + self.porcentaje_saber + self.porcentaje_hacer) != 100:
+                raise ValidationError("La suma de los porcentajes manuales debe ser 100.")
+
     class Meta:
         verbose_name = "Materia"; verbose_name_plural = "Materias"; ordering = ['area__nombre', 'nombre']
 
@@ -62,7 +71,6 @@ class AsignacionDocente(models.Model):
         verbose_name="Usar ponderación equitativa",
         help_text="Si se marca, las 3 competencias (Ser, Saber, Hacer) valdrán lo mismo. Se ignorarán los porcentajes manuales."
     )
-
     porcentaje_ser = models.PositiveIntegerField(
         default=30, 
         validators=[MinValueValidator(0), MaxValueValidator(100)],
@@ -78,7 +86,6 @@ class AsignacionDocente(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(100)],
         help_text="Porcentaje de la nota del HACER (ej: 30). Solo aplica si la ponderación no es equitativa."
     )
-
     class Meta:
         unique_together = ('docente', 'materia', 'curso'); verbose_name = "Asignación Académica"; verbose_name_plural = "Asignaciones Académicas"; ordering = ['curso__nombre', 'materia__nombre']
     
@@ -90,21 +97,15 @@ class AsignacionDocente(models.Model):
             total_porcentaje = (self.porcentaje_ser or 0) + (self.porcentaje_saber or 0) + (self.porcentaje_hacer or 0)
             if total_porcentaje != 100:
                 raise ValidationError(f"Cuando la ponderación no es equitativa, la suma de los porcentajes debe ser 100. Actualmente es {total_porcentaje}.")
-
-    # --- INICIO DE LA MEJORA AÑADIDA ---
-    # Estas propiedades calculan el porcentaje correcto automáticamente.
     @property
     def ser_calc(self):
         return Decimal('33.33') if self.usar_ponderacion_equitativa else Decimal(self.porcentaje_ser)
-
     @property
     def saber_calc(self):
         return Decimal('33.33') if self.usar_ponderacion_equitativa else Decimal(self.porcentaje_saber)
-
     @property
     def hacer_calc(self):
         return Decimal('33.34') if self.usar_ponderacion_equitativa else Decimal(self.porcentaje_hacer)
-    # --- FIN DE LA MEJORA AÑADIDA ---
 
 class Calificacion(models.Model):
     estudiante = models.ForeignKey(Estudiante, on_delete=models.CASCADE)
