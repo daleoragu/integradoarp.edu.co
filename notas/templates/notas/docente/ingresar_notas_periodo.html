@@ -21,7 +21,10 @@
         data-asignacion-id="{{ asignacion_seleccionada.id }}"
         data-materia-id="{{ asignacion_seleccionada.materia.id }}"
         data-periodo-id="{{ periodo_seleccionado.id }}"
-        data-guardar-url="{% url 'guardar_todo_ajax' %}"
+        {# --- INICIO DE LA CORRECCIÓN --- #}
+        {# Se usa la URL correcta que maneja tanto GET como POST #}
+        data-guardar-url="{% url 'ingresar_notas_periodo' %}"
+        {# --- FIN DE LA CORRECCIÓN --- #}
     {% endif %}>
 
     {# 1. Carga el formulario de filtros (docente, asignación, periodo) #}
