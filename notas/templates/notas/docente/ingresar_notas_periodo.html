@@ -7,17 +7,41 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/ingresar_notas.css' %}">
     
-    {# --- INICIO DE LA MEJORA: ESTILOS PARA LAS NOTAS --- #}
+    {# --- INICIO DE LA MEJORA: ESTILOS PARA LAS NOTAS Y ENCABEZADOS --- #}
     <style>
+        /* Estilos para la escala de colores en la nota definitiva */
         .def-celda {
             font-weight: bolder;
-            color: #fff; /* Color de texto blanco para buen contraste */
+            color: #fff; /* Color de texto blanco por defecto para buen contraste */
             transition: background-color 0.3s ease;
         }
         .def-celda.nota-roja { background-color: #dc3545; } /* Rojo */
         .def-celda.nota-amarilla { background-color: #ffc107; color: #212529; } /* Amarillo con texto oscuro */
         .def-celda.nota-verde { background-color: #28a745; } /* Verde */
         .def-celda.nota-azul { background-color: #0d6efd; } /* Azul */
+
+        /* Estilos para el nuevo formato de encabezado de nota */
+        .th-nota {
+            cursor: pointer;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+        .th-nota:hover {
+            background-color: #e9ecef;
+        }
+        .th-nota .col-title {
+            display: block;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: lowercase;
+        }
+        .th-nota .col-desc {
+            display: block;
+            font-size: 0.75em;
+            font-weight: normal;
+            color: #6c757d;
+            min-height: 1.2em; /* Evita que la tabla salte si no hay descripción */
+        }
     </style>
     {# --- FIN DE LA MEJORA --- #}
 {% endblock %}
