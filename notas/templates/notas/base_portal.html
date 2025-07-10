@@ -43,12 +43,18 @@
         .portal-footer { background-color: var(--color-verde-escudo); color: white; }
 
         /* Botones Flotantes */
+         /* --- BOTONES FLOTANTES --- */
         .floating-action-buttons { position: fixed; bottom: 40px; right: 40px; z-index: 1030; display: flex; flex-direction: column; align-items: center; }
         .floating-action-buttons a { display: flex; justify-content: center; align-items: center; width: 60px; height: 60px; margin-top: 10px; color: #FFF; border-radius: 50%; font-size: 30px; text-decoration: none; box-shadow: 2px 2px 8px rgba(0,0,0,0.25); transition: transform 0.3s ease; }
         .floating-action-buttons a:hover { transform: scale(1.1); color: white; }
         .whatsapp-float { background-color: #25d366; }
-        .email-float { background-color: #B23121; }
+        .messenger-float { background-color: #00B2FF; }
+        .facebook-float { background-color: #1877F2; }
+        .instagram-float { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%,#d6249f 60%,#285AEB 90%); }
         .documents-float { background-color: #6c757d; }
+        /* INICIO CORRECCIÓN: Estilo para el nuevo botón de correo */
+        .email-float { background-color: #B23121; }
+        /* FIN CORRECCIÓN */
 
         /* Ajustes para Móviles */
         .navbar-toggler { border: 2px solid white; padding: .25rem .75rem; }
@@ -71,8 +77,10 @@
 
     <!-- BOTONES FLOTANTES DE ACCIONES -->
     <div class="floating-action-buttons">
+        <a href="https://www.facebook.com/iet.alfonso.palacio.rudas.honda" target="_blank" class="facebook-float" title="Síguenos en Facebook"><i class="fab fa-facebook-f"></i></a>
+        <a href="https://www.instagram.com/tu-usuario-de-instagram" target="_blank" class="instagram-float" title="Síguenos en Instagram"><i class="fab fa-instagram"></i></a>
         <a href="mailto:honda.ietalfonsopalaciorudas@sedtolima.edu.co" class="email-float" title="Contáctanos por Correo"><i class="fas fa-envelope"></i></a>
-        <a href="https://api.whatsapp.com/send?phone=573058618450&text=Hola,%20quisiera%20más%20información." class="whatsapp-float" target="_blank" title="Contáctanos por WhatsApp"><i class="fab fa-whatsapp"></i></a>
+        <a href="https://api.whatsapp.com/send?phone=573058618450&text=Hola,%20quisiera%20más%20información sobre la institucion educatica." class="whatsapp-float" target="_blank" title="Contáctanos por WhatsApp"><i class="fab fa-whatsapp"></i></a>
         <a href="#" id="documentosFloatBtn" class="documents-float" title="Ver Documentos Públicos"><i class="fas fa-file-alt"></i></a>
     </div>
 
