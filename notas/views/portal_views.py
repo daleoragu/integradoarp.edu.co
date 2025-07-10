@@ -17,14 +17,10 @@ Asignacion = AsignacionDocente
 def portal_vista(request):
     """
     Maneja la página principal del portal y el proceso de login.
-    VERSIÓN CORREGIDA: Se simplifica el flujo en caso de error de login
-    para evitar posibles errores 500 en el servidor.
+    CORRECCIÓN v3: Se elimina la redirección automática para usuarios
+    autenticados, permitiéndoles ver el portal público.
     """
-    # Si el usuario ya está autenticado, lo enviamos al panel.
-    if request.user.is_authenticated:
-        return redirect('dashboard')
-
-    # Si la petición es para iniciar sesión (método POST)
+    # Se procesa el formulario si el método es POST.
     if request.method == 'POST':
         if request.POST.get('form_type') == 'login_form':
             usuario = request.POST.get('username')
@@ -32,16 +28,13 @@ def portal_vista(request):
             user = authenticate(request, username=usuario, password=contrasena)
 
             if user is not None:
-                # Si las credenciales son correctas, inicia sesión y redirige.
                 login(request, user)
                 return redirect('dashboard')
             else:
-                # Si las credenciales son incorrectas, añade un mensaje de error.
-                # La función continuará y renderizará la página de nuevo, mostrando el error.
                 messages.error(request, 'Usuario o contraseña incorrectos.')
     
-    # Para peticiones GET o si el login falla, se renderiza la plantilla del portal.
-    # El mensaje de error (si existe) se pasará automáticamente al template.
+    # Para peticiones GET o si el login falla, siempre se renderiza la plantilla del portal.
+    # El template se encargará de mostrar una vista para usuarios logueados y otra para anónimos.
     return render(request, 'notas/portal.html')
 
 

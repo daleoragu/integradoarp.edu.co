@@ -9,7 +9,7 @@
     <style>
         :root {
             --color-vinotinto: #56070c;
-            --color-vinotinto-oscuro: #2c0e7638;
+            --color-vinotinto-oscuro: #45060A; /* Un poco más oscuro y opaco */
             --color-oro: #DAA520;
             --color-oro-claro: #FFD700;
             --color-fondo: #f8f9fa;
@@ -24,7 +24,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* --- Estilos del Encabezado (Sin cambios) --- */
+        /* --- Estilos del Encabezado --- */
         .top-bar { background-color: #f1f1f1; padding: 0.3rem 1rem; font-size: 0.85rem; }
         .top-bar .social-icons a { color: #777; margin: 0 8px; transition: color 0.3s ease; }
         .top-bar .social-icons a:hover { color: var(--color-vinotinto); }
@@ -46,47 +46,49 @@
             color: white;
         }
 
-        /* --- BOTONES FLOTANTES DE REDES Y ACCIONES --- */
-        .floating-action-buttons {
-            position: fixed;
-            bottom: 40px;
-            right: 40px;
-            z-index: 1030;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .floating-action-buttons a {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 60px;
-            height: 60px;
-            margin-top: 10px;
-            color: #FFF;
-            border-radius: 50%;
-            font-size: 30px;
-            text-decoration: none;
-            box-shadow: 2px 2px 8px rgba(0,0,0,0.25);
-            transition: transform 0.3s ease;
-        }
-        .floating-action-buttons a:hover {
-            transform: scale(1.1);
-            color: white;
-        }
-        /* Colores específicos para cada botón */
+        /* --- BOTONES FLOTANTES --- */
+        .floating-action-buttons { position: fixed; bottom: 40px; right: 40px; z-index: 1030; display: flex; flex-direction: column; align-items: center; }
+        .floating-action-buttons a { display: flex; justify-content: center; align-items: center; width: 60px; height: 60px; margin-top: 10px; color: #FFF; border-radius: 50%; font-size: 30px; text-decoration: none; box-shadow: 2px 2px 8px rgba(0,0,0,0.25); transition: transform 0.3s ease; }
+        .floating-action-buttons a:hover { transform: scale(1.1); color: white; }
         .whatsapp-float { background-color: #25d366; }
         .messenger-float { background-color: #00B2FF; }
         .facebook-float { background-color: #1877F2; }
         .instagram-float { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%,#d6249f 60%,#285AEB 90%); }
-        .documents-float { background-color: #6c757d; } /* Color gris para documentos */
-
+        .documents-float { background-color: #6c757d; }
+        /* INICIO CORRECCIÓN: Estilo para el nuevo botón de correo */
+        .email-float { background-color: #B23121; }
+        /* FIN CORRECCIÓN */
 
         /* --- Ajustes para Móviles --- */
+        .navbar-toggler {
+            border: 2px solid white;
+            padding: .25rem .75rem;
+        }
+        .navbar-toggler:focus {
+            box-shadow: none;
+        }
+        .menu-text {
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
         @media (max-width: 991.98px) {
             .main-header { justify-content: space-between; }
-            .header-nav .navbar-nav .nav-link { padding: 0.8rem 1rem; border-bottom: 1px solid var(--color-vinotinto-oscuro); }
-            .header-nav .dropdown-menu { border-top: none; background-color: var(--color-vinotinto-oscuro); }
+            .navbar-collapse {
+                background-color: var(--color-vinotinto);
+                border-top: 2px solid var(--color-oro);
+                margin-top: 10px;
+                padding: 10px;
+            }
+            .header-nav .navbar-nav .nav-link { 
+                padding: 0.8rem 1rem; 
+                border-bottom: 1px solid var(--color-vinotinto-oscuro); 
+            }
+            .header-nav .dropdown-menu { 
+                border-top: none; 
+                background-color: var(--color-vinotinto-oscuro); 
+            }
             .header-nav .dropdown-item { padding-left: 2rem; }
             .floating-action-buttons { bottom: 20px; right: 20px; }
             .floating-action-buttons a { width: 50px; height: 50px; font-size: 24px; }
@@ -99,22 +101,17 @@
 
     <!-- BOTONES FLOTANTES DE ACCIONES -->
     <div class="floating-action-buttons">
-        <!-- IMPORTANTE: Reemplaza los enlaces y el número de teléfono -->
-        <a href="https://www.facebook.com/iet.alfonso.palacio.rudas.honda" target="_blank" class="facebook-float" title="Síguenos en Facebook">
-            <i class="fab fa-facebook-f"></i>
+        <a href="https://www.facebook.com/iet.alfonso.palacio.rudas.honda" target="_blank" class="facebook-float" title="Síguenos en Facebook"><i class="fab fa-facebook-f"></i></a>
+        <a href="https://www.instagram.com/tu-usuario-de-instagram" target="_blank" class="instagram-float" title="Síguenos en Instagram"><i class="fab fa-instagram"></i></a>
+        <!-- INICIO CORRECCIÓN: Se añade el botón de correo y se actualiza el de WhatsApp -->
+        <a href="mailto:honda.ietalfonsopalaciorudas@sedtolima.edu.co" class="email-float" title="Contáctanos por Correo">
+            <i class="fas fa-envelope"></i>
         </a>
-        <a href="https://www.instagram.com/tu-usuario-de-instagram" target="_blank" class="instagram-float" title="Síguenos en Instagram">
-            <i class="fab fa-instagram"></i>
-        </a>
-         <a href="http://m.me/iet.alfonso.palacio.rudas.honda" target="_blank" class="messenger-float" title="Contáctanos por Messenger">
-            <i class="fab fa-facebook-messenger"></i>
-        </a>
-        <a href="https://api.whatsapp.com/send?phone=573102753412&text=Hola,%20quisiera%20más%20información." class="whatsapp-float" target="_blank" title="Contáctanos por WhatsApp">
+        <a href="https://api.whatsapp.com/send?phone=573058618450&text=Hola,%20quisiera%20más%20información." class="whatsapp-float" target="_blank" title="Contáctanos por WhatsApp">
             <i class="fab fa-whatsapp"></i>
         </a>
-        <a href="#" id="documentosFloatBtn" class="documents-float" title="Ver Documentos Públicos">
-            <i class="fas fa-file-alt"></i>
-        </a>
+        <!-- FIN CORRECCIÓN -->
+        <a href="#" id="documentosFloatBtn" class="documents-float" title="Ver Documentos Públicos"><i class="fas fa-file-alt"></i></a>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
