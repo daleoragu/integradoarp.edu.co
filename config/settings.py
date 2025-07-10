@@ -36,15 +36,16 @@ ALLOWED_HOSTS.extend([
 ])
 
 
-# --- Aplicaciones Instaladas ---
+# --- Aplicaciones Instaladas (ORDEN CORREGIDO) ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'whitenoise.runserver_nostatic',
+    # CORRECCIÓN: 'django.contrib.staticfiles' debe ir ANTES de 'whitenoise.runserver_nostatic'
     'django.contrib.staticfiles',
+    'whitenoise.runserver_nostatic',
     'notas.apps.NotasConfig',
     'storages', # Aplicación para gestionar almacenamientos externos
     'django_extensions',
