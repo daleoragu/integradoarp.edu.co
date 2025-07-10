@@ -6,7 +6,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.http import JsonResponse, HttpResponseBadRequest
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views import View
 
@@ -19,14 +19,13 @@ from ..models.perfiles import Docente
 
 class IngresoNotasView(LoginRequiredMixin, View):
     """
-    Gestiona la página de ingreso de calificaciones.
-    Versión final compatible con Docentes y Superusuarios.
+    Gestiona la página de ingreso de calificaciones, ahora con validación de indicadores.
     """
-    # CORRECCIÓN 1: La ruta de la plantilla ahora apunta a la ubicación correcta en tu proyecto.
     template_name = 'notas/docente/ingresar_notas_periodo.html'
     login_url = '/login/'
 
     def get(self, request, *args, **kwargs):
+        # ... (El resto de la lógica para obtener asignaciones y periodos se mantiene igual) ...
         asignaciones_a_mostrar = AsignacionDocente.objects.none()
         docente_seleccionado_id = request.GET.get('docente_id')
         
@@ -56,6 +55,8 @@ class IngresoNotasView(LoginRequiredMixin, View):
             'estudiantes_data_json': '[]',
             'periodo_cerrado': False,
             'indicadores': [],
+            # MEJORA 1: Añadimos esta variable al contexto por defecto
+            'hay_indicadores': False, 
         }
         context.update(context_admin)
 
@@ -79,7 +80,16 @@ class IngresoNotasView(LoginRequiredMixin, View):
                 estudiantes_data.append(data)
             
             indicadores = IndicadorLogroPeriodo.objects.filter(asignacion=asignacion_seleccionada, periodo=periodo_seleccionado).order_by('id')
-            context.update({'asignacion_seleccionada': asignacion_seleccionada, 'periodo_seleccionado': periodo_seleccionado, 'estudiantes_data_json': json.dumps(estudiantes_data), 'periodo_cerrado': not periodo_seleccionado.esta_activo, 'indicadores': indicadores})
+            
+            # MEJORA 2: Verificamos si la consulta de indicadores tiene resultados
+            context.update({
+                'asignacion_seleccionada': asignacion_seleccionada, 
+                'periodo_seleccionado': periodo_seleccionado, 
+                'estudiantes_data_json': json.dumps(estudiantes_data), 
+                'periodo_cerrado': not periodo_seleccionado.esta_activo, 
+                'indicadores': indicadores,
+                'hay_indicadores': indicadores.exists() # True si hay al menos uno, False si no.
+            })
 
         return render(request, self.template_name, context)
 
@@ -103,9 +113,20 @@ class IngresoNotasView(LoginRequiredMixin, View):
             if not periodo.esta_activo:
                 return JsonResponse({'status': 'error', 'message': 'El periodo está cerrado.'}, status=403)
 
+            # --- MEJORA 3: VALIDACIÓN DE BACKEND ---
+            # Se comprueba en el servidor si existen indicadores antes de procesar las notas.
+            # Esta es la validación de seguridad más importante.
+            if not IndicadorLogroPeriodo.objects.filter(asignacion=asignacion, periodo=periodo).exists():
+                return JsonResponse({
+                    'status': 'error', 
+                    'message': 'No se pueden guardar calificaciones porque no hay indicadores de logro definidos para esta asignación.'
+                }, status=403)
+            # --- FIN DE LA MEJORA ---
+
             porcentajes = {'SER': asignacion.ser_calc / 100, 'SABER': asignacion.saber_calc / 100, 'HACER': asignacion.hacer_calc / 100}
             
             for est_data in estudiantes_data:
+                # ... (El resto de la lógica para guardar notas se mantiene igual) ...
                 estudiante = get_object_or_404(Estudiante, id=est_data['id'])
                 definitiva_periodo = Decimal('0.0')
 
@@ -132,19 +153,15 @@ class IngresoNotasView(LoginRequiredMixin, View):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Ocurrió un error inesperado: {e}'}, status=500)
 
+# La vista ajax_get_inasistencias_auto no necesita cambios
 @login_required
 def ajax_get_inasistencias_auto(request):
-    """
-    Calcula y devuelve el número de ausencias ('A') registradas en el 
-    sistema de asistencia para un estudiante, asignación y periodo específicos.
-    """
     try:
         asignacion_id = request.GET.get('asignacion_id')
         periodo_id = request.GET.get('periodo_id')
         estudiante_id = request.GET.get('estudiante_id')
         periodo = get_object_or_404(PeriodoAcademico, id=periodo_id)
         
-        # CORRECCIÓN 2: Se usa 'fecha_fin' en lugar de 'fin' para que coincida con el modelo.
         cantidad = Asistencia.objects.filter(
             estudiante_id=estudiante_id, 
             asignacion_id=asignacion_id, 

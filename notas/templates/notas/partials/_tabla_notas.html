@@ -1,6 +1,6 @@
 {% comment %}
-  Plantilla rediseñada para la tabla de calificaciones con un estilo de hoja de cálculo.
-  La estructura de la tabla (encabezados y cuerpo) es construida dinámicamente por JavaScript.
+  Plantilla rediseñada para la tabla de calificaciones.
+  Ahora incluye un contenedor para mensajes y un atributo de datos para la validación.
 {% endcomment %}
 
 {% if asignacion_seleccionada and periodo_seleccionado %}
@@ -9,8 +9,15 @@
         <h5 class="mb-0">Calificaciones: {{ asignacion_seleccionada.materia }} en {{ asignacion_seleccionada.curso }}</h5>
         <div id="status-indicator" class="status-indicator" title="Estado de los cambios"></div>
     </div>
+
+    <!-- MEJORA 1: Contenedor para el mensaje de advertencia -->
+    <div id="mensaje-indicadores" class="p-3" style="display: none;"></div>
+
     <div class="table-responsive">
-        <table class="table table-bordered table-hover tabla-notas-excel" id="tabla-calificaciones">
+        <!-- MEJORA 2: Se añade el atributo data-hay-indicadores -->
+        <table class="table table-bordered table-hover tabla-notas-excel" 
+               id="tabla-calificaciones"
+               data-hay-indicadores="{{ hay_indicadores|yesno:'true,false' }}">
             {# El JavaScript construirá aquí el thead y el tbody completos. #}
         </table>
     </div>
