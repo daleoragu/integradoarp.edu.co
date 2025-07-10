@@ -1,0 +1,32 @@
+{% load i18n %}
+
+<div class="dropdown">
+    <button class="btn login-btn dropdown-toggle" type="button" id="dropdownLogin" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="fas fa-user-lock me-1"></i> Ingreso
+    </button>
+    <div class="dropdown-menu dropdown-menu-end p-3 dropdown-menu-login" aria-labelledby="dropdownLogin">
+        {% if user.is_authenticated %}
+            <div class="text-center">
+                <p class="mb-1 small">Bienvenido/a,</p>
+                <h6 class="mb-2 fw-bold">{{ user.get_full_name|default:user.username }}</h6>
+                <a href="{% url 'dashboard' %}" class="btn btn-sm btn-dark w-100">Ir a mi Panel</a>
+                <hr>
+                <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger w-100">Cerrar Sesión</a>
+            </div>
+        {% else %}
+            <form action="{% url 'portal' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="login_form">
+                <div class="mb-2">
+                    <label for="login-username" class="form-label small">Usuario</label>
+                    <input type="text" name="username" class="form-control form-control-sm" id="login-username" required>
+                </div>
+                <div class="mb-3">
+                    <label for="login-password" class="form-label small">Contraseña</label>
+                    <input type="password" name="password" class="form-control form-control-sm" id="login-password" required>
+                </div>
+                <button type="submit" class="btn btn-sm w-100 text-white" style="background-color: var(--color-vinotinto);">Ingresar</button>
+            </form>
+        {% endif %}
+    </div>
+</div>
