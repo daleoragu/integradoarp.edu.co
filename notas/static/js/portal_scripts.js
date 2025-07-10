@@ -14,7 +14,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const errorAlert = (message) => `<div class="alert alert-danger text-center">${message}</div>`;
     
     // --- VIEW MANAGEMENT FUNCTIONS ---
-    function showDefaultView() {
+    function showDefaultView(content) {
+        defaultContentContainer.innerHTML = content;
         defaultContentContainer.classList.remove('d-none');
         dynamicContentContainer.classList.add('d-none');
         dynamicContentBody.innerHTML = '';
@@ -28,10 +29,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- ASYNCHRONOUS DATA LOADING FUNCTIONS ---
     async function fetchAndShow(url) {
+        if (!url) {
+            console.error("URL is undefined. Cannot fetch content.");
+            showDynamicView(errorAlert('Error de configuración: No se pudo encontrar la ruta del contenido.'));
+            return;
+        }
         showDynamicView(loadingSpinner);
         try {
             const response = await fetch(url);
-            if (!response.ok) throw new Error('Network error.');
+            if (!response.ok) throw new Error(`Network error: ${response.statusText}`);
             const htmlContent = await response.text();
             showDynamicView(htmlContent);
         } catch (error) {
@@ -41,19 +47,65 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     async function fetchAndShowJSON(url, renderFunction) {
-        showDynamicView(loadingSpinner);
+        if (!url) {
+            console.error("URL is undefined. Cannot fetch JSON.");
+            // Si la URL es para el carrusel, muestra la vista por defecto vacía en lugar de un error.
+            if(renderFunction.name === 'renderCarrusel') {
+                showDefaultView('');
+            } else {
+                showDynamicView(errorAlert('Error de configuración: No se pudo encontrar la ruta de los datos.'));
+            }
+            return;
+        }
+        // Para el carrusel, el spinner va en el contenedor por defecto.
+        if (renderFunction.name === 'renderCarrusel') {
+            showDefaultView(loadingSpinner);
+        } else {
+            showDynamicView(loadingSpinner);
+        }
+        
         try {
             const response = await fetch(url);
-            if (!response.ok) throw new Error('Network error.');
+            if (!response.ok) throw new Error(`Network error: ${response.statusText}`);
             const data = await response.json();
             renderFunction(data);
         } catch (error) {
-            showDynamicView(errorAlert('No se pudo cargar el contenido solicitado.'));
+            const errorMessage = 'No se pudo cargar el contenido solicitado.';
+            if (renderFunction.name === 'renderCarrusel') {
+                showDefaultView(errorAlert(errorMessage));
+            } else {
+                showDynamicView(errorAlert(errorMessage));
+            }
             console.error(`Error fetching JSON from ${url}:`, error);
         }
     }
 
     // --- RENDER FUNCTIONS ---
+    function renderCarrusel(imagenes) {
+        if (imagenes.length === 0) {
+            showDefaultView('<div class="text-center p-5 bg-light rounded"><h3>Bienvenido al Portal</h3><p>Aún no hay imágenes en el carrusel.</p></div>');
+            return;
+        }
+        const indicatorsHTML = imagenes.map((img, index) => `<button type="button" data-bs-target="#portalCarousel" data-bs-slide-to="${index}" class="${index === 0 ? 'active' : ''}" aria-current="true"></button>`).join('');
+        const itemsHTML = imagenes.map((img, index) => `
+            <div class="carousel-item ${index === 0 ? 'active' : ''}">
+                <img src="${img.url_imagen}" class="d-block w-100" alt="${img.titulo}" style="max-height: 550px; object-fit: cover;">
+                <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 p-3 rounded">
+                    <h5>${img.titulo}</h5>
+                    <p>${img.subtitulo}</p>
+                </div>
+            </div>`).join('');
+
+        const carruselHTML = `
+            <div id="portalCarousel" class="carousel slide mb-5" data-bs-ride="carousel">
+                <div class="carousel-indicators">${indicatorsHTML}</div>
+                <div class="carousel-inner rounded shadow-lg">${itemsHTML}</div>
+                <button class="carousel-control-prev" type="button" data-bs-target="#portalCarousel" data-bs-slide="prev"><span class="carousel-control-prev-icon" aria-hidden="true"></span></button>
+                <button class="carousel-control-next" type="button" data-bs-target="#portalCarousel" data-bs-slide="next"><span class="carousel-control-next-icon" aria-hidden="true"></span></button>
+            </div>`;
+        showDefaultView(carruselHTML);
+    }
+
     function renderNoticias(noticias) {
         let noticiasHTML;
         if (noticias.length === 0) {
@@ -76,7 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const finalHTML = `<h2 class="card-title mb-4 border-bottom pb-3">Últimas Noticias</h2> ${noticiasHTML}`;
         showDynamicView(finalHTML);
     }
-
+    
     function renderDocumentos(documentos) {
         let documentosHTML;
         if (documentos.length === 0) {
@@ -98,8 +150,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- EVENT LISTENERS ---
     const menuActions = {
-        'logoBtn': () => fetchAndShow(DJANGO_URLS.carrusel), // Asumiendo que carrusel devuelve HTML
-        'inicioBtn': () => fetchAndShow(DJANGO_URLS.carrusel),
+        'inicioBtn': () => fetchAndShowJSON(DJANGO_URLS.carrusel, renderCarrusel),
         'noticiasBtn': () => fetchAndShowJSON(DJANGO_URLS.noticias, renderNoticias),
         'historiaBtn': () => fetchAndShow(DJANGO_URLS.historia),
         'misionBtn': () => fetchAndShow(DJANGO_URLS.mision),
@@ -111,6 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
         'redesBtn': () => fetchAndShow(DJANGO_URLS.redes),
         'documentosFloatBtn': () => fetchAndShowJSON(DJANGO_URLS.documentos, renderDocumentos),
     };
+    menuActions['logoBtn'] = menuActions.inicioBtn;
 
     for (const btnId in menuActions) {
         const btn = document.getElementById(btnId);
@@ -133,7 +185,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (noticiaLink) {
             e.preventDefault();
             const pk = noticiaLink.dataset.pk;
-            fetchAndShow(`/ajax/noticia/${pk}/`);
+            const url = DJANGO_URLS.noticia_detalle.replace('0', pk);
+            fetchAndShow(url);
         } else if (volverBtn) {
             e.preventDefault();
             fetchAndShowJSON(DJANGO_URLS.noticias, renderNoticias);

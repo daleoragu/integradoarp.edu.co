@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 class DocumentoPublico(models.Model):
     titulo = models.CharField(max_length=200, verbose_name="Título del Documento")
     descripcion = models.TextField(blank=True, verbose_name="Descripción Breve")
-    # RUTA SIMPLIFICADA: Se elimina 'media/'. La clase de almacenamiento se encargará.
+    # RUTA CORREGIDA: Se elimina 'media/'.
     archivo = models.FileField(upload_to='documentos_publicos/', verbose_name="Archivo (PDF, Word, etc.)")
     fecha_publicacion = models.DateTimeField(default=timezone.now, verbose_name="Fecha de Publicación")
     
@@ -20,7 +20,7 @@ class DocumentoPublico(models.Model):
 
 class FotoGaleria(models.Model):
     titulo = models.CharField(max_length=150, verbose_name="Título de la Foto", help_text="Un título o descripción corta.")
-    # RUTA SIMPLIFICADA:
+    # RUTA CORREGIDA:
     imagen = models.ImageField(upload_to='galeria_portal/', verbose_name="Fotografía")
     fecha_subida = models.DateTimeField(default=timezone.now)
 
@@ -35,13 +35,13 @@ class FotoGaleria(models.Model):
 class Noticia(models.Model):
     ESTADO_CHOICES = [('BORRADOR', 'Borrador'), ('PUBLICADO', 'Publicado')]
     titulo = models.CharField(max_length=255, verbose_name="Titular de la Noticia")
-    resumen = models.CharField(max_length=500, verbose_name="Resumen Corto", help_text="Un párrafo corto que aparecerá en la lista de noticias.")
+    resumen = models.CharField(max_length=500, verbose_name="Resumen Corto")
     cuerpo = models.TextField(verbose_name="Contenido Completo de la Noticia")
-    # RUTA SIMPLIFICADA:
+    # RUTA CORREGIDA:
     imagen_portada = models.ImageField(upload_to='noticias_portal/', verbose_name="Imagen de Portada", null=True, blank=True)
-    fecha_publicacion = models.DateTimeField(default=timezone.now, verbose_name="Fecha de Publicación")
-    autor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Autor")
-    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='BORRADOR', verbose_name="Estado")
+    fecha_publicacion = models.DateTimeField(default=timezone.now)
+    autor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    estado = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='BORRADOR')
 
     def __str__(self):
         return self.titulo
@@ -52,12 +52,12 @@ class Noticia(models.Model):
         ordering = ['-fecha_publicacion']
 
 class ImagenCarrusel(models.Model):
-    titulo = models.CharField(max_length=100, blank=True, help_text="Texto grande que aparece sobre la imagen (opcional).")
-    subtitulo = models.CharField(max_length=200, blank=True, help_text="Texto más pequeño debajo del título (opcional).")
-    # RUTA SIMPLIFICADA:
+    titulo = models.CharField(max_length=100, blank=True)
+    subtitulo = models.CharField(max_length=200, blank=True)
+    # RUTA CORREGIDA:
     imagen = models.ImageField(upload_to='carrusel_portal/', verbose_name="Imagen de fondo")
-    orden = models.PositiveIntegerField(default=0, help_text="Use números bajos para que aparezca primero (ej: 0, 1, 2...).")
-    visible = models.BooleanField(default=True, verbose_name="¿Visible en el portal?")
+    orden = models.PositiveIntegerField(default=0)
+    visible = models.BooleanField(default=True)
     
     def __str__(self):
         return self.titulo or f"Imagen {self.id}"
