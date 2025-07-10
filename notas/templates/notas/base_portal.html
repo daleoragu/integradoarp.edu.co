@@ -104,23 +104,21 @@
     <!-- INICIO DE LA CORRECCIÓN: SCRIPT PARA EL DIRECTORIO DOCENTE -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Seleccionamos el botón del directorio
         const directorioBtn = document.getElementById('directorioBtn');
 
         if (directorioBtn) {
             directorioBtn.addEventListener('click', function(e) {
                 e.preventDefault(); // Prevenimos la acción por defecto del enlace
+                e.stopPropagation(); // ¡CORRECCIÓN CLAVE! Detiene la propagación para evitar que otros scripts interfieran.
 
-                // Hacemos la petición fetch a la URL del directorio
                 fetch(DJANGO_URLS.directorio)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error('Error en la respuesta del servidor');
                         }
-                        return response.json(); // Convertimos la respuesta a JSON
+                        return response.json();
                     })
                     .then(data => {
-                        // 'data' es ahora un array de objetos de docentes
                         let htmlContent = '<h2>Directorio Docente</h2>';
                         htmlContent += '<div class="table-responsive">';
                         htmlContent += '<table class="table table-striped table-hover">';
@@ -134,7 +132,6 @@
                             </thead>`;
                         htmlContent += '<tbody>';
 
-                        // Iteramos sobre cada docente para crear una fila de la tabla
                         data.forEach(docente => {
                             htmlContent += `
                                 <tr>
@@ -146,7 +143,6 @@
 
                         htmlContent += '</tbody></table></div>';
 
-                        // Mostramos el contenido dinámico y ocultamos el por defecto
                         const dynamicContentContainer = document.querySelector('#dynamicMainContent .card-body');
                         const defaultContent = document.getElementById('defaultMainContent');
                         const dynamicContent = document.getElementById('dynamicMainContent');
@@ -159,7 +155,6 @@
                     })
                     .catch(error => {
                         console.error('Error al cargar el directorio:', error);
-                        // Opcional: Mostrar un mensaje de error en la página
                         const dynamicContentContainer = document.querySelector('#dynamicMainContent .card-body');
                         if(dynamicContentContainer) {
                             dynamicContentContainer.innerHTML = '<p class="text-danger">No se pudo cargar el directorio de docentes. Por favor, intente más tarde.</p>';
