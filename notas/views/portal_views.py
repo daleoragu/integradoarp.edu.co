@@ -2,14 +2,11 @@
 
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
-# --- INICIO DE LA CORRECCIÓN: Imports añadidos para el login ---
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
-# --- FIN DE LA CORRECCIÓN ---
 from django.db.models import Prefetch
 from django.urls import reverse
 
-# Se importan todos los modelos necesarios
 from ..models import (
     Docente, Curso, AsignacionDocente, 
     DocumentoPublico, FotoGaleria, Noticia, ImagenCarrusel, 
@@ -17,36 +14,35 @@ from ..models import (
 
 Asignacion = AsignacionDocente
 
-# --- INICIO DE LA CORRECCIÓN: Lógica de login integrada ---
 def portal_vista(request):
     """
-    Maneja la página principal del portal público y ahora también
-    procesa el formulario de inicio de sesión.
+    Maneja la página principal del portal y el proceso de login.
+    VERSIÓN CORREGIDA: Se simplifica el flujo en caso de error de login
+    para evitar posibles errores 500 en el servidor.
     """
-    # Si el usuario ya está autenticado, se redirige al panel principal.
+    # Si el usuario ya está autenticado, lo enviamos al panel.
     if request.user.is_authenticated:
         return redirect('dashboard')
 
-    # Se procesa el formulario si el método es POST.
+    # Si la petición es para iniciar sesión (método POST)
     if request.method == 'POST':
-        # Verificamos que el POST provenga del formulario de login.
         if request.POST.get('form_type') == 'login_form':
             usuario = request.POST.get('username')
             contrasena = request.POST.get('password')
             user = authenticate(request, username=usuario, password=contrasena)
 
             if user is not None:
+                # Si las credenciales son correctas, inicia sesión y redirige.
                 login(request, user)
-                return redirect('dashboard')  # Éxito, va al panel.
+                return redirect('dashboard')
             else:
-                # Error en las credenciales, se añade un mensaje.
+                # Si las credenciales son incorrectas, añade un mensaje de error.
+                # La función continuará y renderizará la página de nuevo, mostrando el error.
                 messages.error(request, 'Usuario o contraseña incorrectos.')
-                # Se redirige de vuelta al portal para mostrar el mensaje de error.
-                return redirect('portal')
-
-    # Si es una petición GET, simplemente se muestra la página del portal.
+    
+    # Para peticiones GET o si el login falla, se renderiza la plantilla del portal.
+    # El mensaje de error (si existe) se pasará automáticamente al template.
     return render(request, 'notas/portal.html')
-# --- FIN DE LA CORRECCIÓN ---
 
 
 def directorio_docentes_json(request):
