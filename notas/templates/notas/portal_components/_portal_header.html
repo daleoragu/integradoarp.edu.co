@@ -1,97 +1,93 @@
 {% load static %}
+{% load i18n %}
 
-<header>
-    <!-- 1. Barra Superior de Contacto y Redes -->
-    <div class="top-bar d-none d-md-block">
-        <div class="container d-flex justify-content-end align-items-center">
-            <div class="social-icons">
-                <a href="https://www.facebook.com/iet.alfonso.palacio.rudas.honda" target="_blank" title="Facebook"><i class="fab fa-facebook-f"></i></a>
-                <a href="#" target="_blank" title="Instagram"><i class="fab fa-instagram"></i></a>
-                <a href="#" target="_blank" title="Twitter"><i class="fab fa-twitter"></i></a>
-            </div>
+<!-- BARRA SUPERIOR DE CONTACTO Y REDES SOCIALES -->
+<div class="top-bar d-none d-lg-block">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+        <div class="contact-info">
+            <i class="fas fa-phone-alt me-2"></i> (+57) 3058618450
+            <i class="fas fa-envelope ms-3 me-2"></i> honda.ietalfonsopalaciorudas@sedtolima.edu.co
+        </div>
+        <div class="social-icons">
+            <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="#" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
         </div>
     </div>
+</div>
 
-    <!-- 2. Encabezado Principal (Logo y Nombre) -->
-    <div class="main-header">
-        <div class="container d-flex align-items-center">
-            <a class="navbar-brand d-flex align-items-center me-auto" href="#" id="logoBtn">
-                <img src="{% static 'img/logo_colegio.png' %}" alt="Logo del Colegio" style="height: 50px;" class="d-inline-block align-text-top me-3">
-                <span class="d-none d-sm-inline">I.E.T. Alfonso Palacio Rudas</span>
-            </a>
-            
-            <div class="dropdown">
-                <button class="btn login-btn dropdown-toggle" type="button" id="dropdownLogin" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-user-lock me-1"></i> Ingreso
-                </button>
-                <div class="dropdown-menu dropdown-menu-end p-3 dropdown-menu-login" aria-labelledby="dropdownLogin">
-                    {% if user.is_authenticated %}
-                        <div class="text-center">
-                            <p class="mb-1 small">Bienvenido/a,</p>
-                            <h6 class="mb-2 fw-bold">{{ user.get_full_name|default:user.username }}</h6>
-                            <a href="{% url 'dashboard' %}" class="btn btn-sm btn-dark w-100">Ir a mi Panel</a>
-                        </div>
-                    {% else %}
-                        <form action="{% url 'portal' %}" method="POST">
-                            {% csrf_token %}
-                            <input type="hidden" name="form_type" value="login_form">
-                            <div class="mb-2"><label for="login-username" class="form-label small">Usuario</label><input type="text" name="username" class="form-control form-control-sm" id="login-username" required></div>
-                            <div class="mb-3"><label for="login-password" class="form-label small">Contraseña</label><input type="password" name="password" class="form-control form-control-sm" id="login-password" required></div>
-                            <button type="submit" class="btn btn-sm w-100 text-white" style="background-color: var(--color-vinotinto);">Ingresar</button>
-                        </form>
-                    {% endif %}
-                </div>
-            </div>
-            
-             <button class="navbar-toggler ms-3" type="button" data-bs-toggle="collapse" data-bs-target="#main-navbar" aria-controls="main-navbar" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+<!-- ENCABEZADO PRINCIPAL CON LOGO -->
+<header class="main-header">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+        <a class="navbar-brand" href="{% url 'portal' %}">
+            <img src="{% static 'img/escudo.png' %}" alt="Escudo del Colegio" style="height: 60px;">
+            <span class="ms-2">I.E.T. Alfonso Palacio Rudas</span>
+        </a>
+        <!-- Este botón de login solo será visible en pantallas grandes -->
+        <div class="d-none d-lg-block">
+            {% include "notas/portal_components/_portal_login_form.html" %}
         </div>
     </div>
-
-    <!-- 3. Barra de Navegación Principal -->
-    <nav class="navbar navbar-expand-lg header-nav">
-        <div class="container">
-            <div class="collapse navbar-collapse" id="main-navbar">
-                <ul class="navbar-nav mx-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="inicioBtn">Inicio</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" id="noticiasBtn">Noticias</a>
-                    </li>
-                    <!-- Menú Desplegable "Nuestro Colegio" -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownColegio" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Nuestro Colegio
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownColegio">
-                            <li><a class="dropdown-item" href="#" id="historiaBtn">Historia</a></li>
-                            <li><a class="dropdown-item" href="#" id="misionBtn">Misión y Visión</a></li>
-                            <li><a class="dropdown-item" href="#" id="modeloBtn">Modelo Pedagógico</a></li>
-                            <li><a class="dropdown-item" href="#" id="directorioBtn">Equipo Docente</a></li>
-                        </ul>
-                    </li>
-                    <!-- Menú Desplegable "Comunidad" -->
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownComunidad" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Comunidad
-                        </a>
-                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownComunidad">
-                            <li><a class="dropdown-item" href="#" id="galeriaBtn">Galería</a></li>
-                            <li><a class="dropdown-item" href="#" id="documentosBtn">Documentos Públicos</a></li>
-                            <li><a class="dropdown-item" href="#" id="recursosBtn">Recursos Educativos</a></li>
-                            <li><a class="dropdown-item" href="#" id="redesBtn">Redes Sociales</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Admisiones</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Contacto</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
 </header>
+
+<!-- BARRA DE NAVEGACIÓN PRINCIPAL (AQUÍ ESTÁ LA CORRECCIÓN) -->
+<nav class="navbar navbar-expand-lg header-nav">
+    <div class="container-fluid">
+        
+        <!-- Botón de Login para móviles: Se mueve aquí para mejor visibilidad -->
+        <div class="d-lg-none ms-auto">
+            {% include "notas/portal_components/_portal_login_form.html" %}
+        </div>
+
+        <!-- Botón que aparece en móviles (hamburguesa) -->
+        <!-- ATRIBUTOS CLAVE: data-bs-toggle="collapse" y data-bs-target="#main-nav" -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-nav" aria-controls="main-nav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Contenedor de los enlaces que se colapsará en móviles -->
+        <!-- CLASES CLAVE: "collapse navbar-collapse" y el ID que coincide con data-bs-target -->
+        <div class="collapse navbar-collapse" id="main-nav">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="{% url 'portal' %}">Inicio</a>
+                </li>
+                
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="institucionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Institución
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="institucionDropdown">
+                        <li><a class="dropdown-item" href="#" data-section="historia">Historia</a></li>
+                        <li><a class="dropdown-item" href="#" data-section="mision-vision">Misión y Visión</a></li>
+                        <li><a class="dropdown-item" href="#" data-section="modelo-pedagogico">Modelo Pedagógico</a></li>
+                        <li><a class="dropdown-item" href="#" data-section="directorio">Directorio Docente</a></li>
+                    </ul>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="academicoDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Académico
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="academicoDropdown">
+                        <li><a class="dropdown-item" href="#" data-section="recursos-educativos">Recursos Educativos</a></li>
+                        <li><a class="dropdown-item" href="#">Admisiones</a></li>
+                        <li><a class="dropdown-item" href="#">Calendario Académico</a></li>
+                    </ul>
+                </li>
+
+                <li class="nav-item">
+                     <a class="nav-link" href="#" data-section="noticias">Noticias</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="galeria">Galería</a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="#" data-section="redes-sociales">Contacto</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

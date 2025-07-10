@@ -2,26 +2,51 @@
 
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+# --- INICIO DE LA CORRECCIÓN: Imports añadidos para el login ---
 from django.contrib.auth import authenticate, login
 from django.contrib import messages
+# --- FIN DE LA CORRECCIÓN ---
 from django.db.models import Prefetch
 from django.urls import reverse
 
-# Se importan todos los modelos necesarios para las vistas del portal
+# Se importan todos los modelos necesarios
 from ..models import (
     Docente, Curso, AsignacionDocente, 
     DocumentoPublico, FotoGaleria, Noticia, ImagenCarrusel, 
 )
 
-# Se renombra AsignacionDocente para facilitar su uso en la vista
 Asignacion = AsignacionDocente
 
+# --- INICIO DE LA CORRECCIÓN: Lógica de login integrada ---
 def portal_vista(request):
     """
-    Maneja la página principal del portal público.
+    Maneja la página principal del portal público y ahora también
+    procesa el formulario de inicio de sesión.
     """
-    # El código de login se mantiene igual, pero la vista principal solo renderiza el portal.
+    # Si el usuario ya está autenticado, se redirige al panel principal.
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
+    # Se procesa el formulario si el método es POST.
+    if request.method == 'POST':
+        # Verificamos que el POST provenga del formulario de login.
+        if request.POST.get('form_type') == 'login_form':
+            usuario = request.POST.get('username')
+            contrasena = request.POST.get('password')
+            user = authenticate(request, username=usuario, password=contrasena)
+
+            if user is not None:
+                login(request, user)
+                return redirect('dashboard')  # Éxito, va al panel.
+            else:
+                # Error en las credenciales, se añade un mensaje.
+                messages.error(request, 'Usuario o contraseña incorrectos.')
+                # Se redirige de vuelta al portal para mostrar el mensaje de error.
+                return redirect('portal')
+
+    # Si es una petición GET, simplemente se muestra la página del portal.
     return render(request, 'notas/portal.html')
+# --- FIN DE LA CORRECCIÓN ---
 
 
 def directorio_docentes_json(request):
@@ -74,10 +99,6 @@ def directorio_docentes_json(request):
 
 
 def documentos_publicos_json(request):
-    """
-    Obtiene todos los documentos públicos y los devuelve en formato JSON.
-    (Esta vista no se modifica)
-    """
     try:
         documentos = DocumentoPublico.objects.all().order_by('-fecha_publicacion')
         data_documentos = [
@@ -95,10 +116,6 @@ def documentos_publicos_json(request):
 
 
 def galeria_fotos_json(request):
-    """
-    Obtiene todas las fotos de la galería y las devuelve en formato JSON.
-    (Esta vista no se modifica)
-    """
     try:
         fotos = FotoGaleria.objects.all().order_by('-fecha_subida')
         data_fotos = [
@@ -114,10 +131,6 @@ def galeria_fotos_json(request):
 
 
 def noticias_json(request):
-    """
-    Obtiene las noticias publicadas y las devuelve en formato JSON.
-    (Esta vista no se modifica)
-    """
     try:
         noticias = Noticia.objects.filter(estado='PUBLICADO').order_by('-fecha_publicacion')[:10]
         data_noticias = [
@@ -128,7 +141,6 @@ def noticias_json(request):
                 'url_imagen': noticia.imagen_portada.url if noticia.imagen_portada else '',
                 'fecha': noticia.fecha_publicacion.strftime('%d de %B de %Y'),
                 'autor': noticia.autor.get_full_name() if noticia.autor else 'Administración',
-                # Ya no necesitamos la URL de detalle completa, el JS la construirá.
             }
             for noticia in noticias
         ]
@@ -138,18 +150,12 @@ def noticias_json(request):
 
 
 def carrusel_imagenes_json(request):
-    """
-    Devuelve las imágenes del carrusel principal en formato JSON.
-    (Esta vista no se modifica)
-    """
     try:
         imagenes = ImagenCarrusel.objects.filter(visible=True).order_by('orden')
         data = [{'url_imagen': img.imagen.url, 'titulo': img.titulo, 'subtitulo': img.subtitulo} for img in imagenes]
         return JsonResponse(data, safe=False)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
-# --- Vistas para las secciones de contenido ---
 
 def ajax_historia(request):
     return render(request, 'notas/portal_components/_contenido_historia.html')
@@ -166,15 +172,7 @@ def ajax_recursos_educativos(request):
 def ajax_redes_sociales(request):
     return render(request, 'notas/portal_components/_contenido_redes_sociales.html')
 
-# --- NUEVA VISTA PARA CARGAR UNA NOTICIA INDIVIDUAL CON AJAX ---
 def ajax_noticia_detalle(request, pk):
-    """
-    Obtiene una noticia individual y la renderiza en un template parcial
-    para ser cargada dinámicamente en el portal.
-    """
     noticia = get_object_or_404(Noticia, pk=pk, estado='PUBLICADO')
-    context = {
-        'noticia': noticia
-    }
-    # Usamos un nuevo template que solo contiene el detalle de la noticia.
+    context = {'noticia': noticia}
     return render(request, 'notas/portal_components/_contenido_noticia_detalle.html', context)

@@ -2,18 +2,27 @@
 {% load static %}
 
 {% block portal_content %}
-{# Este nuevo div contenedor es clave para el "sticky footer" #}
 <div class="d-flex flex-column min-vh-100 portal-publico-container">
     
-    {# Incluimos la barra de navegación superior #}
     {% include "notas/portal_components/_portal_header.html" %}
 
-    {# El contenido principal ahora crecerá para ocupar el espacio disponible #}
     <main class="flex-grow-1">
+        {# --- INICIO DE LA CORRECCIÓN: Bloque para mostrar mensajes --- #}
+        {% if messages %}
+            <div class="container mt-3" style="position: relative; z-index: 1050;">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        {# --- FIN DE LA CORRECCIÓN --- #}
+        
         {% include "notas/portal_components/_portal_main_content.html" %}
     </main>
     
-    {# Incluimos el pie de página que ahora se quedará abajo #}
     {% include "notas/portal_components/_portal_footer.html" %}
 
 </div>
