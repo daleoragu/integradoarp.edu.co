@@ -15,9 +15,11 @@ except ModuleNotFoundError:
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-local-dev-key-fallback')
 
-# --- Modo DEBUG ---
-# En producción (Render), esta variable de entorno debería ser 'False'
-DEBUG = True
+# --- Modo DEBUG (Mejora de seguridad) ---
+# Lee la variable de entorno DEBUG. En producción (Render), esta variable debe ser 'False'.
+# Por defecto, en desarrollo, será True.
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
+
 
 # --- Configuración de Hosts ---
 ALLOWED_HOSTS = []
@@ -133,10 +135,11 @@ if gs_credentials_json_str:
 # --- Configuración del Almacenamiento por Defecto para Archivos de Medios ---
 DEFAULT_FILE_STORAGE = 'notas.storages.GoogleCloudMediaStorage'
 
-# CORRECCIÓN FINAL: La URL base apunta a la raíz del bucket.
-# Django se encargará de añadir la ruta completa del archivo (ej: media/documentos_publicos/archivo.docx)
-MEDIA_URL = f'https://storage.googleapis.com/{GS_BUCKET_NAME}/'
-MEDIA_ROOT = '' # No se usa en producción con GCS
+# --- URL para Archivos de Medios ---
+# La URL base debe incluir la carpeta 'media/' para que coincida
+# con la estructura de carpetas dentro del bucket de GCS.
+MEDIA_URL = f'https://storage.googleapis.com/{GS_BUCKET_NAME}/media/'
+MEDIA_ROOT = '' # No se usa en producción con GCS, ya que la ruta la gestiona GCS.
 
 GS_FILE_OVERWRITE = False
 
@@ -145,6 +148,7 @@ GS_FILE_OVERWRITE = False
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # --- Seguridad en Producción ---
+# Estas configuraciones se activan automáticamente cuando DEBUG es False.
 if not DEBUG:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True

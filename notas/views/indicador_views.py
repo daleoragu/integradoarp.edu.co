@@ -95,7 +95,7 @@ def editar_indicador_vista(request, indicador_id):
         'url_action': reverse('editar_indicador', args=[indicador.id]),
         'redirect_url_cancel': redirect_url
     }
-    return render(request, 'notas/admin_crud/formulario_indicador_simple.html', context)
+    return render(request, 'notas/docente/editar_indicador.html', context)
 
 
 @login_required
