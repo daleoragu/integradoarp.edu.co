@@ -13,7 +13,7 @@ except ModuleNotFoundError:
 
 # --- Configuración Base ---
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-local-dev-key-fallback')
+SECRET_KEY = True
 
 # --- Modo DEBUG (Mejora de seguridad) ---
 # Lee la variable de entorno DEBUG. En producción (Render), esta variable debe ser 'False'.
