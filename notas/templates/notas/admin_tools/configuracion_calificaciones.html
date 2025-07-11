@@ -1,0 +1,50 @@
+{% extends 'notas/base.html' %}
+
+{% block page_title %}
+    Permiso para Modificar Porcentajes
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h4><i class="fas fa-toggle-on me-2"></i>Permiso de Modificación de Porcentajes</h4>
+            </div>
+            <div class="card-body p-4">
+                <p class="card-text text-muted mb-4">
+                    Activa esta opción para permitir que los docentes puedan ajustar los porcentajes de calificación (Saber, Hacer, Ser) para cada una de sus asignaturas directamente desde la pantalla de "Ingresar Notas".
+                </p>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="form-check form-switch mb-4 p-4 border rounded bg-light">
+                        {{ form.docente_puede_modificar }}
+                        <label class="form-check-label ms-2" for="{{ form.docente_puede_modificar.id_for_label }}">
+                            <span class="fw-bold fs-5">{{ form.docente_puede_modificar.label }}</span>
+                        </label>
+                        <small class="form-text text-muted d-block mt-1">{{ form.docente_puede_modificar.help_text }}</small>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-2"></i>Guardar Configuración
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-check.form-switch {
+        font-size: 1.1rem;
+    }
+    .form-check-input {
+        width: 3.5em;
+        height: 1.75em;
+        cursor: pointer;
+    }
+</style>

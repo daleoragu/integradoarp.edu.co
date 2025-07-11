@@ -9,23 +9,28 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.views import View
+from django.core.exceptions import ValidationError
 
 # Importaciones de tus modelos
 from ..models.academicos import (
     AsignacionDocente, PeriodoAcademico, Estudiante, Calificacion,
-    NotaDetallada, InasistenciasManualesPeriodo, Asistencia, IndicadorLogroPeriodo
+    NotaDetallada, InasistenciasManualesPeriodo, Asistencia, IndicadorLogroPeriodo,
+    ConfiguracionCalificaciones # --- 1. IMPORTAMOS EL NUEVO MODELO ---
 )
 from ..models.perfiles import Docente
 
 class IngresoNotasView(LoginRequiredMixin, View):
     """
-    Gestiona la página de ingreso de calificaciones, ahora con validación de indicadores.
+    Gestiona la página de ingreso de calificaciones. Ahora permite a los docentes
+    modificar los porcentajes si el administrador lo autoriza.
     """
     template_name = 'notas/docente/ingresar_notas_periodo.html'
     login_url = '/login/'
 
     def get(self, request, *args, **kwargs):
-        # ... (El resto de la lógica para obtener asignaciones y periodos se mantiene igual) ...
+        # --- 2. OBTENEMOS LA CONFIGURACIÓN DE PERMISOS ---
+        config, _ = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
+        
         asignaciones_a_mostrar = AsignacionDocente.objects.none()
         docente_seleccionado_id = request.GET.get('docente_id')
         
@@ -55,8 +60,9 @@ class IngresoNotasView(LoginRequiredMixin, View):
             'estudiantes_data_json': '[]',
             'periodo_cerrado': False,
             'indicadores': [],
-            # MEJORA 1: Añadimos esta variable al contexto por defecto
-            'hay_indicadores': False, 
+            'hay_indicadores': False,
+            # --- 3. PASAMOS EL PERMISO A LA PLANTILLA ---
+            'permiso_modificar_porcentajes': config.docente_puede_modificar,
         }
         context.update(context_admin)
 
@@ -64,7 +70,7 @@ class IngresoNotasView(LoginRequiredMixin, View):
             asignacion_seleccionada = get_object_or_404(asignaciones_a_mostrar, id=asignacion_id)
             periodo_seleccionado = get_object_or_404(PeriodoAcademico, id=periodo_id)
             
-            estudiantes_del_curso = Estudiante.objects.filter(curso=asignacion_seleccionada.curso).select_related('user').order_by('user__last_name', 'user__first_name')
+            estudiantes_del_curso = Estudiante.objects.filter(curso=asignacion_seleccionada.curso, is_active=True).select_related('user').order_by('user__last_name', 'user__first_name')
             
             estudiantes_data = []
             for estudiante in estudiantes_del_curso:
@@ -81,14 +87,13 @@ class IngresoNotasView(LoginRequiredMixin, View):
             
             indicadores = IndicadorLogroPeriodo.objects.filter(asignacion=asignacion_seleccionada, periodo=periodo_seleccionado).order_by('id')
             
-            # MEJORA 2: Verificamos si la consulta de indicadores tiene resultados
             context.update({
                 'asignacion_seleccionada': asignacion_seleccionada, 
                 'periodo_seleccionado': periodo_seleccionado, 
                 'estudiantes_data_json': json.dumps(estudiantes_data), 
                 'periodo_cerrado': not periodo_seleccionado.esta_activo, 
                 'indicadores': indicadores,
-                'hay_indicadores': indicadores.exists() # True si hay al menos uno, False si no.
+                'hay_indicadores': indicadores.exists()
             })
 
         return render(request, self.template_name, context)
@@ -100,6 +105,8 @@ class IngresoNotasView(LoginRequiredMixin, View):
             asignacion_id = data.get('asignacion_id')
             periodo_id = data.get('periodo_id')
             estudiantes_data = data.get('estudiantes')
+            # --- 4. OBTENEMOS LOS NUEVOS PORCENTAJES DEL JSON ---
+            porcentajes_nuevos = data.get('porcentajes')
             
             if not all([asignacion_id, periodo_id, isinstance(estudiantes_data, list)]):
                 return JsonResponse({'status': 'error', 'message': 'Faltan datos.'}, status=400)
@@ -113,20 +120,29 @@ class IngresoNotasView(LoginRequiredMixin, View):
             if not periodo.esta_activo:
                 return JsonResponse({'status': 'error', 'message': 'El periodo está cerrado.'}, status=403)
 
-            # --- MEJORA 3: VALIDACIÓN DE BACKEND ---
-            # Se comprueba en el servidor si existen indicadores antes de procesar las notas.
-            # Esta es la validación de seguridad más importante.
             if not IndicadorLogroPeriodo.objects.filter(asignacion=asignacion, periodo=periodo).exists():
-                return JsonResponse({
-                    'status': 'error', 
-                    'message': 'No se pueden guardar calificaciones porque no hay indicadores de logro definidos para esta asignación.'
-                }, status=403)
-            # --- FIN DE LA MEJORA ---
+                return JsonResponse({'status': 'error', 'message': 'No se pueden guardar calificaciones porque no hay indicadores de logro definidos.'}, status=403)
+
+            # --- 5. LÓGICA PARA GUARDAR LOS PORCENTAJES NUEVOS ---
+            config, _ = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
+            if config.docente_puede_modificar and porcentajes_nuevos:
+                try:
+                    asignacion.porcentaje_saber = int(porcentajes_nuevos.get('saber', asignacion.porcentaje_saber))
+                    asignacion.porcentaje_hacer = int(porcentajes_nuevos.get('hacer', asignacion.porcentaje_hacer))
+                    asignacion.porcentaje_ser = int(porcentajes_nuevos.get('ser', asignacion.porcentaje_ser))
+                    asignacion.usar_ponderacion_equitativa = False # Desactivamos la equitativa al guardar manualmente
+                    asignacion.save() # El método save() del modelo validará que la suma sea 100
+                except ValidationError as e:
+                    # Si la suma no es 100, devolvemos un error claro.
+                    return JsonResponse({'status': 'error', 'message': e.messages[0]}, status=400)
+                except (ValueError, TypeError):
+                    return JsonResponse({'status': 'error', 'message': 'Los valores de los porcentajes deben ser números enteros.'}, status=400)
+
+            # --- FIN DE LA LÓGICA DE GUARDADO ---
 
             porcentajes = {'SER': asignacion.ser_calc / 100, 'SABER': asignacion.saber_calc / 100, 'HACER': asignacion.hacer_calc / 100}
             
             for est_data in estudiantes_data:
-                # ... (El resto de la lógica para guardar notas se mantiene igual) ...
                 estudiante = get_object_or_404(Estudiante, id=est_data['id'])
                 definitiva_periodo = Decimal('0.0')
 
@@ -153,7 +169,6 @@ class IngresoNotasView(LoginRequiredMixin, View):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f'Ocurrió un error inesperado: {e}'}, status=500)
 
-# La vista ajax_get_inasistencias_auto no necesita cambios
 @login_required
 def ajax_get_inasistencias_auto(request):
     try:

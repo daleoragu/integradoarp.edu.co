@@ -1,6 +1,6 @@
 {% comment %}
   Plantilla rediseñada para la tabla de calificaciones.
-  Ahora incluye un contenedor para mensajes y un atributo de datos para la validación.
+  Ahora incluye un panel condicional para modificar los porcentajes.
 {% endcomment %}
 
 {% if asignacion_seleccionada and periodo_seleccionado %}
@@ -10,11 +10,39 @@
         <div id="status-indicator" class="status-indicator" title="Estado de los cambios"></div>
     </div>
 
-    <!-- MEJORA 1: Contenedor para el mensaje de advertencia -->
+    <!-- INICIO: PANEL DE PONDERACIÓN CONDICIONAL -->
+    {% if permiso_modificar_porcentajes %}
+    <div class="card-body bg-light border-bottom" id="panel-ponderacion">
+        <h6 class="card-title"><i class="fas fa-sliders-h me-2"></i>Ajustar Ponderación de la Asignatura</h6>
+        <p class="card-text text-muted small">
+            Puedes ajustar los porcentajes para esta asignatura. La suma debe ser exactamente 100%.
+        </p>
+        <div class="row align-items-center">
+            <div class="col-md-3">
+                <label for="p-saber" class="form-label mb-0">Saber (%):</label>
+                <input type="number" class="form-control form-control-sm porcentaje-input" id="p-saber" value="{{ asignacion_seleccionada.porcentaje_saber }}" min="0" max="100">
+            </div>
+            <div class="col-md-3">
+                <label for="p-hacer" class="form-label mb-0">Hacer (%):</label>
+                <input type="number" class="form-control form-control-sm porcentaje-input" id="p-hacer" value="{{ asignacion_seleccionada.porcentaje_hacer }}" min="0" max="100">
+            </div>
+            <div class="col-md-3">
+                <label for="p-ser" class="form-label mb-0">Ser (%):</label>
+                <input type="number" class="form-control form-control-sm porcentaje-input" id="p-ser" value="{{ asignacion_seleccionada.porcentaje_ser }}" min="0" max="100">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-0">Suma Total:</label>
+                <div id="suma-porcentajes" class="fw-bold fs-5 p-1 border rounded text-center bg-white">100%</div>
+            </div>
+        </div>
+        <div id="error-porcentajes" class="text-danger small mt-2" style="display: none;">La suma debe ser 100%.</div>
+    </div>
+    {% endif %}
+    <!-- FIN: PANEL DE PONDERACIÓN CONDICIONAL -->
+
     <div id="mensaje-indicadores" class="p-3" style="display: none;"></div>
 
     <div class="table-responsive">
-        <!-- MEJORA 2: Se añade el atributo data-hay-indicadores -->
         <table class="table table-bordered table-hover tabla-notas-excel" 
                id="tabla-calificaciones"
                data-hay-indicadores="{{ hay_indicadores|yesno:'true,false' }}">
@@ -39,11 +67,52 @@
 <div id="estudiantes-data-json" style="display: none;">{{ estudiantes_data_json|safe }}</div>
 <div id="url-get-inasistencias" data-url="{% url 'ajax_get_inasistencias_auto' %}"></div>
 
-<!-- Datos de la asignación para que JavaScript los use para la nueva lógica. -->
+<!-- Datos de la asignación para que JavaScript los use. -->
 <div id="asignacion-details" 
      data-usar-ponderacion-equitativa="{{ asignacion_seleccionada.usar_ponderacion_equitativa|yesno:'true,false' }}"
      data-p-ser="{{ asignacion_seleccionada.ser_calc }}"
      data-p-saber="{{ asignacion_seleccionada.saber_calc }}"
      data-p-hacer="{{ asignacion_seleccionada.hacer_calc }}">
 </div>
-{% endif %}
+
+<!-- INICIO: SCRIPT PARA VALIDAR PORCENTAJES EN TIEMPO REAL -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const panelPonderacion = document.getElementById('panel-ponderacion');
+    if (panelPonderacion) {
+        const inputs = panelPonderacion.querySelectorAll('.porcentaje-input');
+        const sumaDiv = document.getElementById('suma-porcentajes');
+        const errorDiv = document.getElementById('error-porcentajes');
+        const guardarBtn = document.getElementById('guardarTodoBtn');
+
+        function validarSuma() {
+            let suma = 0;
+            inputs.forEach(input => {
+                suma += parseInt(input.value, 10) || 0;
+            });
+
+            sumaDiv.textContent = suma + '%';
+
+            if (suma === 100) {
+                sumaDiv.classList.remove('text-danger', 'bg-warning-subtle');
+                sumaDiv.classList.add('text-success', 'bg-success-subtle');
+                errorDiv.style.display = 'none';
+                if(guardarBtn) guardarBtn.disabled = false; // Habilita el botón si la suma es correcta
+            } else {
+                sumaDiv.classList.add('text-danger', 'bg-warning-subtle');
+                sumaDiv.classList.remove('text-success', 'bg-success-subtle');
+                errorDiv.style.display = 'block';
+                if(guardarBtn) guardarBtn.disabled = true; // Deshabilita el botón si la suma es incorrecta
+            }
+        }
+
+        inputs.forEach(input => {
+            input.addEventListener('input', validarSuma);
+        });
+
+        // Ejecutar la validación al cargar la página por si los valores iniciales son incorrectos
+        validarSuma();
+    }
+});
+</script>
+<!-- FIN: SCRIPT PARA VALIDAR PORCENTAJES -->

@@ -49,6 +49,7 @@ urlpatterns = [
     path('panel-administrador/control-promocion/', admin_tools_views.panel_control_promocion_vista, name='panel_control_promocion'),
     path('panel-administrador/estadisticas/', estadisticas_views.panel_estadisticas_vista, name='panel_estadisticas'),
     path('panel-administrador/publicar-boletines/', publicacion_views.panel_publicacion_vista, name='panel_publicacion'),
+    path('panel-administrador/configuracion-calificaciones/', admin_tools_views.configuracion_calificaciones_vista, name='configuracion_calificaciones'),
 
     # --- RUTAS PARA EL PANEL DE CONFIGURACIÓN DEL PORTAL ---
     path('panel-administrador/configuracion-portal/', portal_admin_views.configuracion_portal_vista, name='configuracion_portal'),

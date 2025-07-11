@@ -6,15 +6,18 @@ from django.urls import reverse
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
-# --- INICIO: Se importan User y Group para las notificaciones ---
 from django.contrib.auth.models import User, Group
-# --- FIN ---
 from django.http import HttpResponse
 from django.contrib.auth import get_user_model
+from django import forms # Import añadido
+
 from ..models import (
     Curso, Materia, Estudiante, Docente, AsignacionDocente, PeriodoAcademico,
-    ReporteParcial, Observacion, ConfiguracionSistema, Notificacion # Se añade Notificacion
+    ReporteParcial, Observacion, ConfiguracionSistema, Notificacion
 )
+# Import del nuevo modelo añadido
+from ..models.academicos import ConfiguracionCalificaciones
+
 
 def enviar_notificacion_consolidada(request, estudiante, periodo, forzar_envio=False):
     """
@@ -86,10 +89,8 @@ def panel_control_periodos_vista(request):
             periodo_id = request.POST.get('periodo_id')
             periodo = get_object_or_404(PeriodoAcademico, id=periodo_id)
             
-            # --- INICIO: Lógica de Notificación ---
             mensaje_notificacion = ""
             url_notificacion = "#"
-            # --- FIN ---
 
             if action == 'toggle_ingreso_notas':
                 periodo.esta_activo = not periodo.esta_activo
@@ -117,7 +118,6 @@ def panel_control_periodos_vista(request):
 
             periodo.save()
             
-            # --- INICIO: Envío de notificaciones ---
             if mensaje_notificacion:
                 docentes = User.objects.filter(groups__name='Docentes')
                 for docente_user in docentes:
@@ -127,7 +127,6 @@ def panel_control_periodos_vista(request):
                         tipo='PERIODO',
                         url=url_notificacion
                     )
-            # --- FIN ---
 
         except PeriodoAcademico.DoesNotExist:
             messages.error(request, "El periodo que intentó modificar no existe.")
@@ -171,3 +170,42 @@ def panel_control_promocion_vista(request):
     }
     return render(request, 'notas/admin_tools/panel_control_promocion.html', context)
 
+
+# --- INICIO: CÓDIGO AÑADIDO PARA LA CONFIGURACIÓN DE CALIFICACIONES ---
+
+class ConfiguracionCalificacionesForm(forms.ModelForm):
+    """
+    Un formulario simple para manejar el campo booleano del modelo.
+    """
+    class Meta:
+        model = ConfiguracionCalificaciones
+        fields = ['docente_puede_modificar']
+        labels = {
+            'docente_puede_modificar': 'Permitir que los docentes modifiquen los porcentajes'
+        }
+
+@user_passes_test(lambda u: u.is_superuser)
+def configuracion_calificaciones_vista(request):
+    """
+    Esta vista controla la página de configuración de permisos.
+    """
+    # Usamos get_or_create para manejar la primera vez que se accede.
+    # El modelo está diseñado para tener siempre un único registro con pk=1.
+    config, created = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
+
+    if request.method == 'POST':
+        form = ConfiguracionCalificacionesForm(request.POST, instance=config)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'La configuración de permisos ha sido actualizada correctamente.')
+            return redirect('configuracion_calificaciones')
+    else:
+        form = ConfiguracionCalificacionesForm(instance=config)
+
+    context = {
+        'form': form,
+        'page_title': 'Permiso para Modificar Porcentajes'
+    }
+    return render(request, 'notas/admin_tools/configuracion_calificaciones.html', context)
+
+# --- FIN: CÓDIGO AÑADIDO ---

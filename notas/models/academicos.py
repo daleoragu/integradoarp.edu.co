@@ -214,3 +214,23 @@ class PublicacionBoletinFinal(models.Model):
         verbose_name = "Publicación de Boletín Final"
         verbose_name_plural = "Publicaciones de Boletines Finales"
         ordering = ['-ano_lectivo']
+
+class ConfiguracionCalificaciones(models.Model):
+    docente_puede_modificar = models.BooleanField(
+        default=False,
+        verbose_name="Permitir que los docentes modifiquen los porcentajes de calificación",
+        help_text="Si se activa, cada docente podrá ajustar los porcentajes para sus propias asignaturas desde la vista de 'Ingresar Notas'."
+    )
+
+    def save(self, *args, **kwargs):
+        # Esto asegura que siempre estemos editando el mismo registro de configuración
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return "Configuración de Permisos de Calificación"
+
+    class Meta:
+        verbose_name = "Configuración de Permisos de Calificación"
+        verbose_name_plural = "Configuración de Permisos de Calificación"
+

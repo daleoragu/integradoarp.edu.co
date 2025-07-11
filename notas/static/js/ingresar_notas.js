@@ -375,4 +375,18 @@ document.addEventListener('DOMContentLoaded', function () {
     renderizarTabla();
     gestionarEstadoInputsPorIndicadores(); // Llamar a la nueva función de validación
     actualizarStatus('saved');
+
+const payload = {
+
+    
+    // --- LÍNEA A AÑADIR ---
+    porcentajes: {
+        saber: document.getElementById('p-saber').value,
+        hacer: document.getElementById('p-hacer').value,
+        ser: document.getElementById('p-ser').value
+    }
+    // --- FIN DE LÍNEA A AÑADIR ---
+};
+
+// Luego envías el 'payload' con fetch como ya lo haces.
 });
