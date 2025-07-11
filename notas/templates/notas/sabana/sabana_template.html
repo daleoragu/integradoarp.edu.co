@@ -13,21 +13,29 @@
     .medalla.plata { background-color: #C0C0C0; border: 1px solid #A9A9A9; }
     .medalla.bronce { background-color: #CD7F32; border: 1px solid #8C5B30; }
     .medalla.normal { background-color: #f8f9fa; border: 1px solid #dee2e6; color: #495057; width: auto; padding: 0 8px; border-radius: 8px; font-size: 12px; height: 22px; line-height: 22px; }
-    .th-vertical { writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; vertical-align: middle; padding: 8px 4px !important; white-space: nowrap; }
-    .table-responsive thead tr { height: 120px; }
-    .porc-rendimiento { font-size: 0.75rem; color: #6c757d; font-weight: normal; }
     
-    /* --- INICIO: Estilo para nota recuperada --- */
-    .nota-recuperada {
-        color: #155724; /* Verde oscuro */
-        font-weight: bold;
-        margin-left: 4px;
+    .th-area {
+        background-color: #343a40;
+        color: white;
+        text-align: center;
+        vertical-align: middle;
+        font-size: 0.85rem;
+        border-bottom: 2px solid #fff;
     }
-    .nota-original-reprobada {
-        color: #721c24; /* Rojo oscuro */
+    .th-vertical { 
+        writing-mode: vertical-rl; 
+        transform: rotate(180deg); 
+        text-align: center; 
+        vertical-align: bottom;
+        padding: 8px 4px !important; 
+        white-space: nowrap; 
+        height: 150px;
+        font-weight: normal;
     }
-    /* --- FIN --- */
 
+    .porc-rendimiento { font-size: 0.75rem; color: #6c757d; font-weight: normal; }
+    .nota-recuperada { color: #155724; font-weight: bold; margin-left: 4px; }
+    .nota-original-reprobada { color: #721c24; }
 </style>
 {% endblock %}
 
@@ -59,17 +67,24 @@
             <table class="table table-bordered table-hover" style="font-size: 0.8rem; vertical-align: middle;">
                 <thead class="table-light">
                     <tr>
-                        <th class="text-center">N°</th>
-                        <th style="min-width: 220px;">Apellidos y Nombres</th>
-                        {% for materia in materias_curso %}
-                            <th class="th-vertical" title="{{ materia.nombre }}">{{ materia.abreviatura }}</th>
+                        <th rowspan="2" class="text-center align-middle">N°</th>
+                        <th rowspan="2" class="align-middle" style="min-width: 220px;">Apellidos y Nombres</th>
+                        {% for area in areas_con_materias %}
+                            <th colspan="{{ area.materias_del_curso_ordenadas|length }}" class="th-area">{{ area.nombre }}</th>
                         {% endfor %}
-                        <th class="text-center table-info">PROM</th>
-                        <th class="text-center table-info">PUESTO</th>
-                        <th class="text-center" style="background-color: #d1e7dd;">SUP</th>
-                        <th class="text-center" style="background-color: #cff4fc;">ALT</th>
-                        <th class="text-center" style="background-color: #fff3cd;">BÁS</th>
-                        <th class="text-center" style="background-color: #f8d7da;">BAJ</th>
+                        <th rowspan="2" class="text-center table-info align-middle">PROM</th>
+                        <th rowspan="2" class="text-center table-info align-middle">PUESTO</th>
+                        <th rowspan="2" class="text-center align-middle" style="background-color: #d1e7dd;">SUP</th>
+                        <th rowspan="2" class="text-center align-middle" style="background-color: #cff4fc;">ALT</th>
+                        <th rowspan="2" class="text-center align-middle" style="background-color: #fff3cd;">BÁS</th>
+                        <th rowspan="2" class="text-center align-middle" style="background-color: #f8d7da;">BAJ</th>
+                    </tr>
+                    <tr>
+                        {% for area in areas_con_materias %}
+                            {% for materia in area.materias_del_curso_ordenadas %}
+                                <th class="th-vertical" title="{{ materia.nombre }}">{{ materia.abreviatura }}</th>
+                            {% endfor %}
+                        {% endfor %}
                     </tr>
                 </thead>
                 <tbody>

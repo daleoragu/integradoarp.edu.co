@@ -31,6 +31,7 @@
         .medalla.oro { background-color: #FFC300; border: 1px solid #DAA520; }
         .medalla.plata { background-color: #C0C0C0; border: 1px solid #A9A9A9; color: #333; }
         .medalla.bronce { background-color: #CD7F32; border: 1px solid #8C5B30; }
+        .th-area { background-color: #343a40; color: white; text-align: center; vertical-align: middle; font-size: 8px; }
         .th-vertical { text-align: center; vertical-align: bottom; padding-bottom: 8px; height: 100px; }
         .th-vertical div { transform: rotate(-90deg); white-space: nowrap; width: 25px; transform-origin: bottom center; font-weight: bold; }
         .tabla-resumen-transposed { width: 100%; font-size: 7.5px; border-collapse: collapse; }
@@ -45,7 +46,6 @@
     <header>
         <table class="encabezado-tabla">
             <tr>
-                <!-- INICIO DE LA CORRECCIÓN: Se usa la sintaxis de filtro -->
                 <td style="width: 20%;"><img src="{{ 'img/Logo_govtolima.png' | get_static_path }}" alt="Escudo Tolima" class="escudo"></td>
                 <td style="width: 60%;" class="info-institucion">
                     <p>INSTITUCIÓN EDUCATIVA TÉCNICA</p><p>ALFONSO PALACIO RUDAS</p>
@@ -53,7 +53,6 @@
                     <p style="font-size: 8px; font-weight: normal;">Honda-Tolima</p>
                 </td>
                 <td style="width: 20%;"><img src="{{ 'img/logo_colegio.png' | get_static_path }}" alt="Logo Colegio" class="escudo"></td>
-                <!-- FIN DE LA CORRECCIÓN -->
             </tr>
         </table>
         {% if request.GET.tipo_reporte == 'anual' %}<h4 style="text-align: center; margin: 5px 0;">SÁBANA DE NOTAS FINAL - AÑO {{ ano_lectivo }}</h4>{% else %}<h4 style="text-align: center; margin: 5px 0;">SÁBANA DE NOTAS ACUMULATIVA AL {{ periodo.get_nombre_display|upper }} - {{ periodo.ano_lectivo }}</h4>{% endif %}
@@ -70,14 +69,24 @@
         <table class="tabla-sabana">
             <thead>
                 <tr>
-                    <th style="vertical-align: middle;">N°</th>
-                    <th style="width: 20%; vertical-align: middle;">Apellidos y Nombres</th>
-                    {% for materia in materias_curso %}
-                        <th class="th-vertical" title="{{ materia.nombre }}"><div>{{ materia.abreviatura }}</div></th>
+                    <th rowspan="2" style="vertical-align: middle;">N°</th>
+                    <th rowspan="2" style="width: 20%; vertical-align: middle;">Apellidos y Nombres</th>
+                    {% for area in areas_con_materias %}
+                        <th colspan="{{ area.materias_del_curso_ordenadas|length }}" class="th-area">{{ area.nombre }}</th>
                     {% endfor %}
-                    <th style="vertical-align: middle;">PROM</th><th style="vertical-align: middle;">PUESTO</th>
-                    <th style="vertical-align: middle;">SUP</th><th style="vertical-align: middle;">ALT</th>
-                    <th style="vertical-align: middle;">BÁS</th><th style="vertical-align: middle;">BAJ</th>
+                    <th rowspan="2" style="vertical-align: middle;">PROM</th>
+                    <th rowspan="2" style="vertical-align: middle;">PUESTO</th>
+                    <th rowspan="2" style="vertical-align: middle;">SUP</th>
+                    <th rowspan="2" style="vertical-align: middle;">ALT</th>
+                    <th rowspan="2" style="vertical-align: middle;">BÁS</th>
+                    <th rowspan="2" style="vertical-align: middle;">BAJ</th>
+                </tr>
+                <tr>
+                    {% for area in areas_con_materias %}
+                        {% for materia in area.materias_del_curso_ordenadas %}
+                            <th class="th-vertical" title="{{ materia.nombre }}"><div>{{ materia.abreviatura }}</div></th>
+                        {% endfor %}
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>

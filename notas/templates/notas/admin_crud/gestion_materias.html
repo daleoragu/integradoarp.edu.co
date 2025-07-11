@@ -19,15 +19,21 @@
     <a href="{% url 'crear_materia' %}" class="btn btn-primary">
         <i class="fas fa-plus me-2"></i>Añadir Materia
     </a>
-    <a href="{% url 'gestion_areas' %}" class="btn btn-secondary">
-        <i class="fas fa-folder-plus me-2"></i>Gestionar Áreas
+    <!-- BOTÓN MODIFICADO: Ahora dirige a la nueva herramienta de ponderación -->
+    <a href="{% url 'gestion_ponderacion_areas' %}" class="btn btn-info">
+        <i class="fas fa-balance-scale me-2"></i>Gestionar Ponderación por Áreas
     </a>
     <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importarModal">
         <i class="fas fa-file-excel me-2"></i>Importar Materias
     </button>
-    <a href="{% url 'exportar_materias_excel' %}" class="btn btn-info">
+    <a href="{% url 'exportar_materias_excel' %}" class="btn btn-secondary">
         <i class="fas fa-file-download me-2"></i>Exportar Lista a Excel
     </a>
+</div>
+
+<!-- NUEVO: Mensaje informativo -->
+<div class="alert alert-info">
+    <strong>Nota:</strong> Para asignar una materia a un área y definir su peso porcentual, por favor, utilice la herramienta <strong>"Gestionar Ponderación por Áreas"</strong>.
 </div>
 
 <div class="card shadow-sm">
@@ -36,7 +42,7 @@
             <table class="table table-hover align-middle">
                 <thead class="table-light">
                     <tr>
-                        <th>Área de Conocimiento</th>
+                        <!-- COLUMNA ELIMINADA: Ya no se muestra el área aquí -->
                         <th>Materia</th>
                         <th>Abreviatura</th>
                         <th class="text-end">Acciones</th>
@@ -45,8 +51,8 @@
                 <tbody>
                     {% for materia in materias %}
                     <tr>
-                        <td><strong>{{ materia.area.nombre }}</strong></td>
-                        <td>{{ materia.nombre }}</td>
+                        <!-- CAMPO ELIMINADO: Ya no se muestra materia.area.nombre -->
+                        <td><strong>{{ materia.nombre }}</strong></td>
                         <td>{{ materia.abreviatura|default_if_none:"" }}</td>
                         <td class="text-end">
                             <a href="{% url 'editar_materia' materia.id %}" class="btn btn-sm btn-outline-info" title="Editar"><i class="fas fa-pencil-alt"></i></a>
@@ -58,7 +64,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="text-center text-muted py-4">
+                        <td colspan="3" class="text-center text-muted py-4">
                             No hay materias registradas en el sistema.
                         </td>
                     </tr>
@@ -69,6 +75,7 @@
     </div>
 </div>
 
+<!-- El modal de importación no necesita cambios, pero su lógica de backend sí deberá ser ajustada eventualmente -->
 <div class="modal fade" id="importarModal" tabindex="-1" aria-labelledby="importarModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -79,10 +86,10 @@
             <form action="{% url 'importacion_datos' %}" method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-body">
-                    <p>Siga estos pasos para importar materias y áreas:</p>
+                    <p>Siga estos pasos para importar materias:</p>
                     <ol>
                         <li>Descargue la plantilla oficial.</li>
-                        <li>Rellene el archivo Excel. Si el área ya existe, se asignará la materia; si no, se creará una nueva área.</li>
+                        <li>Rellene el archivo Excel con los nombres y abreviaturas de las materias.</li>
                         <li>Guarde el archivo y súbalo en el siguiente formulario.</li>
                     </ol>
                     <a href="{% url 'descargar_plantilla_materias' %}" class="btn btn-link">

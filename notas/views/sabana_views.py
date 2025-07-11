@@ -8,6 +8,7 @@ from decimal import Decimal
 from django.template.loader import render_to_string
 from django.utils import timezone
 from itertools import groupby
+from django.db.models import Prefetch
 
 try:
     from weasyprint import HTML
@@ -15,7 +16,8 @@ try:
 except ImportError:
     PDF_SUPPORT = False
 
-from ..models import Curso, PeriodoAcademico, Docente, AsignacionDocente, Estudiante, Materia, Calificacion
+# Se añaden los modelos necesarios
+from ..models import Curso, PeriodoAcademico, Docente, AsignacionDocente, Estudiante, Materia, Calificacion, AreaConocimiento
 from .sabana_exports import generar_excel_sabana 
 
 def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
@@ -24,13 +26,37 @@ def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
         fecha_inicio__lte=periodo_actual.fecha_inicio
     ).order_by('fecha_inicio')
     
-    materias_curso = Materia.objects.filter(asignaciondocente__curso=curso).distinct().order_by('area__nombre', 'nombre')
+    # --- INICIO DE LA CORRECCIÓN LÓGICA ---
+    # 1. Obtener IDs de materias que se dictan en el curso.
+    materias_del_curso_ids = AsignacionDocente.objects.filter(curso=curso).values_list('materia_id', flat=True).distinct()
+    
+    # 2. Obtener los objetos Materia.
+    materias_del_curso = Materia.objects.filter(id__in=materias_del_curso_ids)
+
+    # 3. Obtener las Áreas que contienen estas materias y ordenarlas.
+    #    Esto nos dará el orden correcto para las columnas en la sábana.
+    areas_con_materias = AreaConocimiento.objects.filter(
+        materias__in=materias_del_curso
+    ).prefetch_related(
+        Prefetch(
+            'materias',
+            queryset=materias_del_curso.order_by('nombre'),
+            to_attr='materias_del_curso_ordenadas'
+        )
+    ).distinct().order_by('nombre')
+    
+    # 4. Crear una lista plana y ordenada de materias para la iteración.
+    materias_curso_ordenadas = []
+    for area in areas_con_materias:
+        materias_curso_ordenadas.extend(area.materias_del_curso_ordenadas)
+    # --- FIN DE LA CORRECCIÓN LÓGICA ---
+
     estudiantes = Estudiante.objects.filter(curso=curso, is_active=True).select_related('user')
     total_estudiantes_curso = estudiantes.count() if estudiantes.exists() else 1
 
     calificaciones = Calificacion.objects.filter(
         estudiante__in=estudiantes,
-        materia__in=materias_curso,
+        materia__in=materias_curso_ordenadas,
         periodo__in=periodos_transcurridos,
         tipo_nota__in=['PROM_PERIODO', 'NIVELACION']
     ).select_related('estudiante', 'materia', 'periodo')
@@ -54,11 +80,9 @@ def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
 
     for est in estudiantes:
         estudiante_data = {'info': est, 'calificaciones_por_materia': []}
-        
-        # --- LÓGICA CORREGIDA ---
         notas_para_promedio_general_estudiante = []
 
-        for mat in materias_curso:
+        for mat in materias_curso_ordenadas: # Usamos la lista ordenada
             notas_materia_por_periodo_visual = []
             notas_para_promedio_acumulado_materia = []
 
@@ -67,27 +91,23 @@ def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
                 nota_original = cal_data.get('prom')
                 nota_nivelacion = cal_data.get('niv')
                 
-                # Lógica de Cálculo para el "Prom" de la materia
                 nota_para_acumulado = nota_original if nota_original is not None else CERO
                 if nota_nivelacion is not None and p.id != periodo_actual.id:
                      nota_para_acumulado = nota_nivelacion
                 notas_para_promedio_acumulado_materia.append(nota_para_acumulado)
 
-                # Lógica de Visualización (Paréntesis)
                 mostrar_recuperacion = nota_nivelacion is not None and p.id != periodo_actual.id
                 notas_materia_por_periodo_visual.append({
                     'original': nota_original,
                     'recuperacion': nota_nivelacion if mostrar_recuperacion else None
                 })
                 
-                # Lógica para el promedio del estudiante y ranking
                 if p.id == periodo_actual.id:
                     nota_para_prom_estudiante = nota_original if nota_original is not None else CERO
                     notas_para_promedio_general_estudiante.append(nota_para_prom_estudiante)
 
             suma_acumulada_materia = sum(notas_para_promedio_acumulado_materia)
             promedio_materia = suma_acumulada_materia / len(notas_para_promedio_acumulado_materia) if notas_para_promedio_acumulado_materia else CERO
-            
             puntos_necesarios = (NOTA_MINIMA_APROBACION * len(periodos_transcurridos)) - suma_acumulada_materia
             if puntos_necesarios < CERO: puntos_necesarios = CERO
             
@@ -98,17 +118,15 @@ def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
             })
         
         rendimiento = {'BAJO': 0, 'BASICO': 0, 'ALTO': 0, 'SUPERIOR': 0}
-        
         promedio_general = sum(notas_para_promedio_general_estudiante) / len(notas_para_promedio_general_estudiante) if notas_para_promedio_general_estudiante else CERO
         
-        # Para el reporte anual, el rendimiento se basa en el promedio acumulado de cada materia
         if tipo_reporte == 'anual':
             for prom in [m['promedio_materia'] for m in estudiante_data['calificaciones_por_materia']]:
                 if prom < NOTA_MINIMA_APROBACION: rendimiento['BAJO'] += 1
                 elif prom < NOTA_ALTO: rendimiento['BASICO'] += 1
                 elif prom < NOTA_SUPERIOR: rendimiento['ALTO'] += 1
                 else: rendimiento['SUPERIOR'] += 1
-        else: # Para el reporte de periodo, el rendimiento se basa en las notas originales del periodo
+        else:
             for nota in notas_para_promedio_general_estudiante:
                 if nota < NOTA_MINIMA_APROBACION: rendimiento['BAJO'] += 1
                 elif nota < NOTA_ALTO: rendimiento['BASICO'] += 1
@@ -134,7 +152,7 @@ def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
     sabana_data.sort(key=lambda x: (x['info'].user.last_name, x['info'].user.first_name))
     
     resumen_materias = []
-    for i, materia in enumerate(materias_curso):
+    for i, materia in enumerate(materias_curso_ordenadas):
         rendimiento_data = {'BAJO': {'count': 0}, 'BASICO': {'count': 0}, 'ALTO': {'count': 0}, 'SUPERIOR': {'count': 0}}
         notas_a_evaluar_resumen = []
 
@@ -149,7 +167,7 @@ def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
                     if nota_original_periodo is not None:
                         nota_a_usar = nota_original_periodo
                 except (ValueError, IndexError):
-                    pass # Se queda como CERO
+                    pass
             
             notas_a_evaluar_resumen.append(nota_a_usar)
             if nota_a_usar < NOTA_MINIMA_APROBACION: rendimiento_data['BAJO']['count'] += 1
@@ -170,10 +188,11 @@ def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
             'rendimiento': rendimiento_data
         })
         
-    return sabana_data, materias_curso, periodos_transcurridos, resumen_materias, mejores_estudiantes, promedio_total_curso
+    return sabana_data, areas_con_materias, materias_curso_ordenadas, periodos_transcurridos, resumen_materias, mejores_estudiantes, promedio_total_curso
 
 @login_required
 def selector_sabana_vista(request):
+    # (Esta vista no necesita cambios)
     user = request.user
     if user.is_superuser:
         cursos = Curso.objects.all().order_by('nombre')
@@ -197,22 +216,22 @@ def _preparar_y_validar_sabana(request):
     periodo_ref = None
 
     if not curso_id or not tipo_reporte:
-        return None, None, "Debe seleccionar un curso y un tipo de reporte."
+        return None, None, None, "Debe seleccionar un curso y un tipo de reporte."
     curso = get_object_or_404(Curso, id=curso_id)
     if not request.user.is_superuser:
         if not AsignacionDocente.objects.filter(docente__user=request.user, curso=curso).exists():
-            return None, None, "No tiene permisos para ver la sábana de este curso."
+            return None, None, None, "No tiene permisos para ver la sábana de este curso."
 
     if tipo_reporte == 'periodo':
         periodo_id = request.GET.get('periodo_id')
-        if not periodo_id: return None, None, "Debe seleccionar un periodo de corte para este tipo de reporte."
+        if not periodo_id: return None, None, None, "Debe seleccionar un periodo de corte para este tipo de reporte."
         periodo_ref = get_object_or_404(PeriodoAcademico, id=periodo_id)
     elif tipo_reporte == 'anual':
         ano_lectivo = request.GET.get('ano_lectivo')
-        if not ano_lectivo: return None, None, "El año lectivo no fue especificado."
+        if not ano_lectivo: return None, None, None, "El año lectivo no fue especificado."
         periodo_ref = PeriodoAcademico.objects.filter(ano_lectivo=ano_lectivo).order_by('-fecha_fin').first()
-        if not periodo_ref: return None, None, f"No se encontraron periodos para el año {ano_lectivo}."
-    else: return None, None, "Tipo de reporte no válido."
+        if not periodo_ref: return None, None, None, f"No se encontraron periodos para el año {ano_lectivo}."
+    else: return None, None, None, "Tipo de reporte no válido."
 
     datos_sabana = _get_sabana_acumulada_data(curso, periodo_ref, tipo_reporte)
     return curso, periodo_ref, datos_sabana, None
@@ -223,10 +242,13 @@ def generar_sabana_vista(request):
     if error:
         messages.error(request, error)
         return redirect('selector_sabana')
-    sabana_data, materias_curso, periodos_transcurridos, resumen_materias, mejores_estudiantes, promedio_total_curso = datos_sabana
+    sabana_data, areas_con_materias, materias_curso, periodos_transcurridos, resumen_materias, mejores_estudiantes, promedio_total_curso = datos_sabana
     context = {
         'curso': curso, 'periodo': periodo_ref, 'ano_lectivo': periodo_ref.ano_lectivo,
-        'sabana_data': sabana_data, 'materias_curso': materias_curso, 'periodos_transcurridos': periodos_transcurridos,
+        'sabana_data': sabana_data, 
+        'areas_con_materias': areas_con_materias, # Variable nueva para la cabecera
+        'materias_curso': materias_curso, # Lista plana para el cuerpo
+        'periodos_transcurridos': periodos_transcurridos,
         'resumen_materias': resumen_materias, 'mejores_estudiantes': mejores_estudiantes,
         'promedio_total_curso': promedio_total_curso, 'total_columnas': 2 + len(materias_curso) + 6,
     }
@@ -238,10 +260,13 @@ def generar_sabana_pdf(request):
         return HttpResponse("Error: La librería 'WeasyPrint' no está instalada.", status=500)
     curso, periodo_ref, datos_sabana, error = _preparar_y_validar_sabana(request)
     if error: return HttpResponse(f"Error: {error}", status=400)
-    sabana_data, materias_curso, periodos_transcurridos, resumen_materias, mejores_estudiantes, promedio_total_curso = datos_sabana
+    sabana_data, areas_con_materias, materias_curso, periodos_transcurridos, resumen_materias, mejores_estudiantes, promedio_total_curso = datos_sabana
     context = {
         'curso': curso, 'periodo': periodo_ref, 'ano_lectivo': periodo_ref.ano_lectivo,
-        'sabana_data': sabana_data, 'materias_curso': materias_curso, 'periodos_transcurridos': periodos_transcurridos,
+        'sabana_data': sabana_data, 
+        'areas_con_materias': areas_con_materias,
+        'materias_curso': materias_curso, 
+        'periodos_transcurridos': periodos_transcurridos,
         'resumen_materias': resumen_materias, 'mejores_estudiantes': mejores_estudiantes,
         'promedio_total_curso': promedio_total_curso,
     }
@@ -256,10 +281,12 @@ def generar_sabana_pdf(request):
 def exportar_sabana_excel(request):
     curso, periodo_ref, datos_sabana, error = _preparar_y_validar_sabana(request)
     if error: return HttpResponse(f"Error: {error}", status=400)
-    sabana_data, materias_curso, periodos_transcurridos, resumen_materias, mejores_estudiantes, promedio_total_curso = datos_sabana
+    sabana_data, areas_con_materias, materias_curso, periodos_transcurridos, resumen_materias, mejores_estudiantes, promedio_total_curso = datos_sabana
     return generar_excel_sabana(
         curso=curso, periodo=periodo_ref, sabana_data=sabana_data,
-        materias_curso=materias_curso, periodos_transcurridos=periodos_transcurridos,
+        areas_con_materias=areas_con_materias, # Pasamos la nueva variable
+        materias_curso=materias_curso, 
+        periodos_transcurridos=periodos_transcurridos,
         resumen_materias=resumen_materias, mejores_estudiantes=mejores_estudiantes,
         promedio_total_curso=promedio_total_curso
     )

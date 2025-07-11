@@ -9,7 +9,7 @@ from ..models import (
     AsignacionDocente, AreaConocimiento, Materia, ConfiguracionSistema,
     PeriodoAcademico
 )
-from django.db.models import Avg
+from django.db.models import Avg, Prefetch
 
 def _get_valoracion(nota):
     """Devuelve la valoración cualitativa según la escala nacional."""
@@ -46,18 +46,23 @@ def _calcular_definitiva_materia_al_vuelo(notas_ser, notas_saber, notas_hacer):
 def get_datos_boletin_curso(curso, periodo, estudiante_especifico=None):
     """
     Función principal que procesa y calcula todos los datos de los boletines
-    para un curso y periodo específicos.
+    para un curso y periodo específicos. (Esta función ya era correcta).
     """
-    # --- INICIO: CORRECCIÓN PARA FILTRAR ESTUDIANTE ---
     if estudiante_especifico:
         estudiantes = [estudiante_especifico]
     else:
         estudiantes = Estudiante.objects.filter(
             curso=curso, is_active=True
         ).select_related('user').order_by('user__last_name', 'user__first_name')
-    # --- FIN ---
     
-    areas = AreaConocimiento.objects.prefetch_related('materias').all()
+    # Obtener las materias que se dictan en este curso
+    materias_del_curso_ids = AsignacionDocente.objects.filter(curso=curso).values_list('materia_id', flat=True).distinct()
+    materias_del_curso = Materia.objects.filter(id__in=materias_del_curso_ids)
+
+    # Obtener las áreas que contienen estas materias
+    areas = AreaConocimiento.objects.filter(materias__in=materias_del_curso).distinct().prefetch_related(
+        Prefetch('materias', queryset=materias_del_curso.order_by('nombre'), to_attr='materias_del_area_ordenadas')
+    ).order_by('nombre')
     
     datos_completos_estudiantes = []
     UMBRAL_APROBACION = Decimal('3.0')
@@ -76,25 +81,17 @@ def get_datos_boletin_curso(curso, periodo, estudiante_especifico=None):
 
         for area in areas:
             datos_area = { 'nombre': area.nombre, 'materias': [] }
-            materias_del_area = area.materias.filter(asignaciondocente__curso=curso).distinct()
-
-            if not materias_del_area.exists():
-                continue
-
-            for materia in materias_del_area:
+            
+            for materia in area.materias_del_area_ordenadas:
                 asignacion = AsignacionDocente.objects.filter(materia=materia, curso=curso).first()
                 if not asignacion: continue
 
                 notas_materia = Calificacion.objects.filter(estudiante=estudiante, materia=materia, periodo=periodo)
                 definitiva_obj = notas_materia.filter(tipo_nota='PROM_PERIODO').first()
                 recuperacion_obj = notas_materia.filter(tipo_nota='NIVELACION').first()
-                recuperacion_valor = recuperacion_obj.valor_nota if recuperacion_obj else None
                 
-                definitiva_valor = definitiva_obj.valor_nota if definitiva_obj else _calcular_definitiva_materia_al_vuelo(
-                    notas_materia.filter(tipo_nota='SER'),
-                    notas_materia.filter(tipo_nota='SABER'),
-                    notas_materia.filter(tipo_nota='HACER')
-                )
+                definitiva_valor = definitiva_obj.valor_nota if definitiva_obj else None
+                recuperacion_valor = recuperacion_obj.valor_nota if recuperacion_obj else None
                 
                 valoracion_cualitativa = _get_valoracion(definitiva_valor)
                 
@@ -110,9 +107,6 @@ def get_datos_boletin_curso(curso, periodo, estudiante_especifico=None):
                     'nombre': materia.nombre,
                     'ih': asignacion.intensidad_horaria_semanal,
                     'docente': asignacion.docente,
-                    'ser': notas_materia.filter(tipo_nota='SER').aggregate(avg=Avg('valor_nota'))['avg'],
-                    'sab': notas_materia.filter(tipo_nota='SABER').aggregate(avg=Avg('valor_nota'))['avg'],
-                    'hac': notas_materia.filter(tipo_nota='HACER').aggregate(avg=Avg('valor_nota'))['avg'],
                     'def': definitiva_valor,
                     'recuperacion': recuperacion_valor,
                     'v_n': valoracion_cualitativa,
@@ -154,21 +148,28 @@ def get_datos_boletin_final(curso, ano_lectivo, estudiante_especifico=None):
         
     UMBRAL_APROBACION = Decimal('3.0')
     
-    # --- INICIO: CORRECCIÓN PARA FILTRAR ESTUDIANTE ---
     if estudiante_especifico:
         estudiantes = [estudiante_especifico]
     else:
         estudiantes = Estudiante.objects.filter(curso=curso, is_active=True).select_related('user').order_by('user__last_name', 'user__first_name')
-    # --- FIN ---
 
-    materias_curso_ids = AsignacionDocente.objects.filter(curso=curso).values_list('materia_id', flat=True).distinct()
-    materias_curso = Materia.objects.filter(id__in=materias_curso_ids).select_related('area').order_by('area__nombre', 'nombre')
+    # --- INICIO DE LA CORRECCIÓN LÓGICA ---
+    materias_del_curso_ids = AsignacionDocente.objects.filter(curso=curso).values_list('materia_id', flat=True).distinct()
+    materias_del_curso = Materia.objects.filter(id__in=materias_del_curso_ids)
+
+    areas = AreaConocimiento.objects.filter(
+        materias__in=materias_del_curso
+    ).distinct().prefetch_related(
+        Prefetch('materias', queryset=materias_del_curso.order_by('nombre'), to_attr='materias_del_area_ordenadas')
+    ).order_by('nombre')
+    # --- FIN DE LA CORRECCIÓN LÓGICA ---
+
     periodos_del_ano = PeriodoAcademico.objects.filter(ano_lectivo=ano_lectivo).order_by('fecha_inicio')
     nombres_periodos_ordenados = [p.nombre for p in periodos_del_ano]
 
     calificaciones = Calificacion.objects.filter(
         estudiante__in=estudiantes,
-        materia__in=materias_curso,
+        materia__in=materias_del_curso,
         periodo__in=periodos_del_ano,
         tipo_nota__in=['PROM_PERIODO', 'NIVELACION']
     )
@@ -185,65 +186,67 @@ def get_datos_boletin_final(curso, ano_lectivo, estudiante_especifico=None):
     for estudiante in estudiantes:
         materias_reprobadas_count = 0
         nombres_materias_reprobadas = []
-        datos_materias_finales = []
         rendimiento_final = defaultdict(int)
-        
         suma_ponderada_final = Decimal('0.0')
         total_ih_anual = 0
+        
+        # Nueva estructura de datos para el boletín
+        datos_areas_finales = []
 
-        for materia in materias_curso:
-            asignacion = AsignacionDocente.objects.filter(materia=materia, curso=curso).first()
-            ih = asignacion.intensidad_horaria_semanal if asignacion else 0
-
-            notas_para_promedio = []
-            notas_para_visualizacion = {}
-
-            for periodo in periodos_del_ano:
-                cal_data = calificaciones_pivot.get((estudiante.id, materia.id, periodo.id), {'prom': None, 'niv': None})
-                nota_original = cal_data.get('prom')
-                nota_nivelacion = cal_data.get('niv')
-
-                nota_final_periodo = nota_nivelacion if nota_nivelacion is not None else nota_original
-                
-                if nota_final_periodo is not None:
-                    notas_para_promedio.append(nota_final_periodo)
-
-                notas_para_visualizacion[periodo.nombre] = {
-                    'original': nota_original,
-                    'nivelacion': nota_nivelacion
-                }
-
-            definitiva = None
-            if notas_para_promedio:
-                definitiva = sum(notas_para_promedio) / len(notas_para_promedio)
-                definitiva = Decimal(definitiva).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)
-
-            if definitiva is not None:
-                suma_ponderada_final += (Decimal(definitiva) * ih)
-                total_ih_anual += ih
+        for area in areas:
+            datos_area_actual = {'nombre': area.nombre, 'materias': []}
             
-            valoracion = _get_valoracion(definitiva)
-            if definitiva is not None and definitiva < UMBRAL_APROBACION:
-                materias_reprobadas_count += 1
-                nombres_materias_reprobadas.append(materia.nombre)
-            if valoracion:
-                rendimiento_final[valoracion] += 1
+            for materia in area.materias_del_area_ordenadas:
+                asignacion = AsignacionDocente.objects.filter(materia=materia, curso=curso).first()
+                ih = asignacion.intensidad_horaria_semanal if asignacion else 0
+
+                notas_para_promedio = []
+                notas_para_visualizacion = {}
+
+                for periodo in periodos_del_ano:
+                    cal_data = calificaciones_pivot.get((estudiante.id, materia.id, periodo.id), {'prom': None, 'niv': None})
+                    nota_original = cal_data.get('prom')
+                    nota_nivelacion = cal_data.get('niv')
+                    nota_final_periodo = nota_nivelacion if nota_nivelacion is not None else nota_original
+                    
+                    if nota_final_periodo is not None:
+                        notas_para_promedio.append(nota_final_periodo)
+
+                    notas_para_visualizacion[periodo.nombre] = {
+                        'original': nota_original,
+                        'nivelacion': nota_nivelacion
+                    }
+
+                definitiva = sum(notas_para_promedio) / len(notas_para_promedio) if notas_para_promedio else None
+                if definitiva is not None:
+                    definitiva = Decimal(definitiva).quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)
+                    suma_ponderada_final += (definitiva * ih)
+                    total_ih_anual += ih
                 
-            datos_materias_finales.append({
-                'nombre': materia.nombre, 
-                'area': materia.area.nombre, 
-                'docente': asignacion.docente if asignacion else None, 
-                'notas_periodos': notas_para_visualizacion,
-                'definitiva': definitiva, 
-                'valoracion': valoracion
-            })
+                valoracion = _get_valoracion(definitiva)
+                if definitiva is not None and definitiva < UMBRAL_APROBACION:
+                    materias_reprobadas_count += 1
+                    nombres_materias_reprobadas.append(materia.nombre)
+                if valoracion:
+                    rendimiento_final[valoracion] += 1
+                    
+                datos_area_actual['materias'].append({
+                    'nombre': materia.nombre, 
+                    'docente': asignacion.docente if asignacion else None, 
+                    'notas_periodos': notas_para_visualizacion,
+                    'definitiva': definitiva, 
+                    'valoracion': valoracion
+                })
+            
+            if datos_area_actual['materias']:
+                datos_areas_finales.append(datos_area_actual)
         
         promedio_general_final = (suma_ponderada_final / total_ih_anual).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) if total_ih_anual > 0 else Decimal('0.0')
         estado_promocion = "PROMOVIDO" if materias_reprobadas_count <= max_materias_reprobadas else "NO PROMOVIDO"
 
         boletines_finales.append({
             'info': estudiante, 
-            'materias': datos_materias_finales, 
+            'areas': datos_areas_finales, # Se usa la nueva estructura
             'rendimiento_final': dict(rendimiento_final), 
             'estado_promocion': estado_promocion, 
             'materias_reprobadas': materias_reprobadas_count, 
