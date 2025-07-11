@@ -32,6 +32,7 @@
         .area-header { background-color: #C0C0C0; font-weight: bold; text-align: left; }
         .asignatura-row td, .logro-row td { text-align: left; }
         .asignatura-row .nota { text-align: center; }
+        .porcentaje-header { font-size: 7px; font-weight: normal; color: #555; }
         .logro-row { font-style: italic; }
         .tabla-resumen { width: 100%; margin-top: 15px; border-collapse: collapse; font-size: 9px; }
         .tabla-resumen th, .tabla-resumen td { border: 1px solid #999; padding: 4px; text-align: center; }
@@ -80,9 +81,9 @@
                     <th style="width: 40%;">AREA/ASIGNATURA</th>
                     <th style="width: 5%;">IH</th>
                     <th style="width: 10%;">V/N</th>
-                    <th style="width: 5%;">SER</th>
-                    <th style="width: 5%;">SAB</th>
-                    <th style="width: 5%;">HAC</th>
+                    <th>SER<br><span class="porcentaje-header">{% if not boletin.areas.0.materias.0.usar_ponderacion_equitativa %}({{ boletin.areas.0.materias.0.porcentaje_ser }}%){% endif %}</span></th>
+                    <th>SAB<br><span class="porcentaje-header">{% if not boletin.areas.0.materias.0.usar_ponderacion_equitativa %}({{ boletin.areas.0.materias.0.porcentaje_saber }}%){% endif %}</span></th>
+                    <th>HAC<br><span class="porcentaje-header">{% if not boletin.areas.0.materias.0.usar_ponderacion_equitativa %}({{ boletin.areas.0.materias.0.porcentaje_hacer }}%){% endif %}</span></th>
                     <th style="width: 5%;">DEF</th>
                     <th style="width: 5%;">REC</th>
                     <th style="width: 5%;">INAS</th>
@@ -96,13 +97,11 @@
                     <td style="padding-left: 10px;">{{ materia.nombre }}<br><small><strong>Docente:</strong> {{ materia.docente.user.get_full_name }}</small></td>
                     <td class="nota">{{ materia.ih }}</td>
                     <td class="nota">{{ materia.v_n }}</td>
-                    <td class="nota">{{ materia.ser|coma_decimal|default_if_none:"" }}</td>
-                    <td class="nota">{{ materia.sab|coma_decimal|default_if_none:"" }}</td>
-                    <td class="nota">{{ materia.hac|coma_decimal|default_if_none:"" }}</td>
+                    <td class="nota">{{ materia.ser.valor_nota|coma_decimal|default_if_none:"" }}</td>
+                    <td class="nota">{{ materia.sab.valor_nota|coma_decimal|default_if_none:"" }}</td>
+                    <td class="nota">{{ materia.hac.valor_nota|coma_decimal|default_if_none:"" }}</td>
                     <td class="nota"><strong>{{ materia.def|coma_decimal|default_if_none:"" }}</strong></td>
-                    <!-- INICIO: Se muestra la nota de recuperación -->
                     <td class="nota">{{ materia.recuperacion|coma_decimal|default_if_none:"" }}</td>
-                    <!-- FIN -->
                     <td class="nota">{{ materia.inasistencias|default_if_none:"0" }}</td>
                 </tr>
                 <tr class="logro-row">

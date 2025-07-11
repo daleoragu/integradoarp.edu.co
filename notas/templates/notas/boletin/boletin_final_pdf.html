@@ -22,7 +22,7 @@
         .tabla-notas th, .tabla-notas td { border: 1px solid #999; padding: 4px; text-align: center; vertical-align: middle; }
         .tabla-notas th { background-color: #E0E0E0; font-weight: bold; }
         .materia-nombre { text-align: left; }
-        .area-header { background-color: #C0C0C0; font-weight: bold; text-align: left; }
+        .area-nombre { text-align: left; font-weight: bold; }
         .nota-definitiva { font-weight: bold; }
         .tabla-resumen { width: 100%; margin-top: 15px; border-collapse: collapse; font-size: 9px; }
         .tabla-resumen th, .tabla-resumen td { border: 1px solid #999; padding: 4px; text-align: center; }
@@ -34,8 +34,10 @@
         .seccion-perdidas h4 { margin: 0 0 5px 0; font-size: 10px; }
         .seccion-perdidas p { margin: 0; }
         .pie-pagina { margin-top: 30px; text-align: center; font-size: 9px; }
+        /* --- INICIO: NUEVOS ESTILOS PARA NIVELACIÓN --- */
         .nota-recuperada { color: green; font-weight: bold; }
         .nota-original-reprobada { color: red; }
+        /* --- FIN --- */
     </style>
 </head>
 <body>
@@ -74,7 +76,8 @@
         <table class="tabla-notas">
             <thead>
                 <tr>
-                    <th style="width: 55%;">ASIGNATURA</th>
+                    <th style="width: 20%;">ÁREA</th>
+                    <th style="width: 35%;">ASIGNATURA</th>
                     {% for p_nombre in nombres_periodos %}
                         <th style="width: 8%;">{{ forloop.counter }}P</th>
                     {% endfor %}
@@ -82,16 +85,11 @@
                 </tr>
             </thead>
             <tbody>
-            <!-- =============================================================== -->
-            <!-- INICIO DE LA CORRECCIÓN: Bucle anidado para áreas y materias -->
-            <!-- =============================================================== -->
-            {% for area in boletin.areas %}
+            {% for materia in boletin.materias %}
+                {% ifchanged materia.area %}
                 <tr>
-                    <td colspan="{{ nombres_periodos|length|add:2 }}" class="area-header">{{ area.nombre }}</td>
-                </tr>
-                {% for materia in area.materias %}
-                <tr>
-                    <td class="materia-nombre" style="padding-left: 15px;">
+                    <td class="area-nombre">{{ materia.area }}</td>
+                    <td class="materia-nombre">
                         {{ materia.nombre }}
                         {% if materia.docente %}
                             <br><small><strong>Docente:</strong> {{ materia.docente.user.get_full_name }}</small>
@@ -111,11 +109,31 @@
                     {% endfor %}
                     <td class="nota-definitiva">{{ materia.definitiva|coma_decimal|default_if_none:"-" }}</td>
                 </tr>
-                {% endfor %}
+                {% else %}
+                <tr>
+                    <td></td>
+                    <td class="materia-nombre">
+                        {{ materia.nombre }}
+                        {% if materia.docente %}
+                            <br><small><strong>Docente:</strong> {{ materia.docente.user.get_full_name }}</small>
+                        {% endif %}
+                    </td>
+                     {% for p_nombre in nombres_periodos %}
+                        <td>
+                            {% with nota_data=materia.notas_periodos|get_item:p_nombre %}
+                                <span class="{% if nota_data.nivelacion and nota_data.original < 3.0 %}nota-original-reprobada{% endif %}">
+                                    {{ nota_data.original|coma_decimal|default_if_none:"-" }}
+                                </span>
+                                {% if nota_data.nivelacion %}
+                                    <span class="nota-recuperada">({{ nota_data.nivelacion|coma_decimal }})</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                    {% endfor %}
+                    <td class="nota-definitiva">{{ materia.definitiva|coma_decimal|default_if_none:"-" }}</td>
+                </tr>
+                {% endifchanged %}
             {% endfor %}
-            <!-- =============================================================== -->
-            <!-- FIN DE LA CORRECCIÓN -->
-            <!-- =============================================================== -->
             </tbody>
         </table>
         

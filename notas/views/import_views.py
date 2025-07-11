@@ -15,7 +15,7 @@ except ImportError:
     EXCEL_SUPPORT = False
 
 from ..models.perfiles import Estudiante, Docente, Curso, FichaEstudiante
-from ..models.academicos import Materia, AreaConocimiento
+from ..models.academicos import Materia, AreaConocimiento, PonderacionAreaMateria
 from django.utils.text import slugify
 from unidecode import unidecode
 
@@ -76,17 +76,14 @@ def _procesar_excel_estudiantes(request, archivo):
     for i, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), 2):
         try:
             if not any(row) or not row[0] or not row[1]:
-                continue # Omitir filas vacías o sin nombre/apellido
+                continue
 
-            # --- CORRECCIÓN: Se leen los datos de forma segura ---
-            # Se asigna None si la columna no existe en la fila
             row_data = list(row) + [None] * (20 - len(row))
             (nombres, apellidos, tipo_doc_str, num_doc, nombre_curso, fecha_nac_str, 
              lugar_nac, eps, grupo_sang_str, enfermedades, nombre_padre, cel_padre,
              nombre_madre, cel_madre, nombre_acud, cel_acud, email_acud, 
              espera_porteria_str, colegio_ant, grado_ant) = row_data[:20]
 
-            # --- Lógica de creación de usuario ---
             primer_nombre = unidecode(str(nombres).split(' ')[0].lower())
             primer_apellido = unidecode(str(apellidos).split(' ')[0].lower())
             username_base = f"{slugify(primer_nombre)}.{slugify(primer_apellido)}"
@@ -96,7 +93,6 @@ def _procesar_excel_estudiantes(request, archivo):
                 username_final = f"{username_base}{counter}"
                 counter += 1
             
-            # Omitir si el usuario ya existe (basado en el username generado)
             if User.objects.filter(username=username_final).exists():
                 omitidos += 1
                 continue
@@ -107,7 +103,7 @@ def _procesar_excel_estudiantes(request, archivo):
 
             user = User.objects.create_user(
                 username=username_final, 
-                password=username_final,  # Contraseña provisional
+                password=username_final,
                 first_name=str(nombres or '').strip().upper(), 
                 last_name=str(apellidos or '').strip().upper()
             )
@@ -151,31 +147,44 @@ def _procesar_excel_estudiantes(request, archivo):
             
     messages.success(request, f"Proceso de estudiantes completado. Creados: {creados}. Errores: {errores}. Omitidos (ya existían): {omitidos}.")
 
-
 def _procesar_excel_materias(request, archivo):
-    """Logic to process the subject Excel file."""
-    # ... (tu código existente para procesar materias)
-    creadas, errores = 0, 0
+    """Logic to process the subject Excel file with the new data model."""
+    creadas, errores, asociaciones_creadas = 0, 0, 0
     wb = load_workbook(archivo, data_only=True)
     sheet = wb.active
     for i, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), 2):
         try:
             if not any(row): continue
             nombre_materia, abreviatura, nombre_area = row[:3]
+            
             nombre_materia = str(nombre_materia).strip().upper()
-            if not nombre_materia or not nombre_area: continue
-            if Materia.objects.filter(nombre=nombre_materia).exists(): continue
-            area, _ = AreaConocimiento.objects.get_or_create(nombre=str(nombre_area).strip().upper())
-            Materia.objects.create(
-                nombre=nombre_materia, 
-                area=area,
-                abreviatura=str(abreviatura).strip().upper() if abreviatura else None
+            nombre_area = str(nombre_area).strip().upper()
+
+            if not nombre_materia or not nombre_area:
+                continue
+
+            materia_obj, materia_fue_creada = Materia.objects.get_or_create(
+                nombre=nombre_materia,
+                defaults={'abreviatura': str(abreviatura).strip().upper() if abreviatura else None}
             )
-            creadas += 1
+            if materia_fue_creada:
+                creadas += 1
+
+            area_obj, _ = AreaConocimiento.objects.get_or_create(nombre=nombre_area)
+
+            _, ponderacion_fue_creada = PonderacionAreaMateria.objects.get_or_create(
+                area=area_obj,
+                materia=materia_obj,
+                defaults={'peso_porcentual': 0.00}
+            )
+            if ponderacion_fue_creada:
+                asociaciones_creadas += 1
+
         except Exception as e:
             messages.warning(request, f"Error en la fila {i} del Excel de materias: {e}")
             errores += 1
-    messages.success(request, f"Proceso de materias completado. Creadas: {creadas}. Errores/Omitidas: {errores}.")
+            
+    messages.success(request, f"Proceso de materias completado. Materias creadas: {creadas}. Asociaciones a áreas creadas: {asociaciones_creadas}. Errores: {errores}.")
 
 def _procesar_csv_docentes(request, reader):
     """Logic to process the teacher CSV (preserved)."""

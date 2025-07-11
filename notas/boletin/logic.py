@@ -24,29 +24,10 @@ def _get_valoracion(nota):
         return "BASICO"
     return "BAJO"
 
-def _calcular_definitiva_materia_al_vuelo(notas_ser, notas_saber, notas_hacer):
-    """Calcula la nota definitiva de una materia promediando las competencias (función de respaldo)."""
-    notas_validas = []
-    
-    avg_ser = notas_ser.aggregate(avg=Avg('valor_nota'))['avg']
-    avg_saber = notas_saber.aggregate(avg=Avg('valor_nota'))['avg']
-    avg_hacer = notas_hacer.aggregate(avg=Avg('valor_nota'))['avg']
-    
-    if avg_ser is not None: notas_validas.append(Decimal(avg_ser))
-    if avg_saber is not None: notas_validas.append(Decimal(avg_saber))
-    if avg_hacer is not None: notas_validas.append(Decimal(avg_hacer))
-    
-    if not notas_validas:
-        return None
-
-    definitiva = sum(notas_validas) / len(notas_validas)
-    return definitiva.quantize(Decimal('0.1'), rounding=ROUND_HALF_UP)
-
-
 def get_datos_boletin_curso(curso, periodo, estudiante_especifico=None):
     """
     Función principal que procesa y calcula todos los datos de los boletines
-    para un curso y periodo específicos. (Esta función ya era correcta).
+    para un curso y periodo específicos.
     """
     if estudiante_especifico:
         estudiantes = [estudiante_especifico]
@@ -55,11 +36,9 @@ def get_datos_boletin_curso(curso, periodo, estudiante_especifico=None):
             curso=curso, is_active=True
         ).select_related('user').order_by('user__last_name', 'user__first_name')
     
-    # Obtener las materias que se dictan en este curso
     materias_del_curso_ids = AsignacionDocente.objects.filter(curso=curso).values_list('materia_id', flat=True).distinct()
     materias_del_curso = Materia.objects.filter(id__in=materias_del_curso_ids)
 
-    # Obtener las áreas que contienen estas materias
     areas = AreaConocimiento.objects.filter(materias__in=materias_del_curso).distinct().prefetch_related(
         Prefetch('materias', queryset=materias_del_curso.order_by('nombre'), to_attr='materias_del_area_ordenadas')
     ).order_by('nombre')
@@ -69,14 +48,9 @@ def get_datos_boletin_curso(curso, periodo, estudiante_especifico=None):
 
     for estudiante in estudiantes:
         datos_estudiante = {
-            'info': estudiante,
-            'promedio_general': Decimal('0.0'),
-            'total_ih': 0,
-            'areas': [],
-            'contador_rendimiento': defaultdict(int),
-            'materias_perdidas': []
+            'info': estudiante, 'promedio_general': Decimal('0.0'), 'total_ih': 0,
+            'areas': [], 'contador_rendimiento': defaultdict(int), 'materias_perdidas': []
         }
-        
         suma_ponderada = Decimal('0.0')
 
         for area in areas:
@@ -103,15 +77,23 @@ def get_datos_boletin_curso(curso, periodo, estudiante_especifico=None):
 
                 inasistencias = Asistencia.objects.filter(estudiante=estudiante, asignacion=asignacion, estado='A', fecha__range=(periodo.fecha_inicio, periodo.fecha_fin)).count()
                 
+                # --- MEJORA: Se obtienen los objetos de calificación y los porcentajes ---
                 datos_materia = {
                     'nombre': materia.nombre,
                     'ih': asignacion.intensidad_horaria_semanal,
                     'docente': asignacion.docente,
+                    'ser': notas_materia.filter(tipo_nota='SER').first(),
+                    'sab': notas_materia.filter(tipo_nota='SABER').first(),
+                    'hac': notas_materia.filter(tipo_nota='HACER').first(),
                     'def': definitiva_valor,
                     'recuperacion': recuperacion_valor,
                     'v_n': valoracion_cualitativa,
                     'inasistencias': inasistencias,
-                    'logros': IndicadorLogroPeriodo.objects.filter(asignacion=asignacion, periodo=periodo)
+                    'logros': IndicadorLogroPeriodo.objects.filter(asignacion=asignacion, periodo=periodo),
+                    'usar_ponderacion_equitativa': asignacion.usar_ponderacion_equitativa,
+                    'porcentaje_ser': asignacion.porcentaje_ser,
+                    'porcentaje_saber': asignacion.porcentaje_saber,
+                    'porcentaje_hacer': asignacion.porcentaje_hacer
                 }
                 datos_area['materias'].append(datos_materia)
 
@@ -153,7 +135,6 @@ def get_datos_boletin_final(curso, ano_lectivo, estudiante_especifico=None):
     else:
         estudiantes = Estudiante.objects.filter(curso=curso, is_active=True).select_related('user').order_by('user__last_name', 'user__first_name')
 
-    # --- INICIO DE LA CORRECCIÓN LÓGICA ---
     materias_del_curso_ids = AsignacionDocente.objects.filter(curso=curso).values_list('materia_id', flat=True).distinct()
     materias_del_curso = Materia.objects.filter(id__in=materias_del_curso_ids)
 
@@ -162,7 +143,6 @@ def get_datos_boletin_final(curso, ano_lectivo, estudiante_especifico=None):
     ).distinct().prefetch_related(
         Prefetch('materias', queryset=materias_del_curso.order_by('nombre'), to_attr='materias_del_area_ordenadas')
     ).order_by('nombre')
-    # --- FIN DE LA CORRECCIÓN LÓGICA ---
 
     periodos_del_ano = PeriodoAcademico.objects.filter(ano_lectivo=ano_lectivo).order_by('fecha_inicio')
     nombres_periodos_ordenados = [p.nombre for p in periodos_del_ano]
@@ -189,8 +169,6 @@ def get_datos_boletin_final(curso, ano_lectivo, estudiante_especifico=None):
         rendimiento_final = defaultdict(int)
         suma_ponderada_final = Decimal('0.0')
         total_ih_anual = 0
-        
-        # Nueva estructura de datos para el boletín
         datos_areas_finales = []
 
         for area in areas:
@@ -246,7 +224,7 @@ def get_datos_boletin_final(curso, ano_lectivo, estudiante_especifico=None):
 
         boletines_finales.append({
             'info': estudiante, 
-            'areas': datos_areas_finales, # Se usa la nueva estructura
+            'areas': datos_areas_finales,
             'rendimiento_final': dict(rendimiento_final), 
             'estado_promocion': estado_promocion, 
             'materias_reprobadas': materias_reprobadas_count, 

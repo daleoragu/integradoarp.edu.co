@@ -75,11 +75,8 @@ def exportar_estudiantes_excel(request):
     if not EXCEL_SUPPORT:
         return HttpResponse("La librería 'openpyxl' es necesaria.", status=500)
 
-    # --- CORRECCIÓN DEFINITIVA: Se buscan todos los Estudiantes, no las Fichas ---
     estudiantes_qs = Estudiante.objects.select_related('user', 'curso').prefetch_related('ficha').all().order_by('curso__nombre', 'user__last_name')
     
-    print(f"DEBUG: Se encontraron {estudiantes_qs.count()} estudiantes para exportar.")
-
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     response['Content-Disposition'] = 'attachment; filename="exportacion_estudiantes_todos.xlsx"'
     
@@ -102,14 +99,12 @@ def exportar_estudiantes_excel(request):
         ws.column_dimensions[get_column_letter(col_num)].width = 22
 
     for row_num, estudiante in enumerate(estudiantes_qs, 2):
-        # Se accede a la ficha de forma segura
         ficha = getattr(estudiante, 'ficha', None)
 
         ws.cell(row=row_num, column=1, value=estudiante.user.first_name)
         ws.cell(row=row_num, column=2, value=estudiante.user.last_name)
         ws.cell(row=row_num, column=5, value=estudiante.curso.nombre if estudiante.curso else '')
         
-        # Se escriben los datos de la ficha solo si existe
         if ficha:
             ws.cell(row=row_num, column=3, value=ficha.get_tipo_documento_display())
             ws.cell(row=row_num, column=4, value=ficha.numero_documento)
@@ -174,24 +169,27 @@ def exportar_materias_excel(request):
     if not EXCEL_SUPPORT:
         return HttpResponse("La librería 'openpyxl' es necesaria.", status=500)
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="exportacion_materias.xlsx"'
+    response['Content-Disposition'] = 'attachment; filename="exportacion_materias_y_areas.xlsx"'
     
     wb = Workbook()
     ws = wb.active
-    ws.title = "Materias Exportadas"
+    ws.title = "Materias por Área"
     
-    headers = ['NOMBRE_MATERIA', 'ABREVIATURA', 'NOMBRE_AREA']
+    headers = ['NOMBRE_AREA', 'NOMBRE_MATERIA', 'ABREVIATURA']
     header_font = Font(bold=True)
     for col_num, header_title in enumerate(headers, 1):
         cell = ws.cell(row=1, column=col_num, value=header_title)
         cell.font = header_font
         ws.column_dimensions[get_column_letter(col_num)].width = 35
     
-    materias = Materia.objects.select_related('area').all().order_by('area__nombre', 'nombre')
-    for row_num, materia in enumerate(materias, 2):
-        ws.cell(row=row_num, column=1, value=materia.nombre)
-        ws.cell(row=row_num, column=2, value=materia.abreviatura)
-        ws.cell(row=row_num, column=3, value=materia.area.nombre)
+    row_num = 2
+    areas = AreaConocimiento.objects.prefetch_related('materias').order_by('nombre')
+    for area in areas:
+        for materia in area.materias.all().order_by('nombre'):
+            ws.cell(row=row_num, column=1, value=area.nombre)
+            ws.cell(row=row_num, column=2, value=materia.nombre)
+            ws.cell(row=row_num, column=3, value=materia.abreviatura)
+            row_num += 1
         
     wb.save(response)
     return response
