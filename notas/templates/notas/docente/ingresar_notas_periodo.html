@@ -7,20 +7,18 @@
 {% block extra_css %}
     <link rel="stylesheet" href="{% static 'css/ingresar_notas.css' %}">
     
-    {# --- INICIO DE LA MEJORA: ESTILOS PARA LAS NOTAS Y ENCABEZADOS --- #}
+    {# --- ESTILOS DE COLORES PARA LA NOTA DEFINITIVA --- #}
     <style>
-        /* Estilos para la escala de colores en la nota definitiva */
         .def-celda {
             font-weight: bolder;
-            color: #fff; /* Color de texto blanco por defecto para buen contraste */
+            color: #fff;
             transition: background-color 0.3s ease;
         }
-        .def-celda.nota-roja { background-color: #dc3545; } /* Rojo */
-        .def-celda.nota-amarilla { background-color: #ffc107; color: #212529; } /* Amarillo con texto oscuro */
-        .def-celda.nota-verde { background-color: #28a745; } /* Verde */
-        .def-celda.nota-azul { background-color: #0d6efd; } /* Azul */
+        .def-celda.nota-roja { background-color: #dc3545; }
+        .def-celda.nota-amarilla { background-color: #ffc107; color: #212529; }
+        .def-celda.nota-verde { background-color: #28a745; }
+        .def-celda.nota-azul { background-color: #0d6efd; }
 
-        /* Estilos para el nuevo formato de encabezado de nota */
         .th-nota {
             cursor: pointer;
             padding-top: 0.5rem;
@@ -40,10 +38,9 @@
             font-size: 0.75em;
             font-weight: normal;
             color: #6c757d;
-            min-height: 1.2em; /* Evita que la tabla salte si no hay descripción */
+            min-height: 1.2em;
         }
     </style>
-    {# --- FIN DE LA MEJORA --- #}
 {% endblock %}
 
 {% block page_title %}
@@ -60,15 +57,81 @@
         {% endif %}>
 
         {% include 'notas/partials/_filtros_notas.html' %}
+        
+        {% if asignacion_seleccionada and periodo_seleccionado %}
+        <div class="d-flex justify-content-end my-3">
+            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exportOptionsModal">
+                <i class="fas fa-file-excel me-2"></i>Exportar Plantilla de Notas
+            </button>
+        </div>
+        {% endif %}
+
         <hr class="separador">
         {% include 'notas/partials/_gestion_indicadores.html' %}
         
-        {# Este es el parcial que actualizaremos a continuación #}
         {% include 'notas/partials/_tabla_notas.html' %}
     </div>
+
+    <!-- MODAL PARA OPCIONES DE EXPORTACIÓN -->
+    {% if asignacion_seleccionada and periodo_seleccionado %}
+    <div class="modal fade" id="exportOptionsModal" tabindex="-1" aria-labelledby="exportOptionsModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="exportOptionsModalLabel">Configurar Plantilla de Notas</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>Define cuántas columnas de notas deseas generar para cada dimensión.</p>
+            <div class="mb-3">
+              <label for="num_ser" class="form-label">Número de notas para el <strong>SER</strong>:</label>
+              <input type="number" class="form-control" id="num_ser" value="5" min="1" max="15">
+            </div>
+            <div class="mb-3">
+              <label for="num_saber" class="form-label">Número de notas para el <strong>SABER</strong>:</label>
+              <input type="number" class="form-control" id="num_saber" value="5" min="1" max="15">
+            </div>
+            <div class="mb-3">
+              <label for="num_hacer" class="form-label">Número de notas para el <strong>HACER</strong>:</label>
+              <input type="number" class="form-control" id="num_hacer" value="5" min="1" max="15">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="confirmExportBtn" 
+                    data-url="{% url 'exportar_planilla_notas' asignacion_seleccionada.id periodo_seleccionado.id %}">
+                Descargar Plantilla
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 {% endblock %}
 
 {% block extra_js %}
-    {# Este es el archivo JS que también actualizaremos #}
     <script src="{% static 'js/ingresar_notas.js' %}"></script>
+
+    <!-- SCRIPT PARA MANEJAR EL MODAL (SINTAXIS CORREGIDA) -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const confirmBtn = document.getElementById('confirmExportBtn');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function() {
+                const numSer = document.getElementById('num_ser').value;
+                const numSaber = document.getElementById('num_saber').value;
+                const numHacer = document.getElementById('num_hacer').value;
+
+                // Se obtiene la URL base desde el atributo data-url del botón
+                let url = confirmBtn.dataset.url;
+                
+                if (url) {
+                    // Se añaden los números como parámetros GET a la URL
+                    url += `?num_ser=${numSer}&num_saber=${numSaber}&num_hacer=${numHacer}`;
+                    window.location.href = url;
+                }
+            });
+        }
+    });
+    </script>
 {% endblock %}

@@ -68,7 +68,11 @@ class IngresoNotasView(LoginRequiredMixin, View):
             
             estudiantes_data = []
             for estudiante in estudiantes_del_curso:
-                data = {'id': estudiante.id, 'nombre_completo': estudiante.user.get_full_name() or estudiante.user.username, 'notas': {'ser': [], 'saber': [], 'hacer': []}, 'inasistencias': 0}
+                # --- CORRECCIÓN DE FORMATO DE NOMBRE ---
+                nombre_completo = f"{estudiante.user.last_name}, {estudiante.user.first_name}".strip()
+                data = {'id': estudiante.id, 'nombre_completo': nombre_completo, 'notas': {'ser': [], 'saber': [], 'hacer': []}, 'inasistencias': 0}
+                # --- FIN CORRECCIÓN ---
+                
                 calificaciones = Calificacion.objects.filter(estudiante=estudiante, materia=asignacion_seleccionada.materia, periodo=periodo_seleccionado).prefetch_related('notas_detalladas')
                 for cal in calificaciones:
                     tipo_map = {'SER': 'ser', 'SABER': 'saber', 'HACER': 'hacer'}
@@ -117,35 +121,39 @@ class IngresoNotasView(LoginRequiredMixin, View):
                 return JsonResponse({'status': 'error', 'message': 'No se pueden guardar calificaciones porque no hay indicadores de logro definidos.'}, status=403)
 
             config, _ = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
+            
+            # --- CORRECCIÓN DE CÁLCULO ---
+            porcentajes_a_usar = {}
             if config.docente_puede_modificar and porcentajes_nuevos:
                 try:
-                    asignacion.porcentaje_saber = int(porcentajes_nuevos.get('saber', asignacion.porcentaje_saber))
-                    asignacion.porcentaje_hacer = int(porcentajes_nuevos.get('hacer', asignacion.porcentaje_hacer))
-                    asignacion.porcentaje_ser = int(porcentajes_nuevos.get('ser', asignacion.porcentaje_ser))
+                    p_saber = int(porcentajes_nuevos.get('saber'))
+                    p_hacer = int(porcentajes_nuevos.get('hacer'))
+                    p_ser = int(porcentajes_nuevos.get('ser'))
+
+                    if p_saber + p_hacer + p_ser != 100:
+                        raise ValidationError("La suma de los porcentajes debe ser 100.")
+
+                    porcentajes_a_usar = {
+                        'SABER': Decimal(p_saber) / 100,
+                        'HACER': Decimal(p_hacer) / 100,
+                        'SER': Decimal(p_ser) / 100
+                    }
+                    
+                    asignacion.porcentaje_saber = p_saber
+                    asignacion.porcentaje_hacer = p_hacer
+                    asignacion.porcentaje_ser = p_ser
                     asignacion.usar_ponderacion_equitativa = False
                     asignacion.save()
+
                 except ValidationError as e:
                     return JsonResponse({'status': 'error', 'message': e.messages[0]}, status=400)
-                except (ValueError, TypeError):
-                    return JsonResponse({'status': 'error', 'message': 'Los valores de los porcentajes deben ser números enteros.'}, status=400)
-
-            # --- INICIO DE LA CORRECCIÓN DEL CÁLCULO ---
-            # Se define el diccionario de porcentajes a usar para el cálculo.
-            # Si el docente puede modificar y envió nuevos porcentajes, se usan esos.
-            # De lo contrario, se usan los que están guardados en la base de datos.
-            if config.docente_puede_modificar and porcentajes_nuevos:
-                porcentajes_a_usar = {
-                    'SABER': Decimal(porcentajes_nuevos.get('saber')) / 100,
-                    'HACER': Decimal(porcentajes_nuevos.get('hacer')) / 100,
-                    'SER': Decimal(porcentajes_nuevos.get('ser')) / 100
-                }
             else:
                 porcentajes_a_usar = {
                     'SABER': asignacion.saber_calc / 100,
                     'HACER': asignacion.hacer_calc / 100,
                     'SER': asignacion.ser_calc / 100
                 }
-            # --- FIN DE LA CORRECCIÓN DEL CÁLCULO ---
+            # --- FIN CORRECCIÓN ---
             
             for est_data in estudiantes_data:
                 estudiante = get_object_or_404(Estudiante, id=est_data['id'])
@@ -165,7 +173,6 @@ class IngresoNotasView(LoginRequiredMixin, View):
                     promedio_comp = (total_notas / num_notas if num_notas > 0 else Decimal('0.0')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     cal_prom.valor_nota = promedio_comp
                     cal_prom.save()
-                    # Se usa el diccionario corregido 'porcentajes_a_usar'
                     definitiva_periodo += promedio_comp * porcentajes_a_usar[comp_map]
 
                 Calificacion.objects.update_or_create(estudiante=estudiante, materia=asignacion.materia, periodo=periodo, tipo_nota='PROM_PERIODO', defaults={'valor_nota': definitiva_periodo.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP), 'docente': asignacion.docente})

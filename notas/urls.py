@@ -29,6 +29,7 @@ from .views import (
     gestion_docentes_views,
     gestion_estudiantes_views,
     gestion_academica_views,
+    import_export_planillas_views,
 )
 
 urlpatterns = [
@@ -71,7 +72,7 @@ urlpatterns = [
     # CORRECCIÓN 1: Se reemplaza la vista de función por la vista basada en clases.
     # Esta única ruta ahora maneja GET (mostrar la página) y POST (guardar los datos).
     path('docente/ingresar-notas/', ingreso_notas_views.IngresoNotasView.as_view(), name='ingresar_notas_periodo'),
-    
+    path('docente/exportar-planilla/<int:asignacion_id>/<int:periodo_id>/', import_export_planillas_views.exportar_planilla_notas, name='exportar_planilla_notas'),
     path('docente/reporte-parcial/', reporte_parcial_views.reporte_parcial_vista, name='reporte_parcial'),
     path('docente/planes-mejoramiento/', plan_mejoramiento_views.plan_mejoramiento_vista, name='plan_mejoramiento'),
     path('docente/asistencia/', asistencia_views.asistencia_vista, name='asistencia'),
