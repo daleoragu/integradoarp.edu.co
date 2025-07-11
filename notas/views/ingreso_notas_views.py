@@ -20,6 +20,10 @@ from ..models.academicos import (
 from ..models.perfiles import Docente
 
 class IngresoNotasView(LoginRequiredMixin, View):
+    """
+    Gestiona la página de ingreso de calificaciones, permitiendo a los docentes
+    modificar los porcentajes si el administrador lo autoriza.
+    """
     template_name = 'notas/docente/ingresar_notas_periodo.html'
     login_url = '/login/'
 
@@ -68,10 +72,8 @@ class IngresoNotasView(LoginRequiredMixin, View):
             
             estudiantes_data = []
             for estudiante in estudiantes_del_curso:
-                # --- CORRECCIÓN DE FORMATO DE NOMBRE ---
                 nombre_completo = f"{estudiante.user.last_name}, {estudiante.user.first_name}".strip()
                 data = {'id': estudiante.id, 'nombre_completo': nombre_completo, 'notas': {'ser': [], 'saber': [], 'hacer': []}, 'inasistencias': 0}
-                # --- FIN CORRECCIÓN ---
                 
                 calificaciones = Calificacion.objects.filter(estudiante=estudiante, materia=asignacion_seleccionada.materia, periodo=periodo_seleccionado).prefetch_related('notas_detalladas')
                 for cal in calificaciones:
@@ -122,38 +124,23 @@ class IngresoNotasView(LoginRequiredMixin, View):
 
             config, _ = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
             
-            # --- CORRECCIÓN DE CÁLCULO ---
-            porcentajes_a_usar = {}
             if config.docente_puede_modificar and porcentajes_nuevos:
                 try:
-                    p_saber = int(porcentajes_nuevos.get('saber'))
-                    p_hacer = int(porcentajes_nuevos.get('hacer'))
-                    p_ser = int(porcentajes_nuevos.get('ser'))
-
-                    if p_saber + p_hacer + p_ser != 100:
-                        raise ValidationError("La suma de los porcentajes debe ser 100.")
-
-                    porcentajes_a_usar = {
-                        'SABER': Decimal(p_saber) / 100,
-                        'HACER': Decimal(p_hacer) / 100,
-                        'SER': Decimal(p_ser) / 100
-                    }
-                    
-                    asignacion.porcentaje_saber = p_saber
-                    asignacion.porcentaje_hacer = p_hacer
-                    asignacion.porcentaje_ser = p_ser
-                    asignacion.usar_ponderacion_equitativa = False
-                    asignacion.save()
-
+                    # Al guardar porcentajes manuales, nos aseguramos de desactivar la ponderación equitativa.
+                    asignacion.porcentaje_saber = int(porcentajes_nuevos.get('saber'))
+                    asignacion.porcentaje_hacer = int(porcentajes_nuevos.get('hacer'))
+                    asignacion.porcentaje_ser = int(porcentajes_nuevos.get('ser'))
+                    asignacion.usar_ponderacion_equitativa = False # Corrección clave
+                    asignacion.save() # El método clean() del modelo validará la suma
                 except ValidationError as e:
                     return JsonResponse({'status': 'error', 'message': e.messages[0]}, status=400)
-            else:
-                porcentajes_a_usar = {
-                    'SABER': asignacion.saber_calc / 100,
-                    'HACER': asignacion.hacer_calc / 100,
-                    'SER': asignacion.ser_calc / 100
-                }
-            # --- FIN CORRECCIÓN ---
+            
+            # El cálculo usará los valores correctos gracias a las propiedades .ser_calc, .saber_calc, etc. del modelo
+            porcentajes_a_usar = {
+                'SABER': asignacion.saber_calc / 100,
+                'HACER': asignacion.hacer_calc / 100,
+                'SER': asignacion.ser_calc / 100
+            }
             
             for est_data in estudiantes_data:
                 estudiante = get_object_or_404(Estudiante, id=est_data['id'])

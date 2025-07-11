@@ -70,7 +70,7 @@ urlpatterns = [
     
     # --- Rutas del Panel Docente ---
     # CORRECCIÓN 1: Se reemplaza la vista de función por la vista basada en clases.
-    # Esta única ruta ahora maneja GET (mostrar la página) y POST (guardar los datos).
+    path('docente/exportar-planillas/<int:docente_id>/<int:periodo_id>/', import_export_planillas_views.exportar_planillas_docente, name='exportar_planillas_docente'),
     path('docente/ingresar-notas/', ingreso_notas_views.IngresoNotasView.as_view(), name='ingresar_notas_periodo'),
     path('docente/exportar-planilla/<int:asignacion_id>/<int:periodo_id>/', import_export_planillas_views.exportar_planilla_notas, name='exportar_planilla_notas'),
     path('docente/reporte-parcial/', reporte_parcial_views.reporte_parcial_vista, name='reporte_parcial'),

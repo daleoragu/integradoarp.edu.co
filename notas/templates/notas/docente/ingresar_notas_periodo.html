@@ -58,80 +58,55 @@
 
         {% include 'notas/partials/_filtros_notas.html' %}
         
-        {% if asignacion_seleccionada and periodo_seleccionado %}
+        {# --- INICIO: BOTÓN DE EXPORTACIÓN POR DOCENTE --- #}
         <div class="d-flex justify-content-end my-3">
-            <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exportOptionsModal">
-                <i class="fas fa-file-excel me-2"></i>Exportar Plantilla de Notas
-            </button>
+            <a href="#" id="exportarPlanillasBtn" class="btn btn-success disabled" title="Seleccione un docente y un periodo para activar">
+                <i class="fas fa-file-excel me-2"></i>Exportar Planillas del Docente
+            </a>
         </div>
-        {% endif %}
+        {# --- FIN: BOTÓN --- #}
 
         <hr class="separador">
         {% include 'notas/partials/_gestion_indicadores.html' %}
         
         {% include 'notas/partials/_tabla_notas.html' %}
     </div>
-
-    <!-- MODAL PARA OPCIONES DE EXPORTACIÓN -->
-    {% if asignacion_seleccionada and periodo_seleccionado %}
-    <div class="modal fade" id="exportOptionsModal" tabindex="-1" aria-labelledby="exportOptionsModalLabel" aria-hidden="true">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="exportOptionsModalLabel">Configurar Plantilla de Notas</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <p>Define cuántas columnas de notas deseas generar para cada dimensión.</p>
-            <div class="mb-3">
-              <label for="num_ser" class="form-label">Número de notas para el <strong>SER</strong>:</label>
-              <input type="number" class="form-control" id="num_ser" value="5" min="1" max="15">
-            </div>
-            <div class="mb-3">
-              <label for="num_saber" class="form-label">Número de notas para el <strong>SABER</strong>:</label>
-              <input type="number" class="form-control" id="num_saber" value="5" min="1" max="15">
-            </div>
-            <div class="mb-3">
-              <label for="num_hacer" class="form-label">Número de notas para el <strong>HACER</strong>:</label>
-              <input type="number" class="form-control" id="num_hacer" value="5" min="1" max="15">
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="button" class="btn btn-primary" id="confirmExportBtn" 
-                    data-url="{% url 'exportar_planilla_notas' asignacion_seleccionada.id periodo_seleccionado.id %}">
-                Descargar Plantilla
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    {% endif %}
 {% endblock %}
 
 {% block extra_js %}
     <script src="{% static 'js/ingresar_notas.js' %}"></script>
 
-    <!-- SCRIPT PARA MANEJAR EL MODAL (SINTAXIS CORREGIDA) -->
+    {# --- SCRIPT PARA HABILITAR EL BOTÓN DE EXPORTACIÓN --- #}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const confirmBtn = document.getElementById('confirmExportBtn');
-        if (confirmBtn) {
-            confirmBtn.addEventListener('click', function() {
-                const numSer = document.getElementById('num_ser').value;
-                const numSaber = document.getElementById('num_saber').value;
-                const numHacer = document.getElementById('num_hacer').value;
+        const docenteSelect = document.getElementById('docente_id');
+        const periodoSelect = document.getElementById('periodo_id');
+        const exportBtn = document.getElementById('exportarPlanillasBtn');
 
-                // Se obtiene la URL base desde el atributo data-url del botón
-                let url = confirmBtn.dataset.url;
-                
-                if (url) {
-                    // Se añaden los números como parámetros GET a la URL
-                    url += `?num_ser=${numSer}&num_saber=${numSaber}&num_hacer=${numHacer}`;
-                    window.location.href = url;
-                }
-            });
+        function checkAndSetExportUrl() {
+            // Si el usuario es superusuario, toma el valor del selector. Si no, usa el ID del docente logueado.
+            const docenteId = docenteSelect ? docenteSelect.value : '{{ request.user.docente.id }}';
+            const periodoId = periodoSelect.value;
+
+            if (docenteId && periodoId) {
+                // Construye la URL dinámicamente
+                let url = `/docente/exportar-planillas/${docenteId}/${periodoId}/`;
+                exportBtn.href = url;
+                exportBtn.classList.remove('disabled');
+                exportBtn.title = 'Descargar todas las planillas para el docente y periodo seleccionados';
+            } else {
+                exportBtn.href = '#';
+                exportBtn.classList.add('disabled');
+                exportBtn.title = 'Seleccione un docente y un periodo para activar';
+            }
         }
+
+        // Añadir listeners a los selectores para que actualicen la URL al cambiar
+        if(docenteSelect) docenteSelect.addEventListener('change', checkAndSetExportUrl);
+        if(periodoSelect) periodoSelect.addEventListener('change', checkAndSetExportUrl);
+
+        // Comprobar al cargar la página por si los valores ya están seleccionados
+        checkAndSetExportUrl();
     });
     </script>
 {% endblock %}
