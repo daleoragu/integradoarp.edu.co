@@ -117,7 +117,9 @@
                             <div class="row"><div class="col-8 ficha-fila"><span class="ficha-label">Director(a) Grado:</span><span class="ficha-data">{{ estudiante.curso.director_grado.user.get_full_name|default_if_none:"" }}</span></div><div class="col-4 ficha-fila"><span class="ficha-label">Grado:</span><span class="ficha-data">{{ estudiante.curso.nombre }}</span></div></div>
                             <div class="row mt-2"><div class="col-8 ficha-fila"><span class="ficha-label">Estudiante:</span><span class="ficha-data">{{ estudiante.user.last_name|upper }} {{ estudiante.user.first_name|upper }}</span></div><div class="col-4 ficha-fila"><span class="ficha-label">Celular:</span><span class="ficha-data">{{ ficha.celular_acudiente|default_if_none:"" }}</span></div></div>
                             <div class="row mt-2"><div class="col-6 ficha-fila"><span class="ficha-label">Lugar De Nacimiento:</span><span class="ficha-data">{{ ficha.lugar_nacimiento|default_if_none:"" }}</span></div><div class="col-6 ficha-fila"><span class="ficha-label">Fecha D:</span><span class="ficha-data">{{ ficha.fecha_nacimiento|date:"d" }}</span><span class="ficha-label">M:</span><span class="ficha-data">{{ ficha.fecha_nacimiento|date:"m" }}</span><span class="ficha-label">A:</span><span class="ficha-data">{{ ficha.fecha_nacimiento|date:"Y" }}</span></div></div>
-                            <div class="row mt-2"><div class="col-12 ficha-fila"><span class="ficha-label">Documento de Identificación N°:</span><span class="ficha-data">{{ estudiante.user.username }}</span></div></div>
+                            <!-- INICIO DE LA CORRECCIÓN -->
+                            <div class="row mt-2"><div class="col-12 ficha-fila"><span class="ficha-label">Documento de Identificación N°:</span><span class="ficha-data">{{ ficha.numero_documento|default_if_none:"" }}</span></div></div>
+                            <!-- FIN DE LA CORRECCIÓN -->
                         </div>
                         <div class="ficha-foto-placeholder">
                             {% if ficha.foto %}<img src="{{ ficha.foto.url }}" alt="Foto de {{ estudiante.user.get_full_name }}">
