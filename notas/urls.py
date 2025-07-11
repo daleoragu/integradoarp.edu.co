@@ -66,14 +66,23 @@ urlpatterns = [
     path('panel-administrador/gestion-carrusel/', portal_admin_views.gestion_carrusel_vista, name='gestion_carrusel'),
     path('panel-administrador/eliminar-imagen-carrusel/<int:pk>/', portal_admin_views.eliminar_imagen_carrusel_vista, name='eliminar_imagen_carrusel'),
     path('panel-administrador/editar-imagen-carrusel/<int:pk>/', portal_admin_views.editar_imagen_carrusel_vista, name='editar_imagen_carrusel'),
-    path('ajax/noticia/<int:pk>/', portal_views.ajax_noticia_detalle, name='ajax_noticia_detalle'),
     
+    # --- Rutas AJAX del Portal ---
+    path('ajax/noticia/<int:pk>/', portal_views.ajax_noticia_detalle, name='ajax_noticia_detalle'),
+    path('ajax/directorio-docentes/', portal_views.directorio_docentes_json, name='ajax_directorio_docentes'),
+    path('ajax/documentos-publicos/', portal_views.documentos_publicos_json, name='ajax_documentos_publicos'),
+    path('ajax/galeria-fotos/', portal_views.galeria_fotos_json, name='ajax_galeria_fotos'),
+    path('ajax/noticias/', portal_views.noticias_json, name='ajax_noticias'),
+    path('ajax/carrusel/', portal_views.carrusel_imagenes_json, name='ajax_carrusel'),
+    path('ajax/historia/', portal_views.ajax_historia, name='ajax_historia'),
+    path('ajax/mision-vision/', portal_views.ajax_mision_vision, name='ajax_mision_vision'),
+    path('ajax/modelo-pedagogico/', portal_views.ajax_modelo_pedagogico, name='ajax_modelo_pedagogico'),
+    path('ajax/recursos-educativos/', portal_views.ajax_recursos_educativos, name='ajax_recursos_educativos'),
+    path('ajax/redes-sociales/', portal_views.ajax_redes_sociales, name='ajax_redes_sociales'),
+
     # --- Rutas del Panel Docente ---
     path('docente/ingresar-notas/', ingreso_notas_views.IngresoNotasView.as_view(), name='ingresar_notas_periodo'),
-    
-    # --- RUTA FINAL PARA EXPORTAR PLANILLAS ---
     path('docente/exportar-planillas/<int:docente_id>/<int:periodo_id>/', import_export_planillas_views.exportar_planillas_docente, name='exportar_planillas_docente'),
-
     path('docente/reporte-parcial/', reporte_parcial_views.reporte_parcial_vista, name='reporte_parcial'),
     path('docente/planes-mejoramiento/', plan_mejoramiento_views.plan_mejoramiento_vista, name='plan_mejoramiento'),
     path('docente/asistencia/', asistencia_views.asistencia_vista, name='asistencia'),
@@ -85,27 +94,11 @@ urlpatterns = [
     path('indicador/<int:indicador_id>/eliminar/', indicador_views.eliminar_indicador_vista, name='eliminar_indicador'),
     path('indicador/crear/', indicador_views.crear_indicador_vista, name='crear_indicador_vista'),
 
-    # --- Rutas de Reportes y Plantillas ---
-    path('reportes/consolidado-excel/', reporte_views.generar_reporte_consolidado_excel, name='generar_reporte_consolidado_excel'),
-    path('reportes/consolidado-pdf/', reporte_views.generar_reporte_consolidado_pdf, name='generar_reporte_consolidado_pdf'),
-    path('reportes/individual-excel/', reporte_views.generar_reporte_individual_excel, name='generar_reporte_individual_excel'),
-    path('reportes/individual-pdf/', reporte_views.generar_reporte_individual_pdf, name='generar_reporte_individual_pdf'),
-
-    # --- Rutas AJAX ---
+    # --- Rutas AJAX del Panel Interno ---
     path('ajax/get-inasistencias-auto/', ingreso_notas_views.ajax_get_inasistencias_auto, name='ajax_get_inasistencias_auto'),
     path('ajax/obtener-meses/', reporte_views.obtener_meses_periodo_ajax, name='ajax_obtener_meses'),
     path('ajax/guardar-asistencia/', asistencia_views.guardar_inasistencia_ajax, name='guardar_inasistencia_ajax'),
     path('ajax/datos-graficos/', estadisticas_views.datos_graficos_ajax, name='datos_graficos_ajax'),
-    path('ajax/directorio-docentes/', portal_views.directorio_docentes_json, name='ajax_directorio_docentes'),
-    path('ajax/documentos-publicos/', portal_views.documentos_publicos_json, name='ajax_documentos_publicos'),
-    path('ajax/galeria-fotos/', portal_views.galeria_fotos_json, name='ajax_galeria_fotos'),
-    path('ajax/noticias/', portal_views.noticias_json, name='ajax_noticias'),
-    path('ajax/carrusel/', portal_views.carrusel_imagenes_json, name='ajax_carrusel'),
-    path('ajax/historia/', portal_views.ajax_historia, name='ajax_historia'),
-    path('ajax/mision-vision/', portal_views.ajax_mision_vision, name='ajax_mision_vision'),
-    path('ajax/modelo-pedagogico/', portal_views.ajax_modelo_pedagogico, name='ajax_modelo_pedagogico'),
-    path('ajax/recursos-educativos/', portal_views.ajax_recursos_educativos, name='ajax_recursos_educativos'),
-    path('ajax/redes-sociales/', portal_views.ajax_redes_sociales, name='ajax_redes_sociales'),
 
     # --- Rutas de Boletines y Sábanas ---
     path('docente/selector-boletines/', boletin_views.selector_boletin_vista, name='selector_boletines'),
@@ -179,12 +172,14 @@ urlpatterns = [
     path('panel-administrador/gestion-areas/crear/', gestion_academica_views.crear_area_vista, name='crear_area'),
     path('panel-administrador/gestion-areas/editar/<int:area_id>/', gestion_academica_views.editar_area_vista, name='editar_area'),
     path('panel-administrador/gestion-areas/eliminar/<int:area_id>/', gestion_academica_views.eliminar_area_vista, name='eliminar_area'),
+    
+    # --- NUEVA RUTA PARA PONDERACIÓN DE ÁREAS ---
+    path('panel-administrador/gestion-ponderacion-areas/', gestion_academica_views.gestion_ponderacion_areas_vista, name='gestion_ponderacion_areas'),
 
     # --- RUTAS PARA IMPORTACIÓN Y EXPORTACIÓN MASIVA ---
     path('panel-administrador/importar/', import_views.importacion_vista, name='importacion_datos'),
     path('panel-administrador/exportar-estudiantes/', export_views.exportar_estudiantes_excel, name='exportar_estudiantes_excel'),
     path('panel-administrador/descargar-plantilla-estudiantes/', export_views.descargar_plantilla_estudiantes, name='descargar_plantilla_estudiantes'),
     path('panel-administrador/exportar-materias/', export_views.exportar_materias_excel, name='exportar_materias_excel'),
-    path('panel-administrador/descargar-plantilla-materias/', export_views.descargar_plantilla_materias, name='descargar_plantilla_materias'),
-    path('panel-administrador/descargar-plantilla-docentes/', export_views.descargar_plantilla_docentes, name='descargar_plantilla_docentes'),   
+    path('panel-administrador/descargar-plantilla-materias/', export_views.descargar_plantilla_materias, name='descargar_plantilla_docentes'),   
 ]

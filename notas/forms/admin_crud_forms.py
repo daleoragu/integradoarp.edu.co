@@ -144,20 +144,24 @@ class AdminEditarEstudianteForm(forms.ModelForm):
 class AreaConocimientoForm(forms.ModelForm):
     class Meta:
         model = AreaConocimiento
+        # --- CORRECCIÓN ---
+        # Ahora que AreaConocimiento tiene una relación ManyToMany,
+        # no podemos simplemente listar 'materias'. Esto se gestionará
+        # a través del panel de administración (admin inlines).
+        # Por ahora, el formulario solo necesita el nombre.
         fields = ['nombre']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
         }
 
-# --- INICIO DE LA CORRECCIÓN ---
-# Se actualiza el MateriaForm para incluir los nuevos campos de ponderación.
 class MateriaForm(forms.ModelForm):
     class Meta:
         model = Materia
+        # --- CORRECCIÓN ---
+        # Se elimina 'area' de la lista de campos porque ya no existe en el modelo Materia.
         fields = [
             'nombre', 
             'abreviatura', 
-            'area', 
             'usar_ponderacion_equitativa', 
             'porcentaje_ser', 
             'porcentaje_saber', 
@@ -166,10 +170,8 @@ class MateriaForm(forms.ModelForm):
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
             'abreviatura': forms.TextInput(attrs={'class': 'form-control'}),
-            'area': forms.Select(attrs={'class': 'form-select'}),
             'usar_ponderacion_equitativa': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
             'porcentaje_ser': forms.NumberInput(attrs={'class': 'form-control'}),
             'porcentaje_saber': forms.NumberInput(attrs={'class': 'form-control'}),
             'porcentaje_hacer': forms.NumberInput(attrs={'class': 'form-control'}),
         }
-# --- FIN DE LA CORRECCIÓN ---

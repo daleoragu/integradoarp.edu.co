@@ -4,12 +4,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from django.db import transaction, IntegrityError
-from django.db.models import Sum
+from django.db.models import Sum, Prefetch
 from django.views.decorators.http import require_POST
 
-# Se importan los modelos necesarios
-from ..models import Curso, AreaConocimiento, Materia, Docente, AsignacionDocente
-# Se importan los formularios, incluyendo el nuevo MateriaForm
+# Se importan los modelos necesarios, incluyendo el nuevo
+from ..models import (
+    Curso, AreaConocimiento, Materia, Docente, AsignacionDocente,
+    PonderacionAreaMateria
+)
+# Se importan los formularios
 from ..forms import CursoForm, AreaConocimientoForm, MateriaForm, AsignacionDocenteForm
 
 def es_personal_admin(user):
@@ -118,7 +121,7 @@ def eliminar_curso_vista(request, curso_id):
 # ===============================================================
 @user_passes_test(es_personal_admin)
 def gestion_materias_vista(request):
-    materias = Materia.objects.select_related('area').all().order_by('area__nombre', 'nombre')
+    materias = Materia.objects.all().order_by('nombre')
     context = {'materias': materias, 'titulo': 'Gestión de Materias'}
     return render(request, 'notas/admin_crud/gestion_materias.html', context)
 
@@ -167,8 +170,6 @@ def eliminar_area_vista(request, area_id):
         messages.success(request, f"Área '{nombre_area}' eliminada con éxito.")
     return redirect('gestion_areas')
 
-# --- VISTA DE CREAR MATERIA ACTUALIZADA ---
-# Usa el nuevo MateriaForm para incluir los campos de ponderación.
 @user_passes_test(es_personal_admin)
 @transaction.atomic
 def crear_materia_vista(request):
@@ -181,11 +182,8 @@ def crear_materia_vista(request):
     else:
         form = MateriaForm()
     context = {'form': form, 'titulo': 'Añadir Nueva Materia'}
-    # Apunta a la plantilla que creamos, la cual sabe cómo renderizar los nuevos campos.
     return render(request, 'notas/admin_crud/formulario_materia.html', context)
 
-# --- VISTA DE EDITAR MATERIA ACTUALIZADA ---
-# Usa el nuevo MateriaForm para incluir los campos de ponderación.
 @user_passes_test(es_personal_admin)
 @transaction.atomic
 def editar_materia_vista(request, materia_id):
@@ -199,7 +197,6 @@ def editar_materia_vista(request, materia_id):
     else:
         form = MateriaForm(instance=materia)
     context = {'form': form, 'titulo': f"Editar Materia: {materia.nombre}"}
-    # Apunta a la plantilla que creamos, la cual sabe cómo renderizar los nuevos campos.
     return render(request, 'notas/admin_crud/formulario_materia.html', context)
 
 @user_passes_test(es_personal_admin)
@@ -208,9 +205,47 @@ def eliminar_materia_vista(request, materia_id):
     materia = get_object_or_404(Materia, id=materia_id)
     nombre_materia = materia.nombre
     try:
-        # Usamos un bloque try-except para manejar el caso en que una materia no se pueda borrar.
         materia.delete()
         messages.success(request, f"Materia '{nombre_materia}' eliminada con éxito.")
     except IntegrityError:
         messages.error(request, f"No se pudo eliminar la materia. Puede que esté asignada a un docente o tenga notas registradas.")
     return redirect('gestion_materias')
+
+
+# ===============================================================
+# VISTA PARA GESTIÓN DE PONDERACIÓN POR ÁREAS
+# ===============================================================
+@user_passes_test(es_personal_admin)
+@transaction.atomic
+def gestion_ponderacion_areas_vista(request):
+    if request.method == 'POST':
+        for key, value in request.POST.items():
+            if key.startswith('peso-'):
+                try:
+                    ponderacion_id = int(key.split('-')[1])
+                    peso = float(value.replace(',', '.'))
+                    
+                    ponderacion = get_object_or_404(PonderacionAreaMateria, id=ponderacion_id)
+                    ponderacion.peso_porcentual = peso
+                    ponderacion.save()
+
+                except (ValueError, IndexError):
+                    continue
+        
+        messages.success(request, '¡Ponderaciones actualizadas correctamente!')
+        return redirect('gestion_ponderacion_areas')
+
+    ponderaciones_prefetch = Prefetch(
+        'ponderacionareamateria_set',
+        queryset=PonderacionAreaMateria.objects.select_related('materia').order_by('materia__nombre'),
+        to_attr='ponderaciones'
+    )
+    
+    areas = AreaConocimiento.objects.prefetch_related(ponderaciones_prefetch).order_by('nombre')
+
+    context = {
+        'areas_con_ponderaciones': areas,
+        'titulo': "Gestión de Ponderación por Áreas"
+    }
+    # --- RUTA ACTUALIZADA ---
+    return render(request, 'notas/admin_crud/ponderacion_areas.html', context)

@@ -5,26 +5,43 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
 import datetime
 
-# --- INICIO DE LA CORRECCIÓN ---
-# Se importa el modelo User que faltaba.
 from django.contrib.auth.models import User
-# --- FIN DE LA CORRECCIÓN ---
-
 from .perfiles import Docente, Estudiante, Curso
+
+# ===================================================================
+# INICIO DE LA MODIFICACIÓN PARA PONDERACIÓN POR ÁREA
+# ===================================================================
 
 class AreaConocimiento(models.Model):
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre del Área")
+    
+    # ¡LÍNEA CLAVE!
+    # La relación con Materia ahora tiene campos adicionales (el peso)
+    # y se gestiona a través del modelo PonderacionAreaMateria.
+    materias = models.ManyToManyField(
+        'Materia',
+        through='PonderacionAreaMateria',
+        related_name='areas_ponderadas'
+    )
+
     def __str__(self): return self.nombre
+    
     def save(self, *args, **kwargs):
         self.nombre = self.nombre.upper()
         super().save(*args, **kwargs)
+        
     class Meta:
-        verbose_name = "Área de Conocimiento"; verbose_name_plural = "Áreas de Conocimiento"; ordering = ['nombre']
+        verbose_name = "Área de Conocimiento"
+        verbose_name_plural = "Áreas de Conocimiento"
+        ordering = ['nombre']
 
 class Materia(models.Model):
     nombre = models.CharField(max_length=100, unique=True, verbose_name="Nombre de la Materia")
     abreviatura = models.CharField(max_length=10, blank=True, null=True, verbose_name="Abreviatura")
-    area = models.ForeignKey(AreaConocimiento, on_delete=models.CASCADE, related_name="materias", verbose_name="Área de Conocimiento")
+    
+    # --- CAMPO ELIMINADO ---
+    # Se elimina el campo 'area' porque la relación ahora se define en AreaConocimiento.
+    # area = models.ForeignKey(AreaConocimiento, on_delete=models.CASCADE, related_name="materias", verbose_name="Área de Conocimiento")
 
     usar_ponderacion_equitativa = models.BooleanField(
         default=True,
@@ -44,7 +61,13 @@ class Materia(models.Model):
                 raise ValidationError("La suma de los porcentajes manuales debe ser 100.")
 
     class Meta:
-        verbose_name = "Materia"; verbose_name_plural = "Materias"; ordering = ['area__nombre', 'nombre']
+        # Se ajusta el orden para que no dependa de 'area'
+        verbose_name = "Materia"; verbose_name_plural = "Materias"; ordering = ['nombre']
+
+# ===================================================================
+# FIN DE LA MODIFICACIÓN
+# ===================================================================
+
 
 class PeriodoAcademico(models.Model):
     nombre = models.CharField(max_length=20, choices=[('PRIMERO', 'Primer Periodo'), ('SEGUNDO', 'Segundo Periodo'), ('TERCERO', 'Tercer Periodo'), ('CUARTO', 'Cuarto Periodo')])
@@ -223,7 +246,6 @@ class ConfiguracionCalificaciones(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        # Esto asegura que siempre estemos editando el mismo registro de configuración
         self.pk = 1
         super().save(*args, **kwargs)
 
@@ -234,3 +256,29 @@ class ConfiguracionCalificaciones(models.Model):
         verbose_name = "Configuración de Permisos de Calificación"
         verbose_name_plural = "Configuración de Permisos de Calificación"
 
+# ===================================================================
+# NUEVO MODELO PARA GESTIONAR LA PONDERACIÓN
+# ===================================================================
+class PonderacionAreaMateria(models.Model):
+    """
+    Modelo intermedio para definir el peso porcentual de una
+    Materia dentro de un Área de Conocimiento específica.
+    """
+    area = models.ForeignKey('AreaConocimiento', on_delete=models.CASCADE)
+    materia = models.ForeignKey('Materia', on_delete=models.CASCADE)
+    peso_porcentual = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('100.00'))],
+        verbose_name="Peso Porcentual (%)",
+        help_text="El peso que esta materia tiene sobre la nota final del área. Ej: 40.00"
+    )
+
+    class Meta:
+        # Asegura que una materia solo pueda tener un peso dentro de un área.
+        unique_together = ('area', 'materia')
+        verbose_name = "Ponderación de Materia en Área"
+        verbose_name_plural = "Ponderaciones de Materias en Áreas"
+
+    def __str__(self):
+        return f"{self.materia.nombre} en {self.area.nombre} ({self.peso_porcentual}%)"
