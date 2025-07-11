@@ -72,6 +72,7 @@ class IngresoNotasView(LoginRequiredMixin, View):
             
             estudiantes_data = []
             for estudiante in estudiantes_del_curso:
+                # CORRECCIÓN DE FORMATO DE NOMBRE
                 nombre_completo = f"{estudiante.user.last_name}, {estudiante.user.first_name}".strip()
                 data = {'id': estudiante.id, 'nombre_completo': nombre_completo, 'notas': {'ser': [], 'saber': [], 'hacer': []}, 'inasistencias': 0}
                 
@@ -130,7 +131,7 @@ class IngresoNotasView(LoginRequiredMixin, View):
                     asignacion.porcentaje_saber = int(porcentajes_nuevos.get('saber'))
                     asignacion.porcentaje_hacer = int(porcentajes_nuevos.get('hacer'))
                     asignacion.porcentaje_ser = int(porcentajes_nuevos.get('ser'))
-                    asignacion.usar_ponderacion_equitativa = False # Corrección clave
+                    asignacion.usar_ponderacion_equitativa = False # ¡Corrección clave!
                     asignacion.save() # El método clean() del modelo validará la suma
                 except ValidationError as e:
                     return JsonResponse({'status': 'error', 'message': e.messages[0]}, status=400)

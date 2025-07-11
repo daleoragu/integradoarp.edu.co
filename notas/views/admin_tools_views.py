@@ -9,7 +9,9 @@ from django.conf import settings
 from django.contrib.auth.models import User, Group
 from django.http import HttpResponse
 from django.contrib.auth import get_user_model
-from django import forms # Import añadido
+from django import forms
+# --- Import añadido para el nuevo panel ---
+from django.forms import modelformset_factory
 
 from ..models import (
     Curso, Materia, Estudiante, Docente, AsignacionDocente, PeriodoAcademico,
@@ -171,41 +173,66 @@ def panel_control_promocion_vista(request):
     return render(request, 'notas/admin_tools/panel_control_promocion.html', context)
 
 
-# --- INICIO: CÓDIGO AÑADIDO PARA LA CONFIGURACIÓN DE CALIFICACIONES ---
+# --- INICIO: LÓGICA PARA EL NUEVO PANEL DE CONFIGURACIÓN ---
 
-class ConfiguracionCalificacionesForm(forms.ModelForm):
+class MateriaPorcentajeForm(forms.ModelForm):
     """
-    Un formulario simple para manejar el campo booleano del modelo.
+    Formulario para editar los porcentajes de una materia específica.
+    """
+    class Meta:
+        model = Materia
+        fields = ['porcentaje_ser', 'porcentaje_saber', 'porcentaje_hacer', 'usar_ponderacion_equitativa']
+        widgets = {
+            'porcentaje_ser': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
+            'porcentaje_saber': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
+            'porcentaje_hacer': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
+            'usar_ponderacion_equitativa': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+class ConfiguracionGlobalForm(forms.ModelForm):
+    """
+    Formulario para el interruptor global de permisos.
     """
     class Meta:
         model = ConfiguracionCalificaciones
         fields = ['docente_puede_modificar']
-        labels = {
-            'docente_puede_modificar': 'Permitir que los docentes modifiquen los porcentajes'
-        }
 
 @user_passes_test(lambda u: u.is_superuser)
 def configuracion_calificaciones_vista(request):
     """
-    Esta vista controla la página de configuración de permisos.
+    Vista mejorada que permite al admin gestionar los porcentajes por defecto
+    de todas las materias y el permiso global para que los docentes modifiquen.
     """
-    # Usamos get_or_create para manejar la primera vez que se accede.
-    # El modelo está diseñado para tener siempre un único registro con pk=1.
-    config, created = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
+    # Se crea un 'FormSet', que es un conjunto de formularios para editar múltiples objetos a la vez.
+    MateriaFormSet = modelformset_factory(Materia, form=MateriaPorcentajeForm, extra=0)
+    
+    # Se obtiene la configuración global de permisos
+    config_global, _ = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
 
     if request.method == 'POST':
-        form = ConfiguracionCalificacionesForm(request.POST, instance=config)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'La configuración de permisos ha sido actualizada correctamente.')
+        # Se procesan ambos formularios: el del permiso global y el de todas las materias
+        formset = MateriaFormSet(request.POST, queryset=Materia.objects.all())
+        form_global = ConfiguracionGlobalForm(request.POST, instance=config_global)
+
+        if formset.is_valid() and form_global.is_valid():
+            formset.save()
+            form_global.save()
+            messages.success(request, 'La configuración de calificaciones ha sido actualizada correctamente.')
             return redirect('configuracion_calificaciones')
+        else:
+            # Si hay errores, se muestran
+            messages.error(request, 'Por favor, corrija los errores en el formulario.')
+
     else:
-        form = ConfiguracionCalificacionesForm(instance=config)
+        # Si es una petición GET, se inicializan los formularios con los datos de la BD
+        formset = MateriaFormSet(queryset=Materia.objects.all().order_by('nombre'))
+        form_global = ConfiguracionGlobalForm(instance=config_global)
 
     context = {
-        'form': form,
-        'page_title': 'Permiso para Modificar Porcentajes'
+        'formset': formset,
+        'form_global': form_global,
+        'page_title': 'Configuración de Calificaciones por Materia'
     }
     return render(request, 'notas/admin_tools/configuracion_calificaciones.html', context)
 
-# --- FIN: CÓDIGO AÑADIDO ---
+# --- FIN: LÓGICA PARA EL NUEVO PANEL ---

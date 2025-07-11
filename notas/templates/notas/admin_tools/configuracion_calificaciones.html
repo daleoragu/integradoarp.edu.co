@@ -1,51 +1,76 @@
 {% extends 'notas/base.html' %}
 
 {% block page_title %}
-    Permiso para Modificar Porcentajes
+    Configuración de Calificaciones por Materia
 {% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h4><i class="fas fa-toggle-on me-2"></i>Permiso de Modificación de Porcentajes</h4>
-            </div>
-            <div class="card-body p-4">
-                <p class="card-text text-muted mb-4">
-                    Activa esta opción para permitir que los docentes puedan ajustar los porcentajes de calificación (Saber, Hacer, Ser) para cada una de sus asignaturas directamente desde la pantalla de "Ingresar Notas".
-                </p>
+<form method="post">
+    {% csrf_token %}
 
-                <form method="post">
-                    {% csrf_token %}
-                    
-                    <div class="form-check form-switch mb-4 p-4 border rounded bg-light">
-                        {{ form.docente_puede_modificar }}
-                        <label class="form-check-label ms-2" for="{{ form.docente_puede_modificar.id_for_label }}">
-                            <span class="fw-bold fs-5">{{ form.docente_puede_modificar.label }}</span>
-                        </label>
-                        <small class="form-text text-muted d-block mt-1">{{ form.docente_puede_modificar.help_text }}</small>
-                    </div>
-
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="fas fa-save me-2"></i>Guardar Configuración
-                        </button>
-                    </div>
-                </form>
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4><i class="fas fa-toggle-on me-2"></i>Permiso Global para Docentes</h4>
+        </div>
+        <div class="card-body p-4">
+            <p class="card-text text-muted">
+                Activa esta opción para permitir que los docentes puedan ajustar los porcentajes para sus asignaturas. Si está desactivado, todos usarán los valores por defecto definidos abajo.
+            </p>
+            <div class="form-check form-switch p-3 border rounded bg-light">
+                {{ form_global.docente_puede_modificar }}
+                <label class="form-check-label ms-2" for="{{ form_global.docente_puede_modificar.id_for_label }}">
+                    <span class="fw-bold fs-5">Permitir que los docentes modifiquen los porcentajes</span>
+                </label>
             </div>
         </div>
     </div>
-</div>
 
-<style>
-    .form-check.form-switch {
-        font-size: 1.1rem;
-    }
-    .form-check-input {
-        width: 3.5em;
-        height: 1.75em;
-        cursor: pointer;
-    }
-</style>
+    <div class="card shadow-sm">
+        <div class="card-header bg-secondary text-white">
+            <h4><i class="fas fa-book me-2"></i>Porcentajes por Defecto de las Materias</h4>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">Estos son los porcentajes que se usarán por defecto para cada materia. La suma de SER, SABER y HACER debe ser 100, a menos que se marque la opción "Ponderación Equitativa".</p>
+            
+            {{ formset.management_form }}
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle">
+                    <thead>
+                        <tr>
+                            <th>Materia</th>
+                            <th class="text-center">Ser (%)</th>
+                            <th class="text-center">Saber (%)</th>
+                            <th class="text-center">Hacer (%)</th>
+                            <th class="text-center">Ponderación Equitativa</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for form in formset %}
+                        <tr>
+                            <td>
+                                {{ form.instance.nombre }}
+                                {{ form.id }}
+                            </td>
+                            <td>{{ form.porcentaje_ser }}</td>
+                            <td>{{ form.porcentaje_saber }}</td>
+                            <td>{{ form.porcentaje_hacer }}</td>
+                            <td class="text-center">
+                                <div class="form-check d-flex justify-content-center">
+                                    {{ form.usar_ponderacion_equitativa }}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-grid mt-4">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="fas fa-save me-2"></i>Guardar Toda la Configuración
+        </button>
+    </div>
+</form>
 {% endblock %}
