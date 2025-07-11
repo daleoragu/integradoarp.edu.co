@@ -50,6 +50,9 @@
                     <li><a class="dropdown-item {% if request.resolver_match.url_name == 'panel_control_periodos' %}active{% endif %}" href="{% url 'panel_control_periodos' %}"><i class="fas fa-calendar-alt fa-fw me-2 text-muted"></i>Control de Plazos</a></li>
                     <li><a class="dropdown-item {% if request.resolver_match.url_name == 'panel_publicacion' %}active{% endif %}" href="{% url 'panel_publicacion' %}"><i class="fas fa-paper-plane fa-fw me-2 text-muted"></i>Publicar Boletines</a></li>
                     <li><a class="dropdown-item {% if request.resolver_match.url_name == 'panel_control_promocion' %}active{% endif %}" href="{% url 'panel_control_promocion' %}"><i class="fas fa-gavel fa-fw me-2 text-muted"></i>Regla de Promoción</a></li>
+                    <!-- INICIO: ENLACE AÑADIDO -->
+                    <li><a class="dropdown-item {% if request.resolver_match.url_name == 'configuracion_calificaciones' %}active{% endif %}" href="{% url 'configuracion_calificaciones' %}"><i class="fas fa-percentage fa-fw me-2 text-muted"></i>Permisos de Porcentajes</a></li>
+                    <!-- FIN: ENLACE AÑADIDO -->
                 {% endif %}
             </ul>
         </div>

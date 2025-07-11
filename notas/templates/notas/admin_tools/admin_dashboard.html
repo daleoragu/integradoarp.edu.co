@@ -89,7 +89,10 @@
     .bg-promocion { background-color: #198754; }
     .bg-portal-config { background-color: #212529; }
     .bg-asignacion { background-color: #fd7e14; }
-    .bg-portal-publico { background-color: #0d6efd; } /* Nuevo color para el botón del portal */
+    .bg-portal-publico { background-color: #0d6efd; }
+    /* INICIO: COLOR AÑADIDO */
+    .bg-permisos { background-color: #20c997; }
+    /* FIN: COLOR AÑADIDO */
 
     /* Colores Panel Docente */
     .bg-notas { background-color: #0d6efd; }
@@ -152,6 +155,12 @@
                 <a href="{% url 'panel_publicacion' %}" class="app-icon"><div class="icon-container bg-publicar"><i class="fas fa-paper-plane"></i></div><span class="app-label">Publicar Boletines</span></a>
                 <a href="{% url 'panel_control_promocion' %}" class="app-icon"><div class="icon-container bg-promocion"><i class="fas fa-gavel"></i></div><span class="app-label">Regla de Promoción</span></a>
                 <a href="{% url 'configuracion_portal' %}" class="app-icon"><div class="icon-container bg-portal-config"><i class="fas fa-cogs"></i></div><span class="app-label">Configurar Portal</span></a>
+                <!-- INICIO: ICONO AÑADIDO -->
+                <a href="{% url 'configuracion_calificaciones' %}" class="app-icon">
+                    <div class="icon-container bg-permisos"><i class="fas fa-percentage"></i></div>
+                    <span class="app-label">Permisos Porcentajes</span>
+                </a>
+                <!-- FIN: ICONO AÑADIDO -->
             </div>
         </div>
 
