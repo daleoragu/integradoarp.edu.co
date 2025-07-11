@@ -123,57 +123,58 @@ class IngresoNotasView(LoginRequiredMixin, View):
             if not IndicadorLogroPeriodo.objects.filter(asignacion=asignacion, periodo=periodo).exists():
                 return JsonResponse({'status': 'error', 'message': 'No se pueden guardar calificaciones porque no hay indicadores de logro definidos para esta asignatura en este periodo.'}, status=403)
 
-            # --- LÓGICA DE ACTUALIZACIÓN DE PORCENTAJES ---
+            # --- LÓGICA DE CÁLCULO DE PESOS (ENFOQUE DIRECTO) ---
+            # 1. Determinamos los pesos a usar. Primero, asumimos los que ya están en la BD.
+            if asignacion.usar_ponderacion_equitativa:
+                pesos = {
+                    'ser': Decimal('33.33') / 100,
+                    'saber': Decimal('33.33') / 100,
+                    'hacer': Decimal('33.34') / 100,
+                }
+            else:
+                pesos = {
+                    'ser': Decimal(asignacion.porcentaje_ser) / 100,
+                    'saber': Decimal(asignacion.porcentaje_saber) / 100,
+                    'hacer': Decimal(asignacion.porcentaje_hacer) / 100,
+                }
+
+            # 2. Si el docente envía nuevos porcentajes, los procesamos y ACTUALIZAMOS nuestra variable 'pesos'.
             config, _ = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
-            
             if config.docente_puede_modificar and porcentajes_nuevos:
                 try:
-                    # Asigna los nuevos valores al objeto en memoria
                     asignacion.porcentaje_saber = int(porcentajes_nuevos.get('saber'))
                     asignacion.porcentaje_hacer = int(porcentajes_nuevos.get('hacer'))
                     asignacion.porcentaje_ser = int(porcentajes_nuevos.get('ser'))
-                    
-                    # ¡CORRECCIÓN CLAVE 1: Desactivar ponderación equitativa!
-                    # Esto es fundamental para que el modelo use los porcentajes manuales.
                     asignacion.usar_ponderacion_equitativa = False
                     
-                    # ¡CORRECCIÓN CLAVE 2: Validar y guardar!
-                    # Se llama a full_clean() para ejecutar las validaciones del modelo (ej: que sumen 100).
                     asignacion.full_clean()
                     asignacion.save()
                     
-                    # ¡CORRECCIÓN CLAVE 3: Refrescar el estado!
-                    # Forzamos la recarga del objeto desde la BD para asegurar que los
-                    # cálculos siguientes usen la información recién guardada, eliminando
-                    # cualquier ambigüedad de estado dentro de la transacción.
-                    asignacion.refresh_from_db()
+                    # ¡CORRECCIÓN CLAVE!
+                    # Actualizamos nuestro diccionario de pesos con los valores que ACABAMOS de guardar.
+                    # Esto asegura que el cálculo posterior se hace con los datos 100% correctos.
+                    pesos['ser'] = Decimal(asignacion.porcentaje_ser) / 100
+                    pesos['saber'] = Decimal(asignacion.porcentaje_saber) / 100
+                    pesos['hacer'] = Decimal(asignacion.porcentaje_hacer) / 100
 
                 except (ValidationError, ValueError, TypeError) as e:
-                    # Captura errores de validación (suma != 100) o si los datos no son números.
                     mensaje_error = e.messages[0] if hasattr(e, 'messages') else str(e)
                     return JsonResponse({'status': 'error', 'message': f"Error en los porcentajes: {mensaje_error}"}, status=400)
             
             # --- LÓGICA DE CÁLCULO DE NOTAS ---
-            # Gracias a refresh_from_db(), estamos 100% seguros de que 'asignacion'
-            # tiene los porcentajes correctos para el cálculo.
-            peso_ser = asignacion.ser_calc / Decimal('100.0')
-            peso_saber = asignacion.saber_calc / Decimal('100.0')
-            peso_hacer = asignacion.hacer_calc / Decimal('100.0')
-            
+            # 3. Iteramos sobre cada estudiante y usamos el diccionario 'pesos' que ya está verificado.
             for est_data in estudiantes_data:
                 estudiante = get_object_or_404(Estudiante, id=est_data['id'])
                 
-                # 1. Calcular promedio de cada componente (Ser, Saber, Hacer)
                 promedio_ser = self.calcular_promedio_componente(estudiante, asignacion, periodo, 'SER', est_data['notas']['ser'])
                 promedio_saber = self.calcular_promedio_componente(estudiante, asignacion, periodo, 'SABER', est_data['notas']['saber'])
                 promedio_hacer = self.calcular_promedio_componente(estudiante, asignacion, periodo, 'HACER', est_data['notas']['hacer'])
 
-                # 2. Aplicar el promedio ponderado para la nota definitiva
-                definitiva_periodo = (promedio_ser * peso_ser) + \
-                                     (promedio_saber * peso_saber) + \
-                                     (promedio_hacer * peso_hacer)
+                # Aplicamos el promedio ponderado usando los pesos definidos explícitamente.
+                definitiva_periodo = (promedio_ser * pesos['ser']) + \
+                                     (promedio_saber * pesos['saber']) + \
+                                     (promedio_hacer * pesos['hacer'])
 
-                # 3. Guardar la nota definitiva del periodo
                 Calificacion.objects.update_or_create(
                     estudiante=estudiante,
                     materia=asignacion.materia,
@@ -185,7 +186,6 @@ class IngresoNotasView(LoginRequiredMixin, View):
                     }
                 )
                 
-                # 4. Actualizar inasistencias
                 InasistenciasManualesPeriodo.objects.update_or_create(
                     estudiante=estudiante,
                     asignacion=asignacion,
@@ -198,7 +198,6 @@ class IngresoNotasView(LoginRequiredMixin, View):
         except json.JSONDecodeError:
             return JsonResponse({'status': 'error', 'message': 'El formato de los datos enviados es inválido.'}, status=400)
         except Exception as e:
-            # Considerar loggear el error 'e' para depuración
             return JsonResponse({'status': 'error', 'message': f'Ocurrió un error inesperado en el servidor.'}, status=500)
 
     def calcular_promedio_componente(self, estudiante, asignacion, periodo, tipo_componente, notas_data):
@@ -227,7 +226,6 @@ class IngresoNotasView(LoginRequiredMixin, View):
                 ))
                 total_notas += valor
             except (ValueError, TypeError):
-                # Ignorar notas inválidas o no numéricas
                 continue
 
         if notas_detalladas_list:

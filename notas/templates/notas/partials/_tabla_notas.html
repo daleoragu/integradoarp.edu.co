@@ -18,6 +18,11 @@
             Puedes ajustar los porcentajes para esta asignatura. La suma debe ser exactamente 100%.
         </p>
         <div class="row align-items-center">
+            <!-- CORRECCIÓN: Se han ajustado los id y for para que coincidan -->
+            <div class="col-md-3">
+                <label for="p-ser" class="form-label mb-0">Ser (%):</label>
+                <input type="number" class="form-control form-control-sm porcentaje-input" id="p-ser" value="{{ asignacion_seleccionada.porcentaje_ser }}" min="0" max="100">
+            </div>
             <div class="col-md-3">
                 <label for="p-saber" class="form-label mb-0">Saber (%):</label>
                 <input type="number" class="form-control form-control-sm porcentaje-input" id="p-saber" value="{{ asignacion_seleccionada.porcentaje_saber }}" min="0" max="100">
@@ -25,10 +30,6 @@
             <div class="col-md-3">
                 <label for="p-hacer" class="form-label mb-0">Hacer (%):</label>
                 <input type="number" class="form-control form-control-sm porcentaje-input" id="p-hacer" value="{{ asignacion_seleccionada.porcentaje_hacer }}" min="0" max="100">
-            </div>
-            <div class="col-md-3">
-                <label for="p-ser" class="form-label mb-0">Ser (%):</label>
-                <input type="number" class="form-control form-control-sm porcentaje-input" id="p-ser" value="{{ asignacion_seleccionada.porcentaje_ser }}" min="0" max="100">
             </div>
             <div class="col-md-3">
                 <label class="form-label mb-0">Suma Total:</label>
@@ -117,4 +118,4 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <!-- FIN: SCRIPT PARA VALIDAR PORCENTAJES -->
 
-{% endif %} {# <-- ETIQUETA DE CIERRE AÑADIDA #}
+{% endif %}
