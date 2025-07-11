@@ -62,17 +62,18 @@ urlpatterns = [
     path('panel-administrador/crear-noticia/', portal_admin_views.crear_noticia_vista, name='crear_noticia'),
     path('panel-administrador/editar-noticia/<int:pk>/', portal_admin_views.editar_noticia_vista, name='editar_noticia'),
     path('panel-administrador/eliminar-noticia/<int:pk>/', portal_admin_views.eliminar_noticia_vista, name='eliminar_noticia'),
-       path('panel-administrador/publicar-noticia/<int:pk>/', portal_admin_views.publicar_noticia_vista, name='publicar_noticia'),
+    path('panel-administrador/publicar-noticia/<int:pk>/', portal_admin_views.publicar_noticia_vista, name='publicar_noticia'),
     path('panel-administrador/gestion-carrusel/', portal_admin_views.gestion_carrusel_vista, name='gestion_carrusel'),
     path('panel-administrador/eliminar-imagen-carrusel/<int:pk>/', portal_admin_views.eliminar_imagen_carrusel_vista, name='eliminar_imagen_carrusel'),
     path('panel-administrador/editar-imagen-carrusel/<int:pk>/', portal_admin_views.editar_imagen_carrusel_vista, name='editar_imagen_carrusel'),
     path('ajax/noticia/<int:pk>/', portal_views.ajax_noticia_detalle, name='ajax_noticia_detalle'),
     
     # --- Rutas del Panel Docente ---
-    # CORRECCIÓN 1: Se reemplaza la vista de función por la vista basada en clases.
-    path('docente/exportar-planillas/<int:docente_id>/<int:periodo_id>/', import_export_planillas_views.exportar_planillas_docente, name='exportar_planillas_docente'),
     path('docente/ingresar-notas/', ingreso_notas_views.IngresoNotasView.as_view(), name='ingresar_notas_periodo'),
-    path('docente/exportar-planilla/<int:asignacion_id>/<int:periodo_id>/', import_export_planillas_views.exportar_planilla_notas, name='exportar_planilla_notas'),
+    
+    # --- RUTA FINAL PARA EXPORTAR PLANILLAS ---
+    path('docente/exportar-planillas/<int:docente_id>/<int:periodo_id>/', import_export_planillas_views.exportar_planillas_docente, name='exportar_planillas_docente'),
+
     path('docente/reporte-parcial/', reporte_parcial_views.reporte_parcial_vista, name='reporte_parcial'),
     path('docente/planes-mejoramiento/', plan_mejoramiento_views.plan_mejoramiento_vista, name='plan_mejoramiento'),
     path('docente/asistencia/', asistencia_views.asistencia_vista, name='asistencia'),
@@ -80,12 +81,9 @@ urlpatterns = [
     path('docente/importar-asistencia/', importar_asistencia_views.importar_asistencia_excel_vista, name='importar_asistencia_excel'),
 
     # --- Rutas para CRUD de Indicadores ---
-    
     path('indicador/<int:indicador_id>/editar/', indicador_views.editar_indicador_vista, name='editar_indicador'),
     path('indicador/<int:indicador_id>/eliminar/', indicador_views.eliminar_indicador_vista, name='eliminar_indicador'),
     path('indicador/crear/', indicador_views.crear_indicador_vista, name='crear_indicador_vista'),
-    path('indicador/<int:indicador_id>/editar/', indicador_views.editar_indicador_vista, name='editar_indicador'),
-    path('indicador/<int:indicador_id>/eliminar/', indicador_views.eliminar_indicador_vista, name='eliminar_indicador'),
 
     # --- Rutas de Reportes y Plantillas ---
     path('reportes/consolidado-excel/', reporte_views.generar_reporte_consolidado_excel, name='generar_reporte_consolidado_excel'),
@@ -93,7 +91,7 @@ urlpatterns = [
     path('reportes/individual-excel/', reporte_views.generar_reporte_individual_excel, name='generar_reporte_individual_excel'),
     path('reportes/individual-pdf/', reporte_views.generar_reporte_individual_pdf, name='generar_reporte_individual_pdf'),
 
-    # CORRECCIÓN 3: Se asegura que la ruta apunte a la función correcta en el archivo de vistas.
+    # --- Rutas AJAX ---
     path('ajax/get-inasistencias-auto/', ingreso_notas_views.ajax_get_inasistencias_auto, name='ajax_get_inasistencias_auto'),
     path('ajax/obtener-meses/', reporte_views.obtener_meses_periodo_ajax, name='ajax_obtener_meses'),
     path('ajax/guardar-asistencia/', asistencia_views.guardar_inasistencia_ajax, name='guardar_inasistencia_ajax'),
