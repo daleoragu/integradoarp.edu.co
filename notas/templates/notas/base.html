@@ -2,42 +2,41 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    {# El _head.html modificado se encargará de los nuevos estilos y colores #}
     {% include "notas/includes/_head.html" %}
     {% block extra_css %}{% endblock %}
 </head>
 <body>
 
     {% if request.session.original_user_id %}
-    <div style="background-color: #ffc107; color: #343a40; text-align: center; padding: 10px; font-weight: bold; position: fixed; width: 100%; z-index: 9999; top: 0; left: 0;">
+    <div class="impersonation-banner">
         <i class="fas fa-user-secret me-2"></i>
         Estás viendo la plataforma como <strong>{{ request.user.get_full_name|upper }}</strong>. 
-        <a href="{% url 'detener_suplantacion' %}" style="color: #0056b3; text-decoration: underline; font-weight: bold; margin-left: 15px;">Volver a mi cuenta de Administrador</a>
+        <a href="{% url 'detener_suplantacion' %}">Volver a mi cuenta de Administrador</a>
     </div>
-    {# NOTA: Puede que necesites ajustar los márgenes o padding si el banner se superpone #}
     {% endif %}
     
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <img src="{% static 'img/logo_colegio.png' %}" alt="Logo del Colegio">
-            <h2>I.E.T. Alfonso Palacio Rudas</h2>
-        </div>
-        {% include "notas/includes/_sidebar.html" %}
-    </aside>
-
+    {# El page-wrapper ahora contiene todo, sin la barra lateral #}
     <div class="page-wrapper">
+        
+        {# El _topbar.html ahora contendrá el menú de navegación principal #}
         {% include "notas/includes/_topbar.html" %}
+
         <main class="content-area">
-            <div class="page-header mb-4">
-                {% block page_title %}{% endblock %}
-            </div>
             {% if messages %}
                 <ul class="messages list-unstyled">
-                    {% for message in messages %}<li class="alert alert-{{ message.tags }}">{{ message }}</li>{% endfor %}
+                    {% for message in messages %}
+                        <li class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </li>
+                    {% endfor %}
                 </ul>
             {% endif %}
             
             {% block content %}{% endblock %}
         </main>
+
         {% include "notas/includes/_footer.html" %}
     </div>
 
