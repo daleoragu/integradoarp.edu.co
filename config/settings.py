@@ -18,7 +18,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-local-dev-key-fallback')
 # --- Modo DEBUG (Mejora de seguridad) ---
 # Lee la variable de entorno DEBUG. En producción (Render), esta variable debe ser 'False'.
 # Por defecto, en desarrollo, será True.
-DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
+DEBUG = True
 
 
 # --- Configuración de Hosts ---
