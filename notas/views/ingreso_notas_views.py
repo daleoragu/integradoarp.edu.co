@@ -15,20 +15,15 @@ from django.core.exceptions import ValidationError
 from ..models.academicos import (
     AsignacionDocente, PeriodoAcademico, Estudiante, Calificacion,
     NotaDetallada, InasistenciasManualesPeriodo, Asistencia, IndicadorLogroPeriodo,
-    ConfiguracionCalificaciones # --- 1. IMPORTAMOS EL NUEVO MODELO ---
+    ConfiguracionCalificaciones
 )
 from ..models.perfiles import Docente
 
 class IngresoNotasView(LoginRequiredMixin, View):
-    """
-    Gestiona la página de ingreso de calificaciones. Ahora permite a los docentes
-    modificar los porcentajes si el administrador lo autoriza.
-    """
     template_name = 'notas/docente/ingresar_notas_periodo.html'
     login_url = '/login/'
 
     def get(self, request, *args, **kwargs):
-        # --- 2. OBTENEMOS LA CONFIGURACIÓN DE PERMISOS ---
         config, _ = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
         
         asignaciones_a_mostrar = AsignacionDocente.objects.none()
@@ -61,7 +56,6 @@ class IngresoNotasView(LoginRequiredMixin, View):
             'periodo_cerrado': False,
             'indicadores': [],
             'hay_indicadores': False,
-            # --- 3. PASAMOS EL PERMISO A LA PLANTILLA ---
             'permiso_modificar_porcentajes': config.docente_puede_modificar,
         }
         context.update(context_admin)
@@ -105,7 +99,6 @@ class IngresoNotasView(LoginRequiredMixin, View):
             asignacion_id = data.get('asignacion_id')
             periodo_id = data.get('periodo_id')
             estudiantes_data = data.get('estudiantes')
-            # --- 4. OBTENEMOS LOS NUEVOS PORCENTAJES DEL JSON ---
             porcentajes_nuevos = data.get('porcentajes')
             
             if not all([asignacion_id, periodo_id, isinstance(estudiantes_data, list)]):
@@ -123,24 +116,36 @@ class IngresoNotasView(LoginRequiredMixin, View):
             if not IndicadorLogroPeriodo.objects.filter(asignacion=asignacion, periodo=periodo).exists():
                 return JsonResponse({'status': 'error', 'message': 'No se pueden guardar calificaciones porque no hay indicadores de logro definidos.'}, status=403)
 
-            # --- 5. LÓGICA PARA GUARDAR LOS PORCENTAJES NUEVOS ---
             config, _ = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
             if config.docente_puede_modificar and porcentajes_nuevos:
                 try:
                     asignacion.porcentaje_saber = int(porcentajes_nuevos.get('saber', asignacion.porcentaje_saber))
                     asignacion.porcentaje_hacer = int(porcentajes_nuevos.get('hacer', asignacion.porcentaje_hacer))
                     asignacion.porcentaje_ser = int(porcentajes_nuevos.get('ser', asignacion.porcentaje_ser))
-                    asignacion.usar_ponderacion_equitativa = False # Desactivamos la equitativa al guardar manualmente
-                    asignacion.save() # El método save() del modelo validará que la suma sea 100
+                    asignacion.usar_ponderacion_equitativa = False
+                    asignacion.save()
                 except ValidationError as e:
-                    # Si la suma no es 100, devolvemos un error claro.
                     return JsonResponse({'status': 'error', 'message': e.messages[0]}, status=400)
                 except (ValueError, TypeError):
                     return JsonResponse({'status': 'error', 'message': 'Los valores de los porcentajes deben ser números enteros.'}, status=400)
 
-            # --- FIN DE LA LÓGICA DE GUARDADO ---
-
-            porcentajes = {'SER': asignacion.ser_calc / 100, 'SABER': asignacion.saber_calc / 100, 'HACER': asignacion.hacer_calc / 100}
+            # --- INICIO DE LA CORRECCIÓN DEL CÁLCULO ---
+            # Se define el diccionario de porcentajes a usar para el cálculo.
+            # Si el docente puede modificar y envió nuevos porcentajes, se usan esos.
+            # De lo contrario, se usan los que están guardados en la base de datos.
+            if config.docente_puede_modificar and porcentajes_nuevos:
+                porcentajes_a_usar = {
+                    'SABER': Decimal(porcentajes_nuevos.get('saber')) / 100,
+                    'HACER': Decimal(porcentajes_nuevos.get('hacer')) / 100,
+                    'SER': Decimal(porcentajes_nuevos.get('ser')) / 100
+                }
+            else:
+                porcentajes_a_usar = {
+                    'SABER': asignacion.saber_calc / 100,
+                    'HACER': asignacion.hacer_calc / 100,
+                    'SER': asignacion.ser_calc / 100
+                }
+            # --- FIN DE LA CORRECCIÓN DEL CÁLCULO ---
             
             for est_data in estudiantes_data:
                 estudiante = get_object_or_404(Estudiante, id=est_data['id'])
@@ -160,7 +165,8 @@ class IngresoNotasView(LoginRequiredMixin, View):
                     promedio_comp = (total_notas / num_notas if num_notas > 0 else Decimal('0.0')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                     cal_prom.valor_nota = promedio_comp
                     cal_prom.save()
-                    definitiva_periodo += promedio_comp * porcentajes[comp_map]
+                    # Se usa el diccionario corregido 'porcentajes_a_usar'
+                    definitiva_periodo += promedio_comp * porcentajes_a_usar[comp_map]
 
                 Calificacion.objects.update_or_create(estudiante=estudiante, materia=asignacion.materia, periodo=periodo, tipo_nota='PROM_PERIODO', defaults={'valor_nota': definitiva_periodo.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP), 'docente': asignacion.docente})
                 InasistenciasManualesPeriodo.objects.update_or_create(estudiante=estudiante, asignacion=asignacion, periodo=periodo, defaults={'cantidad': int(est_data['inasistencias'])})
