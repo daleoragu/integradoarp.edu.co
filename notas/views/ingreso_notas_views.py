@@ -72,7 +72,6 @@ class IngresoNotasView(LoginRequiredMixin, View):
             
             estudiantes_data = []
             for estudiante in estudiantes_del_curso:
-                # CORRECCIÓN DE FORMATO DE NOMBRE
                 nombre_completo = f"{estudiante.user.last_name}, {estudiante.user.first_name}".strip()
                 data = {'id': estudiante.id, 'nombre_completo': nombre_completo, 'notas': {'ser': [], 'saber': [], 'hacer': []}, 'inasistencias': 0}
                 
@@ -107,68 +106,141 @@ class IngresoNotasView(LoginRequiredMixin, View):
             periodo_id = data.get('periodo_id')
             estudiantes_data = data.get('estudiantes')
             porcentajes_nuevos = data.get('porcentajes')
-            
+
             if not all([asignacion_id, periodo_id, isinstance(estudiantes_data, list)]):
-                return JsonResponse({'status': 'error', 'message': 'Faltan datos.'}, status=400)
-            
+                return JsonResponse({'status': 'error', 'message': 'Faltan datos críticos para procesar la solicitud.'}, status=400)
+
             asignacion = get_object_or_404(AsignacionDocente, id=asignacion_id)
             periodo = get_object_or_404(PeriodoAcademico, id=periodo_id)
-            
+
+            # --- Validaciones de Permisos y Estado ---
             if not request.user.is_superuser and asignacion.docente != request.user.docente:
-                return JsonResponse({'status': 'error', 'message': 'Permiso denegado.'}, status=403)
+                return JsonResponse({'status': 'error', 'message': 'No tiene permiso para modificar esta asignación.'}, status=403)
 
             if not periodo.esta_activo:
-                return JsonResponse({'status': 'error', 'message': 'El periodo está cerrado.'}, status=403)
+                return JsonResponse({'status': 'error', 'message': 'El periodo de calificaciones está cerrado. No se pueden guardar cambios.'}, status=403)
 
             if not IndicadorLogroPeriodo.objects.filter(asignacion=asignacion, periodo=periodo).exists():
-                return JsonResponse({'status': 'error', 'message': 'No se pueden guardar calificaciones porque no hay indicadores de logro definidos.'}, status=403)
+                return JsonResponse({'status': 'error', 'message': 'No se pueden guardar calificaciones porque no hay indicadores de logro definidos para esta asignatura en este periodo.'}, status=403)
 
+            # --- LÓGICA DE ACTUALIZACIÓN DE PORCENTAJES ---
             config, _ = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
             
             if config.docente_puede_modificar and porcentajes_nuevos:
                 try:
-                    # Al guardar porcentajes manuales, nos aseguramos de desactivar la ponderación equitativa.
+                    # Asigna los nuevos valores al objeto en memoria
                     asignacion.porcentaje_saber = int(porcentajes_nuevos.get('saber'))
                     asignacion.porcentaje_hacer = int(porcentajes_nuevos.get('hacer'))
                     asignacion.porcentaje_ser = int(porcentajes_nuevos.get('ser'))
-                    asignacion.usar_ponderacion_equitativa = False # ¡Corrección clave!
-                    asignacion.save() # El método clean() del modelo validará la suma
-                except ValidationError as e:
-                    return JsonResponse({'status': 'error', 'message': e.messages[0]}, status=400)
+                    
+                    # ¡CORRECCIÓN CLAVE 1: Desactivar ponderación equitativa!
+                    # Esto es fundamental para que el modelo use los porcentajes manuales.
+                    asignacion.usar_ponderacion_equitativa = False
+                    
+                    # ¡CORRECCIÓN CLAVE 2: Validar y guardar!
+                    # Se llama a full_clean() para ejecutar las validaciones del modelo (ej: que sumen 100).
+                    asignacion.full_clean()
+                    asignacion.save()
+                    
+                    # ¡CORRECCIÓN CLAVE 3: Refrescar el estado!
+                    # Forzamos la recarga del objeto desde la BD para asegurar que los
+                    # cálculos siguientes usen la información recién guardada, eliminando
+                    # cualquier ambigüedad de estado dentro de la transacción.
+                    asignacion.refresh_from_db()
+
+                except (ValidationError, ValueError, TypeError) as e:
+                    # Captura errores de validación (suma != 100) o si los datos no son números.
+                    mensaje_error = e.messages[0] if hasattr(e, 'messages') else str(e)
+                    return JsonResponse({'status': 'error', 'message': f"Error en los porcentajes: {mensaje_error}"}, status=400)
             
-            # El cálculo usará los valores correctos gracias a las propiedades .ser_calc, .saber_calc, etc. del modelo
-            porcentajes_a_usar = {
-                'SABER': asignacion.saber_calc / 100,
-                'HACER': asignacion.hacer_calc / 100,
-                'SER': asignacion.ser_calc / 100
-            }
+            # --- LÓGICA DE CÁLCULO DE NOTAS ---
+            # Gracias a refresh_from_db(), estamos 100% seguros de que 'asignacion'
+            # tiene los porcentajes correctos para el cálculo.
+            peso_ser = asignacion.ser_calc / Decimal('100.0')
+            peso_saber = asignacion.saber_calc / Decimal('100.0')
+            peso_hacer = asignacion.hacer_calc / Decimal('100.0')
             
             for est_data in estudiantes_data:
                 estudiante = get_object_or_404(Estudiante, id=est_data['id'])
-                definitiva_periodo = Decimal('0.0')
+                
+                # 1. Calcular promedio de cada componente (Ser, Saber, Hacer)
+                promedio_ser = self.calcular_promedio_componente(estudiante, asignacion, periodo, 'SER', est_data['notas']['ser'])
+                promedio_saber = self.calcular_promedio_componente(estudiante, asignacion, periodo, 'SABER', est_data['notas']['saber'])
+                promedio_hacer = self.calcular_promedio_componente(estudiante, asignacion, periodo, 'HACER', est_data['notas']['hacer'])
 
-                for comp_key, comp_map in {'ser': 'SER', 'saber': 'SABER', 'hacer': 'HACER'}.items():
-                    cal_prom, _ = Calificacion.objects.get_or_create(estudiante=estudiante, materia=asignacion.materia, periodo=periodo, tipo_nota=comp_map, defaults={'valor_nota': 0, 'docente': asignacion.docente})
-                    cal_prom.notas_detalladas.all().delete()
-                    notas_detalladas_list = []
-                    total_notas = Decimal('0.0')
-                    for nota_det_data in est_data['notas'][comp_key]:
-                        valor = Decimal(nota_det_data['valor'])
-                        notas_detalladas_list.append(NotaDetallada(calificacion_promedio=cal_prom, descripcion=nota_det_data['descripcion'], valor_nota=valor))
-                        total_notas += valor
-                    NotaDetallada.objects.bulk_create(notas_detalladas_list)
-                    num_notas = len(notas_detalladas_list)
-                    promedio_comp = (total_notas / num_notas if num_notas > 0 else Decimal('0.0')).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-                    cal_prom.valor_nota = promedio_comp
-                    cal_prom.save()
-                    definitiva_periodo += promedio_comp * porcentajes_a_usar[comp_map]
+                # 2. Aplicar el promedio ponderado para la nota definitiva
+                definitiva_periodo = (promedio_ser * peso_ser) + \
+                                     (promedio_saber * peso_saber) + \
+                                     (promedio_hacer * peso_hacer)
 
-                Calificacion.objects.update_or_create(estudiante=estudiante, materia=asignacion.materia, periodo=periodo, tipo_nota='PROM_PERIODO', defaults={'valor_nota': definitiva_periodo.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP), 'docente': asignacion.docente})
-                InasistenciasManualesPeriodo.objects.update_or_create(estudiante=estudiante, asignacion=asignacion, periodo=periodo, defaults={'cantidad': int(est_data['inasistencias'])})
+                # 3. Guardar la nota definitiva del periodo
+                Calificacion.objects.update_or_create(
+                    estudiante=estudiante,
+                    materia=asignacion.materia,
+                    periodo=periodo,
+                    tipo_nota='PROM_PERIODO',
+                    defaults={
+                        'valor_nota': definitiva_periodo.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+                        'docente': asignacion.docente
+                    }
+                )
+                
+                # 4. Actualizar inasistencias
+                InasistenciasManualesPeriodo.objects.update_or_create(
+                    estudiante=estudiante,
+                    asignacion=asignacion,
+                    periodo=periodo,
+                    defaults={'cantidad': int(est_data.get('inasistencias', 0))}
+                )
 
-            return JsonResponse({'status': 'success', 'message': 'Calificaciones guardadas correctamente.'})
+            return JsonResponse({'status': 'success', 'message': 'Calificaciones guardadas y calculadas correctamente.'})
+        
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'El formato de los datos enviados es inválido.'}, status=400)
         except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'Ocurrió un error inesperado: {e}'}, status=500)
+            # Considerar loggear el error 'e' para depuración
+            return JsonResponse({'status': 'error', 'message': f'Ocurrió un error inesperado en el servidor.'}, status=500)
+
+    def calcular_promedio_componente(self, estudiante, asignacion, periodo, tipo_componente, notas_data):
+        """
+        Método auxiliar para calcular y guardar el promedio de un componente (Ser, Saber, Hacer).
+        """
+        cal_prom, _ = Calificacion.objects.get_or_create(
+            estudiante=estudiante,
+            materia=asignacion.materia,
+            periodo=periodo,
+            tipo_nota=tipo_componente,
+            defaults={'valor_nota': Decimal('0.0'), 'docente': asignacion.docente}
+        )
+        cal_prom.notas_detalladas.all().delete()
+        
+        notas_detalladas_list = []
+        total_notas = Decimal('0.0')
+        
+        for nota_det_data in notas_data:
+            try:
+                valor = Decimal(nota_det_data['valor'])
+                notas_detalladas_list.append(NotaDetallada(
+                    calificacion_promedio=cal_prom,
+                    descripcion=nota_det_data['descripcion'],
+                    valor_nota=valor
+                ))
+                total_notas += valor
+            except (ValueError, TypeError):
+                # Ignorar notas inválidas o no numéricas
+                continue
+
+        if notas_detalladas_list:
+            NotaDetallada.objects.bulk_create(notas_detalladas_list)
+            promedio = total_notas / len(notas_detalladas_list)
+        else:
+            promedio = Decimal('0.0')
+
+        promedio_final = promedio.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        cal_prom.valor_nota = promedio_final
+        cal_prom.save()
+        
+        return promedio_final
 
 @login_required
 def ajax_get_inasistencias_auto(request):
