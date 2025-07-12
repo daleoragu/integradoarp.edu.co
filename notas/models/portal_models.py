@@ -2,8 +2,12 @@
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
+# 👇 MODIFICADO: Importamos Colegio
+from .perfiles import Colegio
 
 class DocumentoPublico(models.Model):
+    # 👇 MODIFICADO: Se añade null=True para permitir la migración
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="documentos_publicos", null=True)
     titulo = models.CharField(max_length=200, verbose_name="Título del Documento")
     descripcion = models.TextField(blank=True, verbose_name="Descripción Breve")
     # RUTA CORREGIDA: Se elimina 'media/'.
@@ -19,6 +23,8 @@ class DocumentoPublico(models.Model):
         ordering = ['-fecha_publicacion']
 
 class FotoGaleria(models.Model):
+    # 👇 MODIFICADO: Se añade null=True para permitir la migración
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="fotos_galeria", null=True)
     titulo = models.CharField(max_length=150, verbose_name="Título de la Foto", help_text="Un título o descripción corta.")
     # RUTA CORREGIDA:
     imagen = models.ImageField(upload_to='galeria_portal/', verbose_name="Fotografía")
@@ -33,6 +39,8 @@ class FotoGaleria(models.Model):
         ordering = ['-fecha_subida']
 
 class Noticia(models.Model):
+    # 👇 MODIFICADO: Se añade null=True para permitir la migración
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="noticias", null=True)
     ESTADO_CHOICES = [('BORRADOR', 'Borrador'), ('PUBLICADO', 'Publicado')]
     titulo = models.CharField(max_length=255, verbose_name="Titular de la Noticia")
     resumen = models.CharField(max_length=500, verbose_name="Resumen Corto")
@@ -52,6 +60,8 @@ class Noticia(models.Model):
         ordering = ['-fecha_publicacion']
 
 class ImagenCarrusel(models.Model):
+    # 👇 MODIFICADO: Se añade null=True para permitir la migración
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="imagenes_carrusel", null=True)
     titulo = models.CharField(max_length=100, blank=True)
     subtitulo = models.CharField(max_length=200, blank=True)
     # RUTA CORREGIDA:

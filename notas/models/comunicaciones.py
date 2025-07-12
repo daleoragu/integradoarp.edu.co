@@ -1,9 +1,12 @@
 # notas/models/comunicaciones.py
 from django.db import models
 from django.contrib.auth.models import User
-from .perfiles import Estudiante, Docente
+# 👇 MODIFICADO: Importamos Colegio
+from .perfiles import Estudiante, Docente, Colegio
 
 class Mensaje(models.Model):
+    # 👇 MODIFICADO: Se añade null=True para permitir la migración
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="mensajes", null=True)
     # --- INICIO: Se añaden las opciones para el estado ---
     ESTADO_CHOICES = [
         ('ENVIADO', 'Enviado'),
@@ -41,6 +44,8 @@ class Mensaje(models.Model):
 
 # --- Los siguientes modelos no se modifican ---
 class RegistroObservador(models.Model):
+    # 👇 MODIFICADO: Se añade null=True para permitir la migración
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="registros_observador", null=True)
     TIPO_CHOICES = [('ACADEMICA', 'Académica'), ('COMPORTAMENTAL', 'Comportamental')]
     SUBTIPO_CHOICES = [('POSITIVA', 'Positiva'), ('NEGATIVA', 'A Mejorar')]
 
@@ -64,6 +69,8 @@ class RegistroObservador(models.Model):
         verbose_name_plural = "Registros del Observador"
 
 class Notificacion(models.Model):
+    # 👇 MODIFICADO: Se añade null=True para permitir la migración
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="notificaciones", null=True)
     destinatario = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notificaciones")
     mensaje = models.CharField(max_length=255)
     leido = models.BooleanField(default=False)

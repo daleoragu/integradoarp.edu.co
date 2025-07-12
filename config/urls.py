@@ -3,19 +3,21 @@
 from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
-from django.views.static import serve # Importa la vista 'serve'
+from django.views.static import serve
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # Esta línea conecta con todas las URLs de tu aplicación 'notas'
+    
+    # ==============================================================================
+    # Con el middleware, ya no necesitamos una ruta especial.
+    # El middleware identificará el colegio y las URLs de 'notas'
+    # funcionarán directamente para el dominio correspondiente.
+    # Ej: Al entrar a 'integradoapr.edu.co/dashboard', se usará esta configuración.
+    # ==============================================================================
     path('', include('notas.urls')),
 
-    # --- INICIO DE LA CORRECCIÓN PARA PRODUCCIÓN ---
-    # La siguiente línea es necesaria para que Django pueda "servir" (mostrar)
-    # los archivos que los usuarios suben (imágenes, documentos) cuando
-    # la aplicación está en producción (DEBUG=False).
+    # Configuración para servir archivos de medios en desarrollo o producción
     re_path(r'^media/(?P<path>.*)$', serve, {
         'document_root': settings.MEDIA_ROOT,
     }),
-    # --- FIN DE LA CORRECCIÓN ---
 ]

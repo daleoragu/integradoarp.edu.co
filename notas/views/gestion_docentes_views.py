@@ -6,7 +6,8 @@ from django.contrib.auth.models import User, Group
 from django.contrib import messages
 from django.db import transaction
 from django.views.decorators.http import require_POST
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
+from django.http import HttpResponseNotFound
 from django.utils.text import slugify
 from unidecode import unidecode
 
@@ -14,21 +15,33 @@ from ..models import Docente, FichaDocente
 from ..forms import AdminCrearDocenteForm, AdminEditarDocenteForm
 
 def es_personal_admin(user):
-    """Verifica si el usuario es superusuario o pertenece al grupo 'Administradores'."""
-    return user.is_superuser or user.groups.filter(name='Administradores').exists()
+    """Verifica si el usuario es superusuario."""
+    return user.is_superuser
 
 # ===============================================================
 # VISTAS PARA GESTIÓN DE DOCENTES
 # ===============================================================
 @user_passes_test(es_personal_admin)
 def gestion_docentes_vista(request):
-    docentes = Docente.objects.select_related('user').all().order_by('user__last_name')
-    context = {'docentes': docentes}
+    # Verificar que estamos en un colegio válido
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+    
+    # 👇 FILTRADO: Mostrar solo docentes del colegio actual
+    docentes = Docente.objects.filter(colegio=request.colegio).select_related('user').order_by('user__last_name')
+    
+    context = {
+        'docentes': docentes,
+        'colegio': request.colegio # Pasar el colegio a la plantilla
+    }
     return render(request, 'notas/admin_crud/gestion_docentes.html', context)
 
 @user_passes_test(es_personal_admin)
 @transaction.atomic
 def crear_docente_vista(request):
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
     if request.method == 'POST':
         form = AdminCrearDocenteForm(request.POST)
         if form.is_valid():
@@ -58,10 +71,11 @@ def crear_docente_vista(request):
             try:
                 grupo_docentes, _ = Group.objects.get_or_create(name='Docentes')
                 nuevo_usuario.groups.add(grupo_docentes)
-            except Group.DoesNotExist:
-                messages.warning(request, "El grupo 'Docentes' no existe.")
+            except ObjectDoesNotExist:
+                messages.warning(request, "El grupo 'Docentes' no existe. Por favor, créelo en el panel de Admin.")
             
-            nuevo_docente = Docente.objects.create(user=nuevo_usuario)
+            # 👇 ASOCIACIÓN: Crear el docente para el colegio actual
+            nuevo_docente = Docente.objects.create(user=nuevo_usuario, colegio=request.colegio)
             FichaDocente.objects.create(
                 docente=nuevo_docente,
                 numero_documento=datos.get('numero_documento')
@@ -77,21 +91,24 @@ def crear_docente_vista(request):
     else:
         form = AdminCrearDocenteForm()
     
-    context = {'form': form, 'titulo': "Crear Nuevo Docente"}
+    context = {'form': form, 'titulo': "Crear Nuevo Docente", 'colegio': request.colegio}
     return render(request, 'notas/admin_crud/formulario_docente.html', context)
 
 
 @login_required 
 @transaction.atomic
 def editar_docente_vista(request, docente_id):
-    docente = get_object_or_404(Docente, id=docente_id)
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+        
+    # 👇 FILTRADO: Obtener el docente solo si pertenece al colegio actual
+    docente = get_object_or_404(Docente, id=docente_id, colegio=request.colegio)
 
     if not (es_personal_admin(request.user) or request.user.id == docente.user.id):
         raise PermissionDenied
 
     ficha, created = FichaDocente.objects.get_or_create(docente=docente)
     if request.method == 'POST':
-        # --- CORRECCIÓN: Se añade 'request.FILES' para manejar la subida de la foto ---
         form = AdminEditarDocenteForm(request.POST, request.FILES, instance=ficha, docente=docente)
         if form.is_valid():
             form.save()
@@ -100,14 +117,18 @@ def editar_docente_vista(request, docente_id):
     else:
         form = AdminEditarDocenteForm(instance=ficha, docente=docente)
         
-    context = {'form': form, 'titulo': "Editar Ficha del Docente", 'docente': docente}
+    context = {'form': form, 'titulo': "Editar Ficha del Docente", 'docente': docente, 'colegio': request.colegio}
     return render(request, 'notas/admin_crud/formulario_docente.html', context)
 
 
 @user_passes_test(es_personal_admin)
 @require_POST
 def eliminar_docente_vista(request, docente_id):
-    docente = get_object_or_404(Docente, id=docente_id)
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+        
+    # 👇 FILTRADO: Asegurarse de que solo se puede eliminar un docente del colegio actual
+    docente = get_object_or_404(Docente, id=docente_id, colegio=request.colegio)
     docente.user.delete()
     messages.success(request, f"Docente '{docente.user.get_full_name()}' eliminado permanentemente.")
     return redirect('gestion_docentes')

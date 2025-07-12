@@ -1,6 +1,6 @@
 /**
  * Script for handling the grade entry page with a spreadsheet style.
- * @version 9.0 - Corrected real-time calculation and payload for percentages.
+ * @version 10.0 - Corrected button enable/disable logic based on indicators.
  */
 document.addEventListener('DOMContentLoaded', function () {
     // --- DOM ELEMENTS AND INITIAL DATA ---
@@ -11,15 +11,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const guardarTodoBtn = document.getElementById('guardarTodoBtn');
     const statusIndicator = document.getElementById('status-indicator');
     const estudiantesDataEl = document.getElementById('estudiantes-data-json');
-    const urlInasistenciasEl = document.getElementById('url-get-inasistencias');
     const mensajeIndicadoresEl = document.getElementById('mensaje-indicadores');
     
-    // --- NEW: References to percentage inputs ---
     const pSerInput = document.getElementById('p-ser');
     const pSaberInput = document.getElementById('p-saber');
     const pHacerInput = document.getElementById('p-hacer');
 
-    if (!tablaCalificaciones || !estudiantesDataEl || !urlInasistenciasEl) {
+    if (!tablaCalificaciones || !estudiantesDataEl || !mensajeIndicadoresEl) {
         console.error("Faltan elementos HTML esenciales para la inicialización del script.");
         return;
     }
@@ -29,7 +27,6 @@ document.addEventListener('DOMContentLoaded', function () {
         periodoId: container.dataset.periodoId,
         csrfToken: container.dataset.csrfToken,
         guardarUrl: container.dataset.guardarUrl,
-        inasistenciasUrl: urlInasistenciasEl.dataset.url,
     };
 
     let estudiantesData = [];
@@ -44,27 +41,32 @@ document.addEventListener('DOMContentLoaded', function () {
     let hayCambiosSinGuardar = false;
     let descripcionesColumnas = { ser: {}, saber: {}, hacer: {} };
 
+    // --- ============================================= ---
+    // --- FUNCIÓN CORREGIDA PARA HABILITAR/DESHABILITAR ---
+    // --- ============================================= ---
     function gestionarEstadoInputsPorIndicadores() {
         const hayIndicadores = tablaCalificaciones.dataset.hayIndicadores === 'true';
+        
         if (hayIndicadores) {
+            // Si hay indicadores, nos aseguramos de que todo esté habilitado.
             mensajeIndicadoresEl.style.display = 'none';
-            return;
+            container.querySelectorAll('.btn-add-col, .btn-remove-col').forEach(btn => btn.disabled = false);
+            // El botón de guardar se gestionará por separado (si hay cambios o no).
+        } else {
+            // Si NO hay indicadores, mostramos el mensaje y deshabilitamos todo.
+            mensajeIndicadoresEl.innerHTML = `
+                <div class="alert alert-warning" role="alert">
+                    <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Atención</h4>
+                    <p>No se pueden ingresar calificaciones porque <strong>no ha definido ningún indicador de logro</strong> para esta asignación en este periodo.</p>
+                </div>
+            `;
+            mensajeIndicadoresEl.style.display = 'block';
+            container.querySelectorAll('.btn-add-col, .btn-remove-col').forEach(btn => btn.disabled = true);
+            if (guardarTodoBtn) guardarTodoBtn.disabled = true;
         }
-        mensajeIndicadoresEl.innerHTML = `
-            <div class="alert alert-warning" role="alert">
-                <h4 class="alert-heading"><i class="fas fa-exclamation-triangle"></i> Atención</h4>
-                <p>No se pueden ingresar calificaciones porque <strong>no ha definido ningún indicador de logro</strong> para esta asignación en este periodo.</p>
-                <hr>
-                <p class="mb-0">Por favor, agregue al menos un indicador para poder continuar.</p>
-            </div>
-        `;
-        mensajeIndicadoresEl.style.display = 'block';
-        container.querySelectorAll('.btn-add-col, .btn-remove-col').forEach(btn => btn.disabled = true);
-        if (guardarTodoBtn) guardarTodoBtn.disabled = true;
     }
 
     function renderizarTabla() {
-        // (This function remains unchanged)
         const hayIndicadores = tablaCalificaciones.dataset.hayIndicadores === 'true';
         const maxNotas = { ser: 0, saber: 0, hacer: 0 };
         estudiantesData.forEach(est => {
@@ -84,7 +86,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         let headerHtml = `<thead class="table-light"><tr><th rowspan="2" class="text-center align-middle">#</th><th rowspan="2" class="align-middle">Estudiante</th>`;
-        
         for (const tipo of ['ser', 'saber', 'hacer']) {
             headerHtml += `<th colspan="${maxNotas[tipo] + 1}" class="text-center comp-${tipo}">${tipo.toUpperCase()} <button class="btn btn-outline-success btn-sm btn-add-col" data-tipo="${tipo}" title="Añadir columna de nota" ${!hayIndicadores ? 'disabled' : ''}>+</button><button class="btn btn-outline-danger btn-sm btn-remove-col" data-tipo="${tipo}" title="Quitar última columna" ${!hayIndicadores ? 'disabled' : ''}>-</button></th>`;
         }
@@ -132,7 +133,6 @@ document.addEventListener('DOMContentLoaded', function () {
         tablaCalificaciones.querySelectorAll('tbody tr[data-estudiante-id]').forEach(actualizarTodosLosPromedios);
     }
 
-    // --- CALCULATION FUNCTIONS ---
     function actualizarTodosLosPromedios(fila) {
         ['ser', 'saber', 'hacer'].forEach(tipo => {
             const inputs = fila.querySelectorAll(`.input-nota[data-tipo="${tipo}"]`);
@@ -154,7 +154,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const defCelda = fila.querySelector('.def-celda');
         let definitiva = 0;
         
-        // --- FIX 1: Always read the CURRENT percentages from the input fields ---
         const porcentajes = {
             ser: (parseFloat(pSerInput.value) || 0) / 100,
             saber: (parseFloat(pSaberInput.value) || 0) / 100,
@@ -163,9 +162,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         ['ser', 'saber', 'hacer'].forEach(tipo => {
             const prom = parseFloat(fila.querySelector(`.prom-celda[data-tipo="${tipo}"]`).textContent);
-            if (!isNaN(prom)) {
-                definitiva += prom * porcentajes[tipo];
-            }
+            if (!isNaN(prom)) definitiva += prom * porcentajes[tipo];
         });
         
         defCelda.textContent = definitiva.toFixed(1);
@@ -176,9 +173,8 @@ document.addEventListener('DOMContentLoaded', function () {
         else if (notaFinal < 4.6) defCelda.classList.add('nota-verde');
         else defCelda.classList.add('nota-azul');
     }
-
+    
     function actualizarStatus(estado) {
-        // (This function remains unchanged)
         if (!statusIndicator) return;
         statusIndicator.className = 'status-indicator';
         const periodoCerrado = document.querySelector('.card-footer .text-warning');
@@ -188,13 +184,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 statusIndicator.title = 'Cambios sin guardar';
                 hayCambiosSinGuardar = true;
                 if (guardarTodoBtn && !periodoCerrado && tablaCalificaciones.dataset.hayIndicadores === 'true') {
-                    // Re-check percentage sum before enabling save button
                     const suma = (parseInt(pSerInput.value, 10) || 0) + (parseInt(pSaberInput.value, 10) || 0) + (parseInt(pHacerInput.value, 10) || 0);
-                    if (suma === 100) {
-                        guardarTodoBtn.disabled = false;
-                    } else {
-                        guardarTodoBtn.disabled = true;
-                    }
+                    guardarTodoBtn.disabled = (suma !== 100);
                 }
                 break;
             case 'saved':
@@ -214,15 +205,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- EVENT HANDLERS ---
     tablaCalificaciones.addEventListener('input', e => {
-        if (e.target.classList.contains('input-nota')) {
-            actualizarTodosLosPromedios(e.target.closest('tr'));
-        }
         if (e.target.classList.contains('input-nota') || e.target.classList.contains('input-inasistencia')) {
+            if (e.target.classList.contains('input-nota')) {
+                actualizarTodosLosPromedios(e.target.closest('tr'));
+            }
             actualizarStatus('pending');
         }
     });
 
-    // --- FIX 2: Recalculate all grades when a percentage changes ---
     [pSerInput, pSaberInput, pHacerInput].forEach(input => {
         input?.addEventListener('input', () => {
             tablaCalificaciones.querySelectorAll('tbody tr[data-estudiante-id]').forEach(fila => {
@@ -232,11 +222,52 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    tablaCalificaciones.addEventListener('click', e => {
+        const btnAdd = e.target.closest('.btn-add-col');
+        const btnRemove = e.target.closest('.btn-remove-col');
+        const thNota = e.target.closest('.th-nota');
+
+        if (btnAdd) {
+            const tipo = btnAdd.dataset.tipo;
+            if (estudiantesData.length > 0) {
+                estudiantesData.forEach(est => {
+                    if (!est.notas[tipo]) est.notas[tipo] = [];
+                    est.notas[tipo].push({ valor: '', descripcion: '' });
+                });
+            }
+            renderizarTabla();
+            gestionarEstadoInputsPorIndicadores();
+            actualizarStatus('pending');
+        }
+        if (btnRemove) {
+            const tipo = btnRemove.dataset.tipo;
+            estudiantesData.forEach(est => {
+                if (est.notas[tipo]?.length > 1) est.notas[tipo].pop();
+            });
+            const lastIndex = Object.keys(descripcionesColumnas[tipo]).length - 1;
+            if (lastIndex >= 0) delete descripcionesColumnas[tipo][lastIndex];
+            renderizarTabla();
+            gestionarEstadoInputsPorIndicadores();
+            actualizarStatus('pending');
+        }
+        if (thNota) {
+            const tipo = thNota.dataset.tipo;
+            const colIndex = thNota.dataset.colIndex;
+            const descSpan = thNota.querySelector('.col-desc');
+            const descActual = descripcionesColumnas[tipo][colIndex] || '';
+            const nuevaDesc = prompt(`Descripción para la columna ${thNota.querySelector('.col-title').textContent}:`, descActual);
+            if (nuevaDesc !== null) {
+                descripcionesColumnas[tipo][colIndex] = nuevaDesc.trim();
+                descSpan.textContent = nuevaDesc.trim();
+                actualizarStatus('pending');
+            }
+        }
+    });
+
     guardarTodoBtn?.addEventListener('click', async function() {
         this.disabled = true;
         this.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
         
-        // --- FIX 3: Add the new percentages to the payload ---
         const payload = {
             asignacion_id: asignacionData.id,
             periodo_id: asignacionData.periodoId,
@@ -282,9 +313,6 @@ document.addEventListener('DOMContentLoaded', function () {
             this.innerHTML = '<i class="fas fa-save me-2"></i>Guardar Cambios';
         }
     });
-    
-    // Other event listeners (paste, add/remove columns, etc.) remain unchanged
-    // ...
 
     // --- INITIALIZATION ---
     renderizarTabla();

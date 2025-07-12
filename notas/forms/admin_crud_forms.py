@@ -5,7 +5,7 @@ from ..models import (
     Estudiante, FichaEstudiante, Curso, Docente, AreaConocimiento, Materia, FichaDocente
 )
 
-# --- Formularios para Cursos / Grados (Sin cambios) ---
+# --- Formularios para Cursos / Grados ---
 class CursoForm(forms.ModelForm):
     class Meta:
         model = Curso
@@ -19,7 +19,18 @@ class CursoForm(forms.ModelForm):
             'director_grado': 'Director de Grado (Opcional)',
         }
 
-# --- Formularios para Gestión de Docentes (Sin cambios) ---
+    # 👇 INICIO: MODIFICACIÓN MULTI-COLEGIO
+    def __init__(self, *args, **kwargs):
+        # Extraemos el 'colegio' que nos pasa la vista
+        colegio = kwargs.pop('colegio', None)
+        super().__init__(*args, **kwargs)
+        
+        # Si recibimos un colegio, filtramos el queryset de 'director_grado'
+        if colegio:
+            self.fields['director_grado'].queryset = Docente.objects.filter(colegio=colegio).order_by('user__last_name')
+    # 👆 FIN: MODIFICACIÓN MULTI-COLEGIO
+
+# --- Formularios para Gestión de Docentes ---
 class AdminCrearDocenteForm(forms.Form):
     nombres = forms.CharField(label="Nombres Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     apellidos = forms.CharField(label="Apellidos Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -70,14 +81,22 @@ class AdminEditarDocenteForm(forms.ModelForm):
             ficha.save()
         return ficha
 
-# --- Formularios para Gestión de Estudiantes (Sin cambios) ---
+# --- Formularios para Gestión de Estudiantes ---
 class AdminCrearEstudianteForm(forms.Form):
     nombres = forms.CharField(label="Nombres Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     apellidos = forms.CharField(label="Apellidos Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     tipo_documento = forms.ChoiceField(label="Tipo de Documento (Opcional)", required=False, choices=FichaEstudiante.TIPO_DOCUMENTO_CHOICES, widget=forms.Select(attrs={'class': 'form-select'}))
     numero_documento = forms.CharField(label="Número de Documento (Opcional)", required=False, max_length=20, widget=forms.TextInput(attrs={'class': 'form-control'}))
-    curso = forms.ModelChoiceField(label="Asignar al Curso", queryset=Curso.objects.all(), widget=forms.Select(attrs={'class': 'form-select'}))
+    curso = forms.ModelChoiceField(label="Asignar al Curso", queryset=Curso.objects.none(), widget=forms.Select(attrs={'class': 'form-select'}))
     
+    # 👇 INICIO: MODIFICACIÓN MULTI-COLEGIO
+    def __init__(self, *args, **kwargs):
+        colegio = kwargs.pop('colegio', None)
+        super().__init__(*args, **kwargs)
+        if colegio:
+            self.fields['curso'].queryset = Curso.objects.filter(colegio=colegio).order_by('nombre')
+    # 👆 FIN: MODIFICACIÓN MULTI-COLEGIO
+
     def clean_nombres(self):
         return self.cleaned_data.get('nombres', '').upper()
 
@@ -87,7 +106,7 @@ class AdminCrearEstudianteForm(forms.Form):
 class AdminEditarEstudianteForm(forms.ModelForm):
     first_name = forms.CharField(label="Nombres", widget=forms.TextInput(attrs={'class': 'form-control'}))
     last_name = forms.CharField(label="Apellidos", widget=forms.TextInput(attrs={'class': 'form-control'}))
-    curso = forms.ModelChoiceField(queryset=Curso.objects.all(), label="Curso", widget=forms.Select(attrs={'class': 'form-select'}))
+    curso = forms.ModelChoiceField(queryset=Curso.objects.none(), label="Curso", widget=forms.Select(attrs={'class': 'form-select'}))
     is_active = forms.BooleanField(required=False, label="¿Estudiante Activo?", widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
     
     class Meta:
@@ -117,14 +136,21 @@ class AdminEditarEstudianteForm(forms.ModelForm):
             'compromiso_estudiante': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
 
+    # 👇 INICIO: MODIFICACIÓN MULTI-COLEGIO
     def __init__(self, *args, **kwargs):
+        colegio = kwargs.pop('colegio', None)
         super().__init__(*args, **kwargs)
+        
+        if colegio:
+            self.fields['curso'].queryset = Curso.objects.filter(colegio=colegio).order_by('nombre')
+        
         if self.instance and self.instance.pk:
             estudiante_profile = self.instance.estudiante
             self.fields['first_name'].initial = estudiante_profile.user.first_name
             self.fields['last_name'].initial = estudiante_profile.user.last_name
             self.fields['curso'].initial = estudiante_profile.curso
             self.fields['is_active'].initial = estudiante_profile.is_active
+    # 👆 FIN: MODIFICACIÓN MULTI-COLEGIO
 
     def save(self, commit=True):
         ficha = super().save(commit=False)
@@ -144,11 +170,6 @@ class AdminEditarEstudianteForm(forms.ModelForm):
 class AreaConocimientoForm(forms.ModelForm):
     class Meta:
         model = AreaConocimiento
-        # --- CORRECCIÓN ---
-        # Ahora que AreaConocimiento tiene una relación ManyToMany,
-        # no podemos simplemente listar 'materias'. Esto se gestionará
-        # a través del panel de administración (admin inlines).
-        # Por ahora, el formulario solo necesita el nombre.
         fields = ['nombre']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
@@ -157,8 +178,6 @@ class AreaConocimientoForm(forms.ModelForm):
 class MateriaForm(forms.ModelForm):
     class Meta:
         model = Materia
-        # --- CORRECCIÓN ---
-        # Se elimina 'area' de la lista de campos porque ya no existe en el modelo Materia.
         fields = [
             'nombre', 
             'abreviatura', 

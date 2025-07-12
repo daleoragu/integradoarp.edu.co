@@ -1,6 +1,6 @@
 # notas/forms/asignacion_forms.py
 from django import forms
-from ..models import AsignacionDocente, Curso, Materia
+from ..models import AsignacionDocente, Curso, Materia, Docente
 
 class AsignacionDocenteForm(forms.ModelForm):
     """
@@ -19,7 +19,21 @@ class AsignacionDocenteForm(forms.ModelForm):
             'intensidad_horaria_semanal': 'Intensidad Horaria Semanal (I.H.)'
         }
 
+    # 👇 INICIO: MODIFICACIÓN MULTI-COLEGIO
     def __init__(self, *args, **kwargs):
+        # Extraemos el 'colegio' que nos pasa la vista
+        colegio = kwargs.pop('colegio', None)
         super().__init__(*args, **kwargs)
-        self.fields['materia'].queryset = Materia.objects.order_by('nombre')
-        self.fields['curso'].queryset = Curso.objects.order_by('nombre')
+        
+        # Si no recibimos un colegio, dejamos los querysets vacíos para evitar errores.
+        if not colegio:
+            self.fields['docente'].queryset = Docente.objects.none()
+            self.fields['materia'].queryset = Materia.objects.none()
+            self.fields['curso'].queryset = Curso.objects.none()
+            return
+
+        # Filtramos cada queryset para mostrar solo las opciones del colegio actual.
+        self.fields['docente'].queryset = Docente.objects.filter(colegio=colegio).order_by('user__last_name')
+        self.fields['materia'].queryset = Materia.objects.filter(colegio=colegio).order_by('nombre')
+        self.fields['curso'].queryset = Curso.objects.filter(colegio=colegio).order_by('nombre')
+    # 👆 FIN: MODIFICACIÓN MULTI-COLEGIO
