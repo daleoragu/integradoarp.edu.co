@@ -24,8 +24,8 @@ if RENDER_EXTERNAL_HOSTNAME:
 ALLOWED_HOSTS.extend([
     'integradoapr.edu.co',
     'www.integradoapr.edu.co',
-    'mcolegios.com.co', # Añadimos tu dominio principal
-    'www.mcolegios.com.co',
+    'mcolegio.com.co', 
+    'www.mcolegio.com.co',
     '127.0.0.1',
     'localhost',
 ])
