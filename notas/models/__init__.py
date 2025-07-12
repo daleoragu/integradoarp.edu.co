@@ -3,7 +3,7 @@
 # Este archivo importa todos los modelos de sus respectivos archivos
 # y los hace disponibles para que puedan ser importados desde 'notas.models'.
 
-from .perfiles import Curso, Docente, Estudiante, FichaEstudiante, FichaDocente
+from .perfiles import Colegio, Curso, Docente, Estudiante, FichaEstudiante, FichaDocente
 
 from .academicos import (
     AreaConocimiento, Materia, PeriodoAcademico, AsignacionDocente,
@@ -18,7 +18,7 @@ from .portal_models import DocumentoPublico, FotoGaleria, Noticia, ImagenCarruse
 # se exportan cuando se hace 'from .models import *'.
 # Se ha corregido una coma faltante.
 __all__ = [
-    'Curso', 'Docente', 'Estudiante', 'FichaEstudiante', 'FichaDocente',
+    'Colegio', 'Curso', 'Docente', 'Estudiante', 'FichaEstudiante', 'FichaDocente',
     'AreaConocimiento', 'Materia', 'PeriodoAcademico', 'AsignacionDocente',
     'Calificacion', 'NotaDetallada', 'IndicadorLogroPeriodo', 'ReporteParcial', 'Observacion',
     'PlanDeMejoramiento', 'Asistencia', 'InasistenciasManualesPeriodo','PonderacionAreaMateria',
