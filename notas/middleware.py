@@ -4,36 +4,40 @@ from .models import Colegio
 
 class ColegioMiddleware:
     """
-    Este middleware se encarga de identificar el colegio activo
-    basándose en el dominio (hostname) de la petición entrante.
+    Middleware que identifica el colegio activo basándose en el dominio.
+    Prioriza dominios personalizados y luego busca subdominios.
     """
     def __init__(self, get_response):
         self.get_response = get_response
-        # Este método se ejecuta una sola vez, al iniciar el servidor.
+        self.main_domain = "mcolegios.com.co" # Tu dominio principal
 
     def __call__(self, request):
-        # Este método se ejecuta para CADA petición.
-
-        # Obtenemos el hostname sin el puerto. Ej: 'www.integradoapr.edu.co' o 'localhost'
-        host = request.get_host().split(':')[0]
-
-        # Limpiamos el 'www.' si existe, para tener un dominio limpio.
+        host = request.get_host().split(':')[0].lower()
+        
+        # Limpiamos 'www.' para consistencia
         if host.startswith('www.'):
             host = host[4:]
 
-        # Inicializamos request.colegio como None.
         request.colegio = None
 
+        # --- LÓGICA MEJORADA ---
+
+        # 1. Buscar por dominio personalizado (ej: integradoapr.edu.co)
         try:
-            # Buscamos en la base de datos un colegio que coincida con el dominio.
-            # Esta es la consulta clave de todo el sistema.
             request.colegio = Colegio.objects.get(domain=host)
         except Colegio.DoesNotExist:
-            # Si no se encuentra un colegio para el dominio, request.colegio permanecerá como None.
-            # Las vistas se encargarán de manejar este caso (mostrar un error 404, una página de bienvenida, etc.).
-            pass
+            # 2. Si no se encuentra, verificar si es un subdominio de tu plataforma
+            if host.endswith(self.main_domain):
+                # Extraer el subdominio (ej: 'liceo-los-andes' de 'liceo-los-andes.mcolegios.com.co')
+                subdomain = host.replace(f'.{self.main_domain}', '')
+                
+                # Evitar que 'www' o el dominio principal se consideren subdominios válidos
+                if subdomain and subdomain != 'www':
+                    try:
+                        # Buscar el colegio por su 'slug'
+                        request.colegio = Colegio.objects.get(slug=subdomain)
+                    except Colegio.DoesNotExist:
+                        pass # El subdominio no corresponde a ningún colegio
 
-        # Pasamos la petición (ahora con 'request.colegio' adjunto) a la siguiente capa (la vista).
         response = self.get_response(request)
-
         return response
