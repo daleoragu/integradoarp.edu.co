@@ -151,6 +151,18 @@ urlpatterns = [
     path('panel-administrador/gestion-docentes/editar/<int:docente_id>/', gestion_docentes_views.editar_docente_vista, name='editar_docente'),
     path('panel-administrador/gestion-docentes/eliminar/<int:docente_id>/', gestion_docentes_views.eliminar_docente_vista, name='eliminar_docente'),
 
+    # ==============================================================================
+    # INICIO: CORRECCIÓN DEL ERROR NoReverseMatch
+    # Se añade el bloque de URLs para la gestión de estudiantes que faltaba.
+    # ==============================================================================
+    path('panel-administrador/gestion-estudiantes/', gestion_estudiantes_views.gestion_estudiantes_vista, name='gestion_estudiantes'),
+    path('panel-administrador/gestion-estudiantes/crear/', gestion_estudiantes_views.crear_estudiante_vista, name='crear_estudiante'),
+    path('panel-administrador/gestion-estudiantes/editar/<int:estudiante_id>/', gestion_estudiantes_views.editar_estudiante_vista, name='editar_estudiante'),
+    path('panel-administrador/gestion-estudiantes/eliminar/<int:estudiante_id>/', gestion_estudiantes_views.eliminar_estudiante_vista, name='eliminar_estudiante'),
+    # ==============================================================================
+    # FIN: CORRECCIÓN
+    # ==============================================================================
+
     # --- Gestión de Cursos / Grados ---
     path('panel-administrador/gestion-cursos/', gestion_academica_views.gestion_cursos_vista, name='gestion_cursos'),
     path('panel-administrador/gestion-cursos/crear/', gestion_academica_views.crear_curso_vista, name='crear_curso'),
@@ -176,9 +188,6 @@ urlpatterns = [
     path('panel-administrador/descargar-plantilla-estudiantes/', export_views.descargar_plantilla_estudiantes, name='descargar_plantilla_estudiantes'),
     path('panel-administrador/exportar-materias/', export_views.exportar_materias_excel, name='exportar_materias_excel'),
     
-    # 👇 INICIO: CORRECCIÓN
-    # Se añade la ruta que faltaba para la plantilla de docentes y se mantiene la de materias.
     path('panel-administrador/descargar-plantilla-docentes/', export_views.descargar_plantilla_docentes, name='descargar_plantilla_docentes'),
     path('panel-administrador/descargar-plantilla-materias/', export_views.descargar_plantilla_materias, name='descargar_plantilla_materias'),   
-    # 👆 FIN: CORRECCIÓN
 ]
