@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mColegios - Plataforma de Gestión Educativa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <a href="#" class="text-2xl font-bold text-indigo-600">mColegios</a>
+            <div>
+                <a href="#servicios" class="text-gray-600 hover:text-indigo-600 px-3 py-2">Servicios</a>
+                <a href="#contacto" class="text-gray-600 hover:text-indigo-600 px-3 py-2">Contacto</a>
+                <a href="/admin" class="ml-4 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">Acceso Admin</a>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="gradient-bg text-white">
+        <div class="container mx-auto px-6 py-24 text-center">
+            <h1 class="text-4xl md:text-6xl font-bold leading-tight mb-4">La plataforma que unifica y potencia la gestión de tu colegio.</h1>
+            <p class="text-lg md:text-xl text-indigo-200 mb-8">Desde las calificaciones hasta la comunicación con padres de familia, todo en un solo lugar. Simple, potente e intuitivo.</p>
+            <a href="#contacto" class="bg-white text-indigo-600 font-bold py-3 px-8 rounded-full hover:bg-gray-100 transition-transform transform hover:scale-105">Solicita una Demostración</a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="servicios" class="py-20">
+        <div class="container mx-auto px-6">
+            <h2 class="text-3xl font-bold text-center mb-2">Todo lo que tu institución necesita</h2>
+            <p class="text-center text-gray-600 mb-12">Nuestras herramientas están diseñadas para facilitar el día a día de directivos, docentes, estudiantes y padres.</p>
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Gestión de Calificaciones</h3>
+                    <p class="text-gray-600">Ingreso de notas por competencias (Ser, Saber, Hacer), cálculo automático de promedios y generación de boletines en PDF.</p>
+                </div>
+                <!-- Feature 2 -->
+                <div class="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Portal Público y Comunicación</h3>
+                    <p class="text-gray-600">Cada colegio tiene su propio portal personalizable con noticias, galería y documentos. Mensajería interna para una comunicación fluida.</p>
+                </div>
+                <!-- Feature 3 -->
+                <div class="bg-white p-8 rounded-lg shadow-md hover:shadow-xl transition-shadow">
+                    <div class="flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 text-indigo-600 mb-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197m0 0A10.99 10.99 0 002.45 13.5m1.928-3.3A10.99 10.99 0 002.45 13.5m1.928-3.3A10.99 10.99 0 002.45 13.5"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Administración Centralizada</h3>
+                    <p class="text-gray-600">Gestiona cursos, docentes, estudiantes y asignaturas desde un panel de control intuitivo. Importa y exporta datos masivamente.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contacto" class="bg-gray-100 py-20">
+        <div class="container mx-auto px-6 text-center">
+            <h2 class="text-3xl font-bold mb-4">¿Listo para transformar tu institución?</h2>
+            <p class="text-gray-600 mb-8">Contáctanos para agendar una demostración personalizada y resolver todas tus dudas.</p>
+            <div class="bg-white inline-block p-8 rounded-lg shadow-lg">
+                <p class="text-lg font-semibold">Correo Electrónico:</p>
+                <a href="mailto:davidlrg89@gmail.com" class="text-indigo-600 text-xl hover:underline">davidlrg89@gmail.com</a>
+                <p class="text-lg font-semibold mt-4">Teléfono:</p>
+                <p class="text-xl text-gray-800">+57 3102398080</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-6 text-center">
+            <p>&copy; 2025 mColegios. Todos los derechos reservados.</p>
+            <p>Una solución de software educativo moderna.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
