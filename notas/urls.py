@@ -157,12 +157,6 @@ urlpatterns = [
     path('panel-administrador/gestion-cursos/editar/<int:curso_id>/', gestion_academica_views.editar_curso_vista, name='editar_curso'),
     path('panel-administrador/gestion-cursos/eliminar/<int:curso_id>/', gestion_academica_views.eliminar_curso_vista, name='eliminar_curso'),
     
-    # --- Gestión de Estudiantes ---
-    path('panel-administrador/gestion-estudiantes/', gestion_estudiantes_views.gestion_estudiantes_vista, name='gestion_estudiantes'),
-    path('panel-administrador/gestion-estudiantes/crear/', gestion_estudiantes_views.crear_estudiante_vista, name='crear_estudiante'),
-    path('panel-administrador/gestion-estudiantes/editar/<int:estudiante_id>/', gestion_estudiantes_views.editar_estudiante_vista, name='editar_estudiante'),
-    path('panel-administrador/gestion-estudiantes/eliminar/<int:estudiante_id>/', gestion_estudiantes_views.eliminar_estudiante_vista, name='eliminar_estudiante'),
-    
     # --- Gestión de Materias y Áreas ---
     path('panel-administrador/gestion-materias/', gestion_academica_views.gestion_materias_vista, name='gestion_materias'),
     path('panel-administrador/gestion-materias/crear/', gestion_academica_views.crear_materia_vista, name='crear_materia'),
@@ -181,5 +175,10 @@ urlpatterns = [
     path('panel-administrador/exportar-estudiantes/', export_views.exportar_estudiantes_excel, name='exportar_estudiantes_excel'),
     path('panel-administrador/descargar-plantilla-estudiantes/', export_views.descargar_plantilla_estudiantes, name='descargar_plantilla_estudiantes'),
     path('panel-administrador/exportar-materias/', export_views.exportar_materias_excel, name='exportar_materias_excel'),
-    path('panel-administrador/descargar-plantilla-materias/', export_views.descargar_plantilla_materias, name='descargar_plantilla_docentes'),   
+    
+    # 👇 INICIO: CORRECCIÓN
+    # Se añade la ruta que faltaba para la plantilla de docentes y se mantiene la de materias.
+    path('panel-administrador/descargar-plantilla-docentes/', export_views.descargar_plantilla_docentes, name='descargar_plantilla_docentes'),
+    path('panel-administrador/descargar-plantilla-materias/', export_views.descargar_plantilla_materias, name='descargar_plantilla_materias'),   
+    # 👆 FIN: CORRECCIÓN
 ]
