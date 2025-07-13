@@ -13,7 +13,7 @@ except ModuleNotFoundError:
 # --- Configuración Base ---
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-local-dev-key-fallback')
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 't')
 
 # --- Configuración de Hosts ---
 ALLOWED_HOSTS = []
