@@ -5,46 +5,41 @@ from .models import Colegio
 class ColegioMiddleware:
     """
     Middleware que identifica el colegio activo basándose en el dominio.
-    Maneja tres casos:
-    1. Dominios personalizados (ej: integradoapr.edu.co).
-    2. El dominio principal de la plataforma (ej: mcolegio.com.co).
-    3. Subdominios de la plataforma (ej: colegio-nuevo.mcolegio.com.co).
+    Incluye impresiones de depuración para rastrear el proceso en los logs.
     """
     def __init__(self, get_response):
         self.get_response = get_response
-        # CORREGIDO: Se eliminó la 's' extra.
         self.main_domain = "mcolegio.com.co"
 
     def __call__(self, request):
-        # Obtiene el host y lo limpia (elimina el puerto y 'www.')
         host = request.get_host().split(':')[0].lower()
+        # DEBUG: Imprime el host que se está procesando.
+        print(f"DEBUG: Middleware - Host recibido: '{host}'")
+        
         if host.startswith('www.'):
             host = host[4:]
+            print(f"DEBUG: Middleware - Host sin 'www': '{host}'")
 
         request.colegio = None
 
-        # --- LÓGICA REESTRUCTURADA PARA MAYOR ROBUSTEZ ---
-
-        # 1. Primero, intentar la coincidencia directa por el campo 'domain'.
-        #    Esto funciona tanto para dominios personalizados como para el dominio principal.
         try:
+            # Intenta encontrar el colegio por el campo 'domain'.
             request.colegio = Colegio.objects.get(domain=host)
+            print(f"DEBUG: Middleware - Colegio encontrado por dominio: '{request.colegio.nombre}'")
         except Colegio.DoesNotExist:
-            # 2. Si no hay coincidencia directa, verificar si es un subdominio válido.
-            #    Nos aseguramos de que termine en '.mcolegio.com.co'
+            # Si no lo encuentra, verifica si es un subdominio.
             if host.endswith(f'.{self.main_domain}'):
-                
-                # Extraemos el 'slug' del subdominio de forma segura.
-                # Ej: 'colegio-nuevo' de 'colegio-nuevo.mcolegio.com.co'
                 subdomain = host.split('.')[0]
-                
-                try:
-                    request.colegio = Colegio.objects.get(slug=subdomain)
-                except Colegio.DoesNotExist:
-                    # El subdominio es válido en formato, pero no está registrado en la BD.
-                    # request.colegio permanecerá como None, y la vista mostrará la página de inicio.
-                    pass
+                print(f"DEBUG: Middleware - Buscando por slug de subdominio: '{subdomain}'")
+                if subdomain and subdomain != 'www':
+                    try:
+                        request.colegio = Colegio.objects.get(slug=subdomain)
+                        print(f"DEBUG: Middleware - Colegio encontrado por slug: '{request.colegio.nombre}'")
+                    except Colegio.DoesNotExist:
+                        print("DEBUG: Middleware - No se encontró colegio por slug.")
+                        pass
+            else:
+                print("DEBUG: Middleware - No se encontró colegio por dominio y no es un subdominio.")
         
-        # Continuar con la petición
         response = self.get_response(request)
         return response

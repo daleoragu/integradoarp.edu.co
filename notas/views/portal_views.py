@@ -12,17 +12,14 @@ from ..models import (
     DocumentoPublico, FotoGaleria, Noticia, ImagenCarrusel, 
 )
 
-Asignacion = AsignacionDocente
-
 def portal_vista(request):
     """
     Maneja la página principal.
-    - Si se identifica un colegio (request.colegio existe), muestra el portal de ese colegio.
-    - Si no, muestra la página de inicio principal (landing page) de la plataforma.
+    - Si se identifica un colegio, muestra su portal.
+    - Si no, muestra un error de configuración claro.
     """
-    # El middleware ya ha intentado encontrar un colegio.
     if request.colegio:
-        # --- LÓGICA DEL PORTAL DEL COLEGIO (YA EXISTENTE) ---
+        # Lógica de login del portal
         if request.method == 'POST':
             if request.POST.get('form_type') == 'login_form':
                 usuario = request.POST.get('username')
@@ -30,7 +27,6 @@ def portal_vista(request):
                 user = authenticate(request, username=usuario, password=contrasena)
 
                 if user is not None:
-                    # Verificamos que el usuario pertenezca al colegio actual
                     es_docente = Docente.objects.filter(user=user, colegio=request.colegio).exists()
                     es_estudiante = hasattr(user, 'estudiante') and user.estudiante.colegio == request.colegio
                     
@@ -45,24 +41,22 @@ def portal_vista(request):
         context = {'colegio': request.colegio}
         return render(request, 'notas/portal.html', context)
     else:
-        # --- LÓGICA NUEVA: MOSTRAR LANDING PAGE PRINCIPAL ---
-        # No se encontró un colegio para este dominio, así que mostramos la página de inicio del servicio.
-        return render(request, 'landing/index.html')
+        # CORRECCIÓN: Devolver un error explícito en lugar de renderizar una plantilla.
+        # Esto nos confirma que el problema está en la identificación del colegio.
+        return HttpResponseNotFound("<h1>Error de Configuración</h1><p>El sistema no pudo identificar un colegio para el dominio que estás visitando. Verifica que el dominio esté correctamente registrado en el panel de administración.</p>")
 
 
 def directorio_docentes_json(request):
     if not request.colegio:
         return JsonResponse({'error': 'Colegio no identificado'}, status=404)
     try:
-        # 👇 FILTRADO: Obtener solo cursos del colegio actual
         cursos_con_director = Curso.objects.filter(colegio=request.colegio, director_grado__isnull=False).select_related('director_grado')
         directores_map = {c.director_grado.id: c.nombre for c in cursos_con_director}
 
-        # 👇 FILTRADO: Obtener solo docentes del colegio actual
         docentes = Docente.objects.filter(colegio=request.colegio, user__is_active=True).prefetch_related(
             Prefetch(
                 'asignaciondocente_set',
-                queryset=Asignacion.objects.filter(colegio=request.colegio).select_related('curso', 'materia'),
+                queryset=AsignacionDocente.objects.filter(colegio=request.colegio).select_related('curso', 'materia'),
                 to_attr='asignaciones_optimizadas'
             )
         ).order_by('user__last_name', 'user__first_name')
@@ -95,7 +89,6 @@ def documentos_publicos_json(request):
     if not request.colegio:
         return JsonResponse({'error': 'Colegio no identificado'}, status=404)
     try:
-        # 👇 FILTRADO: Obtener solo documentos del colegio actual
         documentos = DocumentoPublico.objects.filter(colegio=request.colegio).order_by('-fecha_publicacion')
         data_documentos = [
             {'titulo': doc.titulo, 'descripcion': doc.descripcion, 'url_archivo': doc.archivo.url, 'fecha': doc.fecha_publicacion.strftime('%d de %B de %Y')}
@@ -110,7 +103,6 @@ def galeria_fotos_json(request):
     if not request.colegio:
         return JsonResponse({'error': 'Colegio no identificado'}, status=404)
     try:
-        # 👇 FILTRADO: Obtener solo fotos del colegio actual
         fotos = FotoGaleria.objects.filter(colegio=request.colegio).order_by('-fecha_subida')
         data_fotos = [{'titulo': foto.titulo, 'url_imagen': foto.imagen.url} for foto in fotos]
         return JsonResponse(data_fotos, safe=False)
@@ -122,7 +114,6 @@ def noticias_json(request):
     if not request.colegio:
         return JsonResponse({'error': 'Colegio no identificado'}, status=404)
     try:
-        # 👇 FILTRADO: Obtener solo noticias del colegio actual
         noticias = Noticia.objects.filter(colegio=request.colegio, estado='PUBLICADO').order_by('-fecha_publicacion')[:10]
         data_noticias = [
             {'pk': noticia.pk, 'titulo': noticia.titulo, 'resumen': noticia.resumen, 'url_imagen': noticia.imagen_portada.url if noticia.imagen_portada else '', 'fecha': noticia.fecha_publicacion.strftime('%d de %B de %Y'), 'autor': noticia.autor.get_full_name() if noticia.autor else 'Administración'}
@@ -137,7 +128,6 @@ def carrusel_imagenes_json(request):
     if not request.colegio:
         return JsonResponse({'error': 'Colegio no identificado'}, status=404)
     try:
-        # 👇 FILTRADO: Obtener solo imágenes del carrusel del colegio actual
         imagenes = ImagenCarrusel.objects.filter(colegio=request.colegio, visible=True).order_by('orden')
         data = [{'url_imagen': img.imagen.url, 'titulo': img.titulo, 'subtitulo': img.subtitulo} for img in imagenes]
         return JsonResponse(data, safe=False)
@@ -147,12 +137,10 @@ def carrusel_imagenes_json(request):
 def ajax_noticia_detalle(request, pk):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
-    # 👇 FILTRADO: Asegurar que la noticia pertenece al colegio actual
     noticia = get_object_or_404(Noticia, pk=pk, estado='PUBLICADO', colegio=request.colegio)
     context = {'noticia': noticia, 'colegio': request.colegio}
     return render(request, 'notas/portal_components/_contenido_noticia_detalle.html', context)
 
-# Las siguientes vistas de contenido estático podrían necesitar personalización por colegio en el futuro
 def ajax_historia(request):
     return render(request, 'notas/portal_components/_contenido_historia.html', {'colegio': request.colegio})
 
