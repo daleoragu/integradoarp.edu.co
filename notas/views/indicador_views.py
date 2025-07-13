@@ -5,6 +5,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.views.decorators.http import require_POST
+# Se añade HttpResponseNotFound para manejar el caso de un colegio no identificado
+from django.http import HttpResponseNotFound
 
 from ..models import Docente, IndicadorLogroPeriodo, AsignacionDocente, PeriodoAcademico
 
@@ -12,42 +14,40 @@ from ..models import Docente, IndicadorLogroPeriodo, AsignacionDocente, PeriodoA
 @require_POST
 def crear_indicador_vista(request):
     """
-    Procesa la petición para crear un nuevo indicador, ahora con lógica
-    mejorada para administradores y redirección correcta.
+    Procesa la petición para crear un nuevo indicador, asegurando que todos
+    los objetos pertenezcan al colegio actual.
     """
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
     asignacion_id = request.POST.get('asignacion_id')
     periodo_id = request.POST.get('periodo_id')
     descripcion = request.POST.get('descripcion', '').strip()
-    # Se recupera el ID del docente que el admin estaba viendo
     docente_id_param = request.POST.get('docente_id')
 
-    # --- INICIO DE LA MEJORA: Redirección Inteligente ---
-    # Construimos la URL base de redirección.
     redirect_url = f"{reverse('ingresar_notas_periodo')}?asignacion_id={asignacion_id or ''}&periodo_id={periodo_id or ''}"
-    # Si el admin estaba viendo un docente, lo añadimos a la URL para no perder el contexto.
     if request.user.is_superuser and docente_id_param:
         redirect_url += f"&docente_id={docente_id_param}"
-    # --- FIN DE LA MEJORA ---
 
     if not all([asignacion_id, periodo_id, descripcion]):
         messages.error(request, "Faltan datos o la descripción está vacía para crear el indicador.")
         return redirect(redirect_url)
     
     try:
-        asignacion = get_object_or_404(AsignacionDocente, id=asignacion_id)
-        periodo = get_object_or_404(PeriodoAcademico, id=periodo_id)
+        # CORRECCIÓN: Filtrar por colegio al obtener los objetos.
+        asignacion = get_object_or_404(AsignacionDocente, id=asignacion_id, colegio=request.colegio)
+        periodo = get_object_or_404(PeriodoAcademico, id=periodo_id, colegio=request.colegio)
         
-        # --- INICIO DE LA CORRECCIÓN: Búsqueda segura del docente ---
-        # Usamos .first() que devuelve None si no lo encuentra, en vez de fallar.
-        docente_actual = Docente.objects.filter(user=request.user).first()
+        docente_actual = Docente.objects.filter(user=request.user, colegio=request.colegio).first()
         
-        # Lógica de permisos que ahora funciona para admins
         if not (request.user.is_superuser or (docente_actual and asignacion.docente == docente_actual)):
             messages.error(request, "No tiene permiso para agregar indicadores a esta asignación.")
             return redirect(redirect_url)
-        # --- FIN DE LA CORRECCIÓN ---
 
+        # CORRECCIÓN: Asociar el nuevo indicador al colegio actual.
+        # Se asume que el modelo IndicadorLogroPeriodo tiene un campo 'colegio'.
         IndicadorLogroPeriodo.objects.create(
+            colegio=request.colegio,
             asignacion=asignacion,
             periodo=periodo,
             descripcion=descripcion
@@ -61,19 +61,25 @@ def crear_indicador_vista(request):
 
 @login_required
 def editar_indicador_vista(request, indicador_id):
-    # Esta vista ya estaba bien implementada, solo se ajusta la redirección.
+    """
+    Muestra el formulario para editar un indicador, asegurando que pertenezca
+    al colegio actual.
+    """
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
     try:
-        indicador = IndicadorLogroPeriodo.objects.select_related('asignacion__docente', 'asignacion__docente__user').get(id=indicador_id)
-        docente_actual = Docente.objects.filter(user=request.user).first()
+        # CORRECCIÓN: Filtrar por colegio al obtener el indicador.
+        indicador = IndicadorLogroPeriodo.objects.select_related('asignacion__docente', 'asignacion__docente__user').get(id=indicador_id, colegio=request.colegio)
+        docente_actual = Docente.objects.filter(user=request.user, colegio=request.colegio).first()
         
         if not (request.user.is_superuser or (docente_actual and indicador.asignacion.docente == docente_actual)):
             messages.error(request, "No tiene permiso para editar este indicador.")
             return redirect('ingresar_notas_periodo')
     except IndicadorLogroPeriodo.DoesNotExist:
-        messages.error(request, "El indicador que intenta editar no existe.")
+        messages.error(request, "El indicador que intenta editar no existe o no pertenece a este colegio.")
         return redirect('ingresar_notas_periodo')
 
-    # Se añade el docente_id a la URL de redirección para el admin
     docente_id_param = indicador.asignacion.docente.id if request.user.is_superuser else None
     redirect_url = f"{reverse('ingresar_notas_periodo')}?asignacion_id={indicador.asignacion.id}&periodo_id={indicador.periodo.id}"
     if docente_id_param:
@@ -90,27 +96,34 @@ def editar_indicador_vista(request, indicador_id):
         return redirect(redirect_url)
     
     context = {
-        'form': {'descripcion': indicador.descripcion}, # Simplificado para usar en la plantilla
+        'form': {'descripcion': indicador.descripcion},
         'titulo': f'Editar Indicador para {indicador.asignacion.materia}',
         'url_action': reverse('editar_indicador', args=[indicador.id]),
-        'redirect_url_cancel': redirect_url
+        'redirect_url_cancel': redirect_url,
+        'colegio': request.colegio
     }
     return render(request, 'notas/docente/editar_indicador.html', context)
 
 
 @login_required
-@require_POST # Es más seguro que la eliminación sea siempre vía POST
+@require_POST
 def eliminar_indicador_vista(request, indicador_id):
-    # Se reconstruye la URL de redirección de forma segura
+    """
+    Elimina un indicador, asegurando que pertenezca al colegio actual.
+    """
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+        
     try:
-        indicador = IndicadorLogroPeriodo.objects.select_related('asignacion__docente').get(id=indicador_id)
+        # CORRECCIÓN: Filtrar por colegio al obtener el indicador.
+        indicador = IndicadorLogroPeriodo.objects.select_related('asignacion__docente').get(id=indicador_id, colegio=request.colegio)
         
         docente_id_param = indicador.asignacion.docente.id if request.user.is_superuser else None
         redirect_url = f"{reverse('ingresar_notas_periodo')}?asignacion_id={indicador.asignacion.id}&periodo_id={indicador.periodo.id}"
         if docente_id_param:
             redirect_url += f"&docente_id={docente_id_param}"
         
-        docente_actual = Docente.objects.filter(user=request.user).first()
+        docente_actual = Docente.objects.filter(user=request.user, colegio=request.colegio).first()
         
         if not (request.user.is_superuser or (docente_actual and indicador.asignacion.docente == docente_actual)):
             messages.error(request, "No tiene permiso para eliminar este indicador.")
@@ -120,5 +133,5 @@ def eliminar_indicador_vista(request, indicador_id):
         
         return redirect(redirect_url)
     except IndicadorLogroPeriodo.DoesNotExist:
-        messages.error(request, "El indicador que intenta eliminar no existe.")
+        messages.error(request, "El indicador que intenta eliminar no existe o no pertenece a este colegio.")
         return redirect('ingresar_notas_periodo')

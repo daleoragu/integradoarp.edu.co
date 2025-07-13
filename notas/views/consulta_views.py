@@ -1,4 +1,4 @@
-# Reemplaza TODO el contenido de: notas/views/consulta_views.py
+# notas/views/consulta_views.py
 
 from django.shortcuts import render, redirect
 from django.contrib import messages
@@ -7,17 +7,22 @@ from django.db.models import Q
 from django.utils import timezone
 from collections import defaultdict
 from datetime import datetime
+# Se añade HttpResponseNotFound para manejar el caso de un colegio no identificado
+from django.http import HttpResponseNotFound
 
-# Asegúrate de importar los modelos necesarios
 from ..models import Docente, AsignacionDocente, Estudiante, Asistencia, PeriodoAcademico, Curso
 
 @login_required
 def consulta_asistencia_vista(request):
     """
     Permite a los docentes y administradores consultar el historial de asistencias de un curso completo
-    para una fecha específica, mostrando una matriz de todos los estudiantes vs. todas las asignaturas.
+    para una fecha específica, asegurando que todos los datos correspondan al colegio actual.
     """
-    context = {}
+    # CORRECCIÓN: Verificar que se ha identificado un colegio.
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
+    context = {'colegio': request.colegio}
     user = request.user
     docente_seleccionado_id = request.GET.get('docente_id')
     asignacion_id = request.GET.get('asignacion_id')
@@ -25,18 +30,20 @@ def consulta_asistencia_vista(request):
     
     # Lógica para determinar qué asignaciones mostrar
     if user.is_superuser:
-        context['todos_los_docentes'] = Docente.objects.all().order_by('user__last_name', 'user__first_name')
+        # CORRECCIÓN: Filtrar docentes y asignaciones por el colegio actual.
+        context['todos_los_docentes'] = Docente.objects.filter(colegio=request.colegio).order_by('user__last_name', 'user__first_name')
         if docente_seleccionado_id:
-            asignaciones_docente = AsignacionDocente.objects.filter(docente_id=docente_seleccionado_id)
+            asignaciones_docente = AsignacionDocente.objects.filter(docente_id=docente_seleccionado_id, colegio=request.colegio)
         else:
-            asignaciones_docente = AsignacionDocente.objects.all()
+            asignaciones_docente = AsignacionDocente.objects.filter(colegio=request.colegio)
     else:
         try:
-            docente_actual = Docente.objects.get(user=user)
-            asignaciones_docente = AsignacionDocente.objects.filter(docente=docente_actual)
+            # CORRECCIÓN: Asegurar que se obtiene el docente del colegio actual.
+            docente_actual = Docente.objects.get(user=user, colegio=request.colegio)
+            asignaciones_docente = AsignacionDocente.objects.filter(docente=docente_actual, colegio=request.colegio)
             context['docente_actual'] = docente_actual
         except Docente.DoesNotExist:
-            messages.error(request, "Acceso denegado.")
+            messages.error(request, "Acceso denegado. Su usuario no está asociado a un perfil de docente en este colegio.")
             return redirect('dashboard')
 
     # Variables de contexto para el historial
@@ -53,20 +60,25 @@ def consulta_asistencia_vista(request):
 
     if asignacion_id:
         try:
-            asignacion_seleccionada = AsignacionDocente.objects.select_related('curso').get(id=asignacion_id)
+            # CORRECCIÓN: Asegurar que la asignación seleccionada pertenece al colegio actual.
+            asignacion_seleccionada = AsignacionDocente.objects.select_related('curso').get(id=asignacion_id, colegio=request.colegio)
             curso_seleccionado = asignacion_seleccionada.curso
             
-            # --- LÍNEA CORREGIDA ---
-            # Se ordena por los campos del modelo User y se filtra por estudiantes activos
+            # CORRECCIÓN: Filtrar estudiantes por colegio.
             estudiantes_del_curso = Estudiante.objects.filter(
-                curso=curso_seleccionado, is_active=True
+                curso=curso_seleccionado, colegio=request.colegio, is_active=True
             ).order_by('user__last_name', 'user__first_name')
             
-            asignaturas_del_curso = AsignacionDocente.objects.filter(curso=curso_seleccionado).select_related('materia').order_by('materia__nombre')
+            # CORRECCIÓN: Filtrar asignaturas por colegio.
+            asignaturas_del_curso = AsignacionDocente.objects.filter(
+                curso=curso_seleccionado, colegio=request.colegio
+            ).select_related('materia').order_by('materia__nombre')
             
+            # CORRECCIÓN: Filtrar asistencias por colegio.
             asistencias_del_dia = Asistencia.objects.filter(
                 estudiante__in=estudiantes_del_curso,
-                fecha=fecha_consulta
+                fecha=fecha_consulta,
+                colegio=request.colegio
             ).select_related('estudiante', 'asignacion')
             
             for asistencia in asistencias_del_dia:
@@ -74,7 +86,7 @@ def consulta_asistencia_vista(request):
                 matriz_asistencia[asistencia.estudiante_id][asistencia.asignacion_id] = estado
 
         except AsignacionDocente.DoesNotExist:
-            messages.error(request, "La asignación seleccionada no es válida.")
+            messages.error(request, "La asignación seleccionada no es válida o no pertenece a este colegio.")
     
     context.update({
         'asignaciones': asignaciones_docente.select_related('curso', 'materia'),
@@ -85,7 +97,8 @@ def consulta_asistencia_vista(request):
         'asignaturas_del_curso': asignaturas_del_curso,
         'matriz_asistencia': matriz_asistencia,
         'fecha_consulta': fecha_consulta,
-        'periodos_academicos': PeriodoAcademico.objects.all().order_by('-ano_lectivo', 'nombre'),
+        # CORRECCIÓN: Filtrar periodos académicos por colegio.
+        'periodos_academicos': PeriodoAcademico.objects.filter(colegio=request.colegio).order_by('-ano_lectivo', 'nombre'),
     })
 
     return render(request, 'notas/docente/consulta_asistencia.html', context)

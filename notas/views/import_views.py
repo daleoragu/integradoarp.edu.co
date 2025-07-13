@@ -7,6 +7,10 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.contrib.auth.models import User, Group
 from django.db import transaction, IntegrityError
+# Se añade HttpResponseNotFound para manejar el caso de un colegio no identificado
+from django.http import HttpResponseNotFound
+from django.utils.text import slugify
+from unidecode import unidecode
 
 try:
     from openpyxl import load_workbook
@@ -16,8 +20,6 @@ except ImportError:
 
 from ..models.perfiles import Estudiante, Docente, Curso, FichaEstudiante
 from ..models.academicos import Materia, AreaConocimiento, PonderacionAreaMateria
-from django.utils.text import slugify
-from unidecode import unidecode
 
 def es_superusuario(user):
     return user.is_superuser
@@ -26,8 +28,13 @@ def es_superusuario(user):
 @user_passes_test(es_superusuario)
 def importacion_vista(request):
     """
-    Handles the upload and processing of files for bulk data loading.
+    Handles the upload and processing of files for bulk data loading,
+    ensuring all data is associated with the current school.
     """
+    # CORRECCIÓN: Verificar que se ha identificado un colegio.
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
     if request.method == 'POST' and 'archivo_importacion' in request.FILES:
         tipo_importacion = request.POST.get('tipo_importacion')
         archivo = request.FILES['archivo_importacion']
@@ -39,17 +46,21 @@ def importacion_vista(request):
                         raise Exception("La librería 'openpyxl' es necesaria. Instálela con 'pip install openpyxl'.")
                     if not archivo.name.endswith('.xlsx'):
                         raise Exception("Para importar estudiantes, seleccione un archivo Excel válido (.xlsx).")
-                    _procesar_excel_estudiantes(request, archivo)
+                    # CORRECCIÓN: Pasar el objeto colegio a la función de procesamiento.
+                    _procesar_excel_estudiantes(request, archivo, request.colegio)
                 
                 elif tipo_importacion == 'materias':
                     if not EXCEL_SUPPORT:
                         raise Exception("La librería 'openpyxl' es necesaria. Instálela con 'pip install openpyxl'.")
                     if not archivo.name.endswith('.xlsx'):
                          raise Exception(f"Para importar materias, seleccione un archivo Excel válido (.xlsx).")
-                    _procesar_excel_materias(request, archivo)
+                    # CORRECCIÓN: Pasar el objeto colegio a la función de procesamiento.
+                    _procesar_excel_materias(request, archivo, request.colegio)
 
                 elif tipo_importacion == 'docentes':
-                    # ... (Tu lógica para docentes)
+                    # CORRECCIÓN: Pasar el objeto colegio a la función de procesamiento.
+                    # Asumiendo que se implementará la lógica para docentes en Excel.
+                    messages.warning(request, "La importación de docentes aún no está implementada para Excel.")
                     pass
                 else:
                     raise Exception("El tipo de importación seleccionado no es válido.")
@@ -63,8 +74,8 @@ def importacion_vista(request):
 
     return redirect('admin_dashboard')
 
-def _procesar_excel_estudiantes(request, archivo):
-    """Logic to process the student Excel file safely."""
+def _procesar_excel_estudiantes(request, archivo, colegio):
+    """Logic to process the student Excel file safely for the current school."""
     creados, errores, omitidos = 0, 0, 0
     grupo_estudiantes, _ = Group.objects.get_or_create(name="Estudiantes")
     
@@ -97,9 +108,10 @@ def _procesar_excel_estudiantes(request, archivo):
                 omitidos += 1
                 continue
 
-            curso = Curso.objects.filter(nombre=str(nombre_curso).strip().upper()).first()
+            # CORRECCIÓN: Buscar el curso dentro del colegio actual.
+            curso = Curso.objects.filter(nombre=str(nombre_curso).strip().upper(), colegio=colegio).first()
             if not curso:
-                raise ValueError(f"El curso '{nombre_curso}' no existe.")
+                raise ValueError(f"El curso '{nombre_curso}' no existe en este colegio.")
 
             user = User.objects.create_user(
                 username=username_final, 
@@ -109,7 +121,8 @@ def _procesar_excel_estudiantes(request, archivo):
             )
             user.groups.add(grupo_estudiantes)
             
-            estudiante_obj = Estudiante.objects.create(user=user, curso=curso)
+            # CORRECCIÓN: Asociar el nuevo estudiante al colegio actual.
+            estudiante_obj = Estudiante.objects.create(user=user, curso=curso, colegio=colegio)
             
             fecha_nacimiento = None
             if isinstance(fecha_nac_str, datetime):
@@ -147,8 +160,8 @@ def _procesar_excel_estudiantes(request, archivo):
             
     messages.success(request, f"Proceso de estudiantes completado. Creados: {creados}. Errores: {errores}. Omitidos (ya existían): {omitidos}.")
 
-def _procesar_excel_materias(request, archivo):
-    """Logic to process the subject Excel file with the new data model."""
+def _procesar_excel_materias(request, archivo, colegio):
+    """Logic to process the subject Excel file for the current school."""
     creadas, errores, asociaciones_creadas = 0, 0, 0
     wb = load_workbook(archivo, data_only=True)
     sheet = wb.active
@@ -163,18 +176,23 @@ def _procesar_excel_materias(request, archivo):
             if not nombre_materia or not nombre_area:
                 continue
 
+            # CORRECCIÓN: Crear o buscar la materia dentro del colegio actual.
             materia_obj, materia_fue_creada = Materia.objects.get_or_create(
                 nombre=nombre_materia,
+                colegio=colegio,
                 defaults={'abreviatura': str(abreviatura).strip().upper() if abreviatura else None}
             )
             if materia_fue_creada:
                 creadas += 1
 
-            area_obj, _ = AreaConocimiento.objects.get_or_create(nombre=nombre_area)
+            # CORRECCIÓN: Crear o buscar el área dentro del colegio actual.
+            area_obj, _ = AreaConocimiento.objects.get_or_create(nombre=nombre_area, colegio=colegio)
 
+            # CORRECCIÓN: Crear o buscar la ponderación dentro del colegio actual.
             _, ponderacion_fue_creada = PonderacionAreaMateria.objects.get_or_create(
                 area=area_obj,
                 materia=materia_obj,
+                colegio=colegio,
                 defaults={'peso_porcentual': 0.00}
             )
             if ponderacion_fue_creada:
@@ -186,8 +204,8 @@ def _procesar_excel_materias(request, archivo):
             
     messages.success(request, f"Proceso de materias completado. Materias creadas: {creadas}. Asociaciones a áreas creadas: {asociaciones_creadas}. Errores: {errores}.")
 
-def _procesar_csv_docentes(request, reader):
-    """Logic to process the teacher CSV (preserved)."""
+def _procesar_csv_docentes(request, reader, colegio):
+    """Logic to process the teacher CSV for the current school (preserved)."""
     creados, errores = 0, 0
     grupo_docentes, _ = Group.objects.get_or_create(name="Docentes")
     for i, row in enumerate(reader, 2):
@@ -198,7 +216,8 @@ def _procesar_csv_docentes(request, reader):
             if User.objects.filter(username=documento).exists(): continue
             user = User.objects.create_user(username=documento, password=documento, email=email, first_name=str(nombres or '').upper(), last_name=f"{str(primer_apellido or '').upper()} {str(segundo_apellido or '').upper()}".strip())
             user.groups.add(grupo_docentes)
-            Docente.objects.create(user=user)
+            # CORRECCIÓN: Asociar el nuevo docente al colegio actual.
+            Docente.objects.create(user=user, colegio=colegio)
             creados += 1
         except Exception as e:
             messages.warning(request, f"Error in teacher CSV row {i}: {e}")

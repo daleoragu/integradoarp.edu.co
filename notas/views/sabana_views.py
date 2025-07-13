@@ -2,7 +2,8 @@
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+# Se añade HttpResponseNotFound para manejar el caso de un colegio no identificado
+from django.http import HttpResponse, HttpResponseNotFound
 from django.contrib import messages
 from decimal import Decimal
 from django.template.loader import render_to_string
@@ -16,26 +17,28 @@ try:
 except ImportError:
     PDF_SUPPORT = False
 
-# Se añaden los modelos necesarios
 from ..models import Curso, PeriodoAcademico, Docente, AsignacionDocente, Estudiante, Materia, Calificacion, AreaConocimiento
+# Se asume que este módulo de exportación también será adaptado para recibir el colegio
 from .sabana_exports import generar_excel_sabana 
 
-def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
+def _get_sabana_acumulada_data(colegio, curso, periodo_actual, tipo_reporte):
+    """
+    Lógica de negocio para obtener los datos de la sábana, ahora completamente
+    filtrada por el colegio proporcionado.
+    """
+    # CORRECCIÓN: Filtrar periodos por el colegio actual.
     periodos_transcurridos = PeriodoAcademico.objects.filter(
+        colegio=colegio,
         ano_lectivo=periodo_actual.ano_lectivo,
         fecha_inicio__lte=periodo_actual.fecha_inicio
     ).order_by('fecha_inicio')
     
-    # --- INICIO DE LA CORRECCIÓN LÓGICA ---
-    # 1. Obtener IDs de materias que se dictan en el curso.
-    materias_del_curso_ids = AsignacionDocente.objects.filter(curso=curso).values_list('materia_id', flat=True).distinct()
-    
-    # 2. Obtener los objetos Materia.
-    materias_del_curso = Materia.objects.filter(id__in=materias_del_curso_ids)
+    # CORRECCIÓN: Filtrar asignaciones y materias por el colegio actual.
+    materias_del_curso_ids = AsignacionDocente.objects.filter(curso=curso, colegio=colegio).values_list('materia_id', flat=True).distinct()
+    materias_del_curso = Materia.objects.filter(id__in=materias_del_curso_ids, colegio=colegio)
 
-    # 3. Obtener las Áreas que contienen estas materias y ordenarlas.
-    #    Esto nos dará el orden correcto para las columnas en la sábana.
     areas_con_materias = AreaConocimiento.objects.filter(
+        colegio=colegio,
         materias__in=materias_del_curso
     ).prefetch_related(
         Prefetch(
@@ -45,22 +48,24 @@ def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
         )
     ).distinct().order_by('nombre')
     
-    # 4. Crear una lista plana y ordenada de materias para la iteración.
     materias_curso_ordenadas = []
     for area in areas_con_materias:
         materias_curso_ordenadas.extend(area.materias_del_curso_ordenadas)
-    # --- FIN DE LA CORRECCIÓN LÓGICA ---
 
-    estudiantes = Estudiante.objects.filter(curso=curso, is_active=True).select_related('user')
+    # CORRECCIÓN: Filtrar estudiantes y calificaciones por el colegio actual.
+    estudiantes = Estudiante.objects.filter(curso=curso, is_active=True, colegio=colegio).select_related('user')
     total_estudiantes_curso = estudiantes.count() if estudiantes.exists() else 1
 
     calificaciones = Calificacion.objects.filter(
+        colegio=colegio,
         estudiante__in=estudiantes,
         materia__in=materias_curso_ordenadas,
         periodo__in=periodos_transcurridos,
         tipo_nota__in=['PROM_PERIODO', 'NIVELACION']
     ).select_related('estudiante', 'materia', 'periodo')
 
+    # El resto de la lógica de procesamiento de datos no necesita cambios,
+    # ya que opera sobre los querysets que ya hemos filtrado.
     calificaciones_pivot = {}
     for cal in calificaciones:
         key = (cal.estudiante_id, cal.materia_id, cal.periodo.id)
@@ -82,7 +87,7 @@ def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
         estudiante_data = {'info': est, 'calificaciones_por_materia': []}
         notas_para_promedio_general_estudiante = []
 
-        for mat in materias_curso_ordenadas: # Usamos la lista ordenada
+        for mat in materias_curso_ordenadas:
             notas_materia_por_periodo_visual = []
             notas_para_promedio_acumulado_materia = []
 
@@ -192,48 +197,76 @@ def _get_sabana_acumulada_data(curso, periodo_actual, tipo_reporte):
 
 @login_required
 def selector_sabana_vista(request):
-    # (Esta vista no necesita cambios)
+    """
+    Muestra los filtros para generar la sábana, asegurando que solo se
+    muestren cursos y periodos del colegio actual.
+    """
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
     user = request.user
     if user.is_superuser:
-        cursos = Curso.objects.all().order_by('nombre')
+        # CORRECCIÓN: Filtrar cursos por el colegio actual.
+        cursos = Curso.objects.filter(colegio=request.colegio).order_by('nombre')
     else:
         try:
-            docente = Docente.objects.get(user=user)
-            cursos_ids = AsignacionDocente.objects.filter(docente=docente).values_list('curso_id', flat=True).distinct()
-            cursos = Curso.objects.filter(id__in=cursos_ids)
+            # CORRECCIÓN: Filtrar docente y asignaciones por el colegio actual.
+            docente = Docente.objects.get(user=user, colegio=request.colegio)
+            cursos_ids = AsignacionDocente.objects.filter(docente=docente, colegio=request.colegio).values_list('curso_id', flat=True).distinct()
+            cursos = Curso.objects.filter(id__in=cursos_ids, colegio=request.colegio)
         except Docente.DoesNotExist:
-            messages.error(request, "Acceso denegado. Su perfil no está asociado a un docente.")
+            messages.error(request, "Acceso denegado. Su perfil no está asociado a un docente en este colegio.")
             return redirect('dashboard')
             
     ano_actual = timezone.now().year
-    periodos_actuales = PeriodoAcademico.objects.filter(ano_lectivo=ano_actual).order_by('fecha_inicio')
-    context = {'cursos': cursos, 'periodos': periodos_actuales, 'ano_actual': ano_actual}
+    # CORRECCIÓN: Filtrar periodos por el colegio actual.
+    periodos_actuales = PeriodoAcademico.objects.filter(colegio=request.colegio, ano_lectivo=ano_actual).order_by('fecha_inicio')
+    
+    context = {
+        'cursos': cursos, 
+        'periodos': periodos_actuales, 
+        'ano_actual': ano_actual,
+        'colegio': request.colegio
+    }
     return render(request, 'notas/sabana/selector_sabana.html', context)
 
 def _preparar_y_validar_sabana(request):
+    """
+    Función auxiliar para validar los parámetros de la sábana, asegurando
+    que todos los datos pertenezcan al colegio actual.
+    """
+    if not request.colegio:
+        return None, None, None, "Colegio no identificado."
+
     curso_id = request.GET.get('curso_id')
     tipo_reporte = request.GET.get('tipo_reporte')
     periodo_ref = None
 
     if not curso_id or not tipo_reporte:
         return None, None, None, "Debe seleccionar un curso y un tipo de reporte."
-    curso = get_object_or_404(Curso, id=curso_id)
+
+    # CORRECCIÓN: Filtrar curso por el colegio actual.
+    curso = get_object_or_404(Curso, id=curso_id, colegio=request.colegio)
+    
     if not request.user.is_superuser:
-        if not AsignacionDocente.objects.filter(docente__user=request.user, curso=curso).exists():
+        if not AsignacionDocente.objects.filter(docente__user=request.user, curso=curso, colegio=request.colegio).exists():
             return None, None, None, "No tiene permisos para ver la sábana de este curso."
 
     if tipo_reporte == 'periodo':
         periodo_id = request.GET.get('periodo_id')
         if not periodo_id: return None, None, None, "Debe seleccionar un periodo de corte para este tipo de reporte."
-        periodo_ref = get_object_or_404(PeriodoAcademico, id=periodo_id)
+        # CORRECCIÓN: Filtrar periodo por el colegio actual.
+        periodo_ref = get_object_or_404(PeriodoAcademico, id=periodo_id, colegio=request.colegio)
     elif tipo_reporte == 'anual':
         ano_lectivo = request.GET.get('ano_lectivo')
         if not ano_lectivo: return None, None, None, "El año lectivo no fue especificado."
-        periodo_ref = PeriodoAcademico.objects.filter(ano_lectivo=ano_lectivo).order_by('-fecha_fin').first()
-        if not periodo_ref: return None, None, None, f"No se encontraron periodos para el año {ano_lectivo}."
+        # CORRECCIÓN: Filtrar periodo por el colegio actual.
+        periodo_ref = PeriodoAcademico.objects.filter(colegio=request.colegio, ano_lectivo=ano_lectivo).order_by('-fecha_fin').first()
+        if not periodo_ref: return None, None, None, f"No se encontraron periodos para el año {ano_lectivo} en este colegio."
     else: return None, None, None, "Tipo de reporte no válido."
 
-    datos_sabana = _get_sabana_acumulada_data(curso, periodo_ref, tipo_reporte)
+    # Pasamos el colegio a la lógica de negocio.
+    datos_sabana = _get_sabana_acumulada_data(request.colegio, curso, periodo_ref, tipo_reporte)
     return curso, periodo_ref, datos_sabana, None
 
 @login_required
@@ -246,11 +279,12 @@ def generar_sabana_vista(request):
     context = {
         'curso': curso, 'periodo': periodo_ref, 'ano_lectivo': periodo_ref.ano_lectivo,
         'sabana_data': sabana_data, 
-        'areas_con_materias': areas_con_materias, # Variable nueva para la cabecera
-        'materias_curso': materias_curso, # Lista plana para el cuerpo
+        'areas_con_materias': areas_con_materias,
+        'materias_curso': materias_curso,
         'periodos_transcurridos': periodos_transcurridos,
         'resumen_materias': resumen_materias, 'mejores_estudiantes': mejores_estudiantes,
         'promedio_total_curso': promedio_total_curso, 'total_columnas': 2 + len(materias_curso) + 6,
+        'colegio': request.colegio
     }
     return render(request, 'notas/sabana/sabana_template.html', context)
 
@@ -269,6 +303,7 @@ def generar_sabana_pdf(request):
         'periodos_transcurridos': periodos_transcurridos,
         'resumen_materias': resumen_materias, 'mejores_estudiantes': mejores_estudiantes,
         'promedio_total_curso': promedio_total_curso,
+        'colegio': request.colegio
     }
     html_string = render_to_string('notas/sabana/sabana_pdf.html', context, request=request)
     pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
@@ -282,9 +317,11 @@ def exportar_sabana_excel(request):
     curso, periodo_ref, datos_sabana, error = _preparar_y_validar_sabana(request)
     if error: return HttpResponse(f"Error: {error}", status=400)
     sabana_data, areas_con_materias, materias_curso, periodos_transcurridos, resumen_materias, mejores_estudiantes, promedio_total_curso = datos_sabana
+    # Se pasa el colegio al generador de Excel.
     return generar_excel_sabana(
+        colegio=request.colegio,
         curso=curso, periodo=periodo_ref, sabana_data=sabana_data,
-        areas_con_materias=areas_con_materias, # Pasamos la nueva variable
+        areas_con_materias=areas_con_materias,
         materias_curso=materias_curso, 
         periodos_transcurridos=periodos_transcurridos,
         resumen_materias=resumen_materias, mejores_estudiantes=mejores_estudiantes,

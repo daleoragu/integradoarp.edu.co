@@ -1,6 +1,6 @@
 # notas/views/export_views.py
 import csv
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseNotFound
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.shortcuts import render, get_object_or_404
@@ -31,7 +31,8 @@ def es_personal_admin(user):
 def descargar_plantilla_estudiantes(request):
     """
     Genera y ofrece para descarga una plantilla de Excel (.xlsx) completa para 
-    la importación masiva de estudiantes.
+    la importación masiva de estudiantes. Esta función es genérica y no necesita
+    filtrar por colegio.
     """
     if not EXCEL_SUPPORT:
         return HttpResponse("La librería 'openpyxl' es necesaria. Instálela con 'pip install openpyxl'.", status=500)
@@ -70,15 +71,19 @@ def descargar_plantilla_estudiantes(request):
 @user_passes_test(es_personal_admin)
 def exportar_estudiantes_excel(request):
     """
-    Exporta la lista COMPLETA de estudiantes a un archivo Excel.
+    Exporta la lista COMPLETA de estudiantes a un archivo Excel, pero únicamente
+    los que pertenecen al colegio actual.
     """
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
     if not EXCEL_SUPPORT:
         return HttpResponse("La librería 'openpyxl' es necesaria.", status=500)
 
-    estudiantes_qs = Estudiante.objects.select_related('user', 'curso').prefetch_related('ficha').all().order_by('curso__nombre', 'user__last_name')
+    # CORRECCIÓN: Filtrar estudiantes por el colegio actual.
+    estudiantes_qs = Estudiante.objects.filter(colegio=request.colegio).select_related('user', 'curso').prefetch_related('ficha').order_by('curso__nombre', 'user__last_name')
     
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="exportacion_estudiantes_todos.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="exportacion_estudiantes_{request.colegio.slug}.xlsx"'
     
     wb = Workbook()
     ws = wb.active
@@ -136,6 +141,7 @@ def exportar_estudiantes_excel(request):
 def descargar_plantilla_materias(request):
     """
     Genera y ofrece para descarga una plantilla de Excel para la importación de materias.
+    Función genérica, no necesita filtrar por colegio.
     """
     if not EXCEL_SUPPORT:
         return HttpResponse("La librería 'openpyxl' es necesaria.", status=500)
@@ -164,12 +170,16 @@ def descargar_plantilla_materias(request):
 @user_passes_test(es_personal_admin)
 def exportar_materias_excel(request):
     """
-    Exporta la lista actual de materias y sus áreas a un archivo Excel.
+    Exporta la lista actual de materias y sus áreas a un archivo Excel,
+    pero únicamente las del colegio actual.
     """
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
     if not EXCEL_SUPPORT:
         return HttpResponse("La librería 'openpyxl' es necesaria.", status=500)
+        
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    response['Content-Disposition'] = 'attachment; filename="exportacion_materias_y_areas.xlsx"'
+    response['Content-Disposition'] = f'attachment; filename="exportacion_materias_y_areas_{request.colegio.slug}.xlsx"'
     
     wb = Workbook()
     ws = wb.active
@@ -183,9 +193,12 @@ def exportar_materias_excel(request):
         ws.column_dimensions[get_column_letter(col_num)].width = 35
     
     row_num = 2
-    areas = AreaConocimiento.objects.prefetch_related('materias').order_by('nombre')
+    # CORRECCIÓN: Filtrar áreas y materias por el colegio actual.
+    areas = AreaConocimiento.objects.filter(colegio=request.colegio).prefetch_related('materias').order_by('nombre')
     for area in areas:
-        for materia in area.materias.all().order_by('nombre'):
+        # El prefetch ya trae las materias, pero por seguridad podemos re-filtrar en Python.
+        materias_del_area_y_colegio = [m for m in area.materias.all() if m.colegio == request.colegio]
+        for materia in sorted(materias_del_area_y_colegio, key=lambda m: m.nombre):
             ws.cell(row=row_num, column=1, value=area.nombre)
             ws.cell(row=row_num, column=2, value=materia.nombre)
             ws.cell(row=row_num, column=3, value=materia.abreviatura)
@@ -203,6 +216,7 @@ def exportar_materias_excel(request):
 def descargar_plantilla_docentes(request):
     """
     Genera y ofrece para descarga una plantilla de Excel para la importación de docentes.
+    Función genérica, no necesita filtrar por colegio.
     """
     if not EXCEL_SUPPORT:
         return HttpResponse("La librería 'openpyxl' es necesaria para esta función.", status=500)

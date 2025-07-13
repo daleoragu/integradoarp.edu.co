@@ -7,17 +7,16 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.contrib.auth.models import User, Group
-from django.http import HttpResponse
+# Se añade HttpResponseNotFound para manejar el caso de un colegio no identificado
+from django.http import HttpResponse, HttpResponseNotFound
 from django.contrib.auth import get_user_model
 from django import forms
-# --- Import añadido para el nuevo panel ---
 from django.forms import modelformset_factory
 
 from ..models import (
     Curso, Materia, Estudiante, Docente, AsignacionDocente, PeriodoAcademico,
     ReporteParcial, Observacion, ConfiguracionSistema, Notificacion
 )
-# Import del nuevo modelo añadido
 from ..models.academicos import ConfiguracionCalificaciones
 
 
@@ -27,12 +26,22 @@ def enviar_notificacion_consolidada(request, estudiante, periodo, forzar_envio=F
     y de ser así, genera una observación consolidada y envía un único correo resumen.
     Devuelve True si se envió, False si no.
     """
+    # Se asume que los objetos 'estudiante' y 'periodo' ya pertenecen al colegio correcto.
+    colegio = request.colegio
+    if not colegio:
+        return False
+
+    # Las consultas internas ya se basan en el estudiante, lo cual es seguro.
     if Observacion.objects.filter(estudiante=estudiante, tipo_observacion='AUTOMATICA', periodo=periodo).exists():
         print(f"DEBUG: Notificación para {estudiante} en {periodo} ya fue procesada previamente.")
         return False
 
     reportes_realizados = ReporteParcial.objects.filter(estudiante=estudiante, periodo=periodo)
-    total_asignaciones_curso = AsignacionDocente.objects.filter(curso=estudiante.curso).count()
+    
+    # CORRECCIÓN: Filtrar las asignaciones por el colegio para un conteo preciso.
+    total_asignaciones_curso = AsignacionDocente.objects.filter(
+        curso=estudiante.curso, colegio=colegio
+    ).count()
 
     if not forzar_envio and (reportes_realizados.count() < total_asignaciones_curso or total_asignaciones_curso == 0):
         return False
@@ -53,17 +62,19 @@ def enviar_notificacion_consolidada(request, estudiante, periodo, forzar_envio=F
     else:
         descripcion_observacion = f"Informe parcial consolidado del {periodo}: ¡Felicitaciones! Desempeño adecuado en todas las materias reportadas."
     
+    # CORRECCIÓN: Asegurar que la observación se asocie al colegio.
     Observacion.objects.update_or_create(
         estudiante=estudiante, 
         tipo_observacion='AUTOMATICA',
         periodo=periodo,
+        colegio=colegio, # Se añade el colegio
         defaults={
             'descripcion': descripcion_observacion, 
             'docente_reporta': estudiante.curso.director_grado if estudiante.curso and estudiante.curso.director_grado else None
         }
     )
     
-    context_email = {'estudiante': estudiante, 'periodo': periodo, 'materias_con_dificultades': materias_con_dificultades}
+    context_email = {'estudiante': estudiante, 'periodo': periodo, 'materias_con_dificultades': materias_con_dificultades, 'colegio': colegio}
     html_message = render_to_string('notas/emails/email_reporte_parcial.html', context_email)
     plain_message = render_to_string('notas/emails/email_reporte_parcial.txt', context_email)
     asunto = f"Informe Parcial Consolidado - {estudiante.user.get_full_name()} - {periodo}"
@@ -83,13 +94,19 @@ def es_superusuario(user):
 @user_passes_test(es_superusuario)
 def panel_control_periodos_vista(request):
     """
-    Panel de control para que el administrador gestione los plazos de cada periodo.
+    Panel de control para que el administrador gestione los plazos de cada periodo
+    del colegio actual.
     """
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
     if request.method == 'POST':
         try:
             action = request.POST.get('action')
             periodo_id = request.POST.get('periodo_id')
-            periodo = get_object_or_404(PeriodoAcademico, id=periodo_id)
+            
+            # CORRECCIÓN: Obtener el periodo asegurando que pertenece al colegio actual.
+            periodo = get_object_or_404(PeriodoAcademico, id=periodo_id, colegio=request.colegio)
             
             mensaje_notificacion = ""
             url_notificacion = "#"
@@ -121,25 +138,29 @@ def panel_control_periodos_vista(request):
             periodo.save()
             
             if mensaje_notificacion:
-                docentes = User.objects.filter(groups__name='Docentes')
+                # CORRECCIÓN: Notificar solo a los docentes del colegio actual.
+                docentes = User.objects.filter(docente__colegio=request.colegio)
                 for docente_user in docentes:
                     Notificacion.objects.create(
                         destinatario=docente_user,
                         mensaje=mensaje_notificacion,
                         tipo='PERIODO',
-                        url=url_notificacion
+                        url=url_notificacion,
+                        colegio=request.colegio # Asociar la notificación al colegio
                     )
 
         except PeriodoAcademico.DoesNotExist:
-            messages.error(request, "El periodo que intentó modificar no existe.")
+            messages.error(request, "El periodo que intentó modificar no existe o no pertenece a este colegio.")
         except Exception as e:
             messages.error(request, f"Ocurrió un error inesperado: {e}")
         
         return redirect('panel_control_periodos')
 
-    periodos = PeriodoAcademico.objects.all().order_by('-ano_lectivo', '-fecha_inicio')
+    # CORRECCIÓN: Mostrar solo los periodos del colegio actual.
+    periodos = PeriodoAcademico.objects.filter(colegio=request.colegio).order_by('-ano_lectivo', '-fecha_inicio')
     context = {
-        'periodos': periodos
+        'periodos': periodos,
+        'colegio': request.colegio,
     }
     
     return render(request, 'notas/admin_tools/panel_control_periodos.html', context)
@@ -148,9 +169,23 @@ def panel_control_periodos_vista(request):
 @user_passes_test(es_superusuario)
 def panel_control_promocion_vista(request):
     """
-    Permite al administrador ver y modificar la regla de promoción del sistema.
+    Permite al administrador ver y modificar la regla de promoción del colegio actual.
     """
-    config, created = ConfiguracionSistema.objects.get_or_create(pk=1)
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
+    # --- CAMBIO ARQUITECTÓNICO IMPORTANTE ---
+    # La configuración del sistema ya no puede ser global (pk=1).
+    # Debe estar asociada a cada colegio.
+    #
+    # ACCIÓN REQUERIDA:
+    # 1. Añade una ForeignKey al modelo Colegio en tu modelo `ConfiguracionSistema`:
+    #    colegio = models.OneToOneField(Colegio, on_delete=models.CASCADE, related_name='configuracion')
+    # 2. Elimina `primary_key=True` si lo tenías en algún campo.
+    # 3. Haz makemigrations y migrate.
+
+    # CORRECCIÓN: Obtener o crear la configuración para el colegio específico.
+    config, created = ConfiguracionSistema.objects.get_or_create(colegio=request.colegio)
 
     if request.method == 'POST':
         nuevo_valor_str = request.POST.get('max_materias_reprobadas')
@@ -168,17 +203,13 @@ def panel_control_promocion_vista(request):
         return redirect('panel_control_promocion')
 
     context = {
-        'config': config
+        'config': config,
+        'colegio': request.colegio,
     }
     return render(request, 'notas/admin_tools/panel_control_promocion.html', context)
 
 
-# --- INICIO: LÓGICA PARA EL NUEVO PANEL DE CONFIGURACIÓN ---
-
 class MateriaPorcentajeForm(forms.ModelForm):
-    """
-    Formulario para editar los porcentajes de una materia específica.
-    """
     class Meta:
         model = Materia
         fields = ['porcentaje_ser', 'porcentaje_saber', 'porcentaje_hacer', 'usar_ponderacion_equitativa']
@@ -190,9 +221,6 @@ class MateriaPorcentajeForm(forms.ModelForm):
         }
 
 class ConfiguracionGlobalForm(forms.ModelForm):
-    """
-    Formulario para el interruptor global de permisos.
-    """
     class Meta:
         model = ConfiguracionCalificaciones
         fields = ['docente_puede_modificar']
@@ -200,18 +228,29 @@ class ConfiguracionGlobalForm(forms.ModelForm):
 @user_passes_test(lambda u: u.is_superuser)
 def configuracion_calificaciones_vista(request):
     """
-    Vista mejorada que permite al admin gestionar los porcentajes por defecto
-    de todas las materias y el permiso global para que los docentes modifiquen.
+    Vista para que el admin gestione los porcentajes por defecto de las materias
+    y el permiso global para el COLEGIO ACTUAL.
     """
-    # Se crea un 'FormSet', que es un conjunto de formularios para editar múltiples objetos a la vez.
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
+    # CORRECCIÓN: El queryset del formset debe ser filtrado por colegio.
+    materias_colegio = Materia.objects.filter(colegio=request.colegio)
     MateriaFormSet = modelformset_factory(Materia, form=MateriaPorcentajeForm, extra=0)
     
-    # Se obtiene la configuración global de permisos
-    config_global, _ = ConfiguracionCalificaciones.objects.get_or_create(pk=1)
+    # --- CAMBIO ARQUITECTÓNICO IMPORTANTE ---
+    # La configuración de calificaciones también debe ser por colegio.
+    # ACCIÓN REQUERIDA:
+    # 1. Añade una ForeignKey al modelo Colegio en tu modelo `ConfiguracionCalificaciones`:
+    #    colegio = models.OneToOneField(Colegio, on_delete=models.CASCADE, related_name='config_calificaciones')
+    # 2. Haz makemigrations y migrate.
+
+    # CORRECCIÓN: Obtener la configuración global para el colegio actual.
+    config_global, _ = ConfiguracionCalificaciones.objects.get_or_create(colegio=request.colegio)
 
     if request.method == 'POST':
-        # Se procesan ambos formularios: el del permiso global y el de todas las materias
-        formset = MateriaFormSet(request.POST, queryset=Materia.objects.all())
+        # CORRECCIÓN: Usar el queryset filtrado al procesar el formset.
+        formset = MateriaFormSet(request.POST, queryset=materias_colegio)
         form_global = ConfiguracionGlobalForm(request.POST, instance=config_global)
 
         if formset.is_valid() and form_global.is_valid():
@@ -220,19 +259,17 @@ def configuracion_calificaciones_vista(request):
             messages.success(request, 'La configuración de calificaciones ha sido actualizada correctamente.')
             return redirect('configuracion_calificaciones')
         else:
-            # Si hay errores, se muestran
             messages.error(request, 'Por favor, corrija los errores en el formulario.')
 
     else:
-        # Si es una petición GET, se inicializan los formularios con los datos de la BD
-        formset = MateriaFormSet(queryset=Materia.objects.all().order_by('nombre'))
+        # CORRECCIÓN: Usar el queryset filtrado al inicializar el formset.
+        formset = MateriaFormSet(queryset=materias_colegio.order_by('nombre'))
         form_global = ConfiguracionGlobalForm(instance=config_global)
 
     context = {
         'formset': formset,
         'form_global': form_global,
-        'page_title': 'Configuración de Calificaciones por Materia'
+        'page_title': 'Configuración de Calificaciones por Materia',
+        'colegio': request.colegio,
     }
     return render(request, 'notas/admin_tools/configuracion_calificaciones.html', context)
-
-# --- FIN: LÓGICA PARA EL NUEVO PANEL ---

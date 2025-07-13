@@ -10,9 +10,8 @@ from django.template.loader import render_to_string
 from django.conf import settings
 import json
 from datetime import datetime
+
 from ..models import Docente, AsignacionDocente, Estudiante, Asistencia
-from ..forms.auth_forms import CustomPasswordChangeForm
-from django.contrib.auth import update_session_auth_hash
 
 def _enviar_correo_inasistencia(estudiante, asignacion, fecha):
     # Esta función auxiliar no necesita cambios, ya que recibe objetos ya filtrados.
@@ -32,6 +31,10 @@ def _enviar_correo_inasistencia(estudiante, asignacion, fecha):
 
 @login_required
 def asistencia_vista(request):
+    """
+    Gestiona la interfaz para el registro de asistencia diaria, asegurando
+    que los datos correspondan al colegio actual.
+    """
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
 
@@ -85,6 +88,10 @@ def asistencia_vista(request):
 
 @login_required
 def guardar_inasistencia_ajax(request):
+    """
+    Guarda el estado de asistencia de un estudiante vía AJAX, asegurando
+    que la operación se realice en el colegio correcto.
+    """
     if not request.colegio:
         return JsonResponse({'status': 'error', 'message': 'Colegio no identificado'}, status=404)
     if request.method != 'POST':
@@ -118,19 +125,3 @@ def guardar_inasistencia_ajax(request):
         return JsonResponse({'status': 'success', 'message': 'Asistencia guardada.'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
-
-# Esta vista estaba mal ubicada, la muevo aquí fuera de la otra función.
-@login_required
-def cambiar_password_vista(request):
-    if request.method == 'POST':
-        form = CustomPasswordChangeForm(request.user, request.POST)
-        if form.is_valid():
-            user = form.save()
-            update_session_auth_hash(request, user)
-            messages.success(request, '¡Tu contraseña ha sido actualizada exitosamente!')
-            return redirect('dashboard')
-        else:
-            messages.error(request, 'Por favor corrige los errores a continuación.')
-    else:
-        form = CustomPasswordChangeForm(request.user)
-    return render(request, 'registration/cambiar_password.html', {'form': form, 'colegio': getattr(request, 'colegio', None)})

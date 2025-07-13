@@ -1,6 +1,7 @@
 # notas/views/estadisticas_views.py
 from django.shortcuts import render
-from django.http import JsonResponse, HttpResponseForbidden
+# Se añade HttpResponseNotFound y HttpResponseForbidden para manejar errores
+from django.http import JsonResponse, HttpResponseForbidden, HttpResponseNotFound
 from django.contrib.auth.decorators import user_passes_test
 import datetime
 import numpy as np
@@ -10,6 +11,7 @@ from ..models import (
     Curso, PeriodoAcademico, Docente, AsignacionDocente, 
     ReporteParcial
 )
+# Se asume que la lógica de estadísticas será actualizada para aceptar el colegio
 from ..estadisticas_logic import (
     get_rendimiento_general, get_promedios_por_materia, 
     get_ranking_cursos, get_distribucion_por_materia, get_histograma_distribucion
@@ -18,6 +20,7 @@ from ..estadisticas_logic import (
 def generar_conclusiones_texto(datos_rendimiento, datos_por_materia, total_estudiantes):
     """
     Analiza los datos estadísticos y genera una lista de conclusiones en texto.
+    Esta función auxiliar no necesita cambios, ya que opera sobre datos ya filtrados.
     """
     if total_estudiantes == 0:
         return ["No hay datos suficientes para generar conclusiones."]
@@ -67,40 +70,68 @@ def es_docente_o_superuser(user):
 
 @user_passes_test(es_docente_o_superuser)
 def panel_estadisticas_vista(request):
+    """
+    Prepara el panel de filtros para las estadísticas, mostrando solo los
+    cursos y periodos del colegio actual.
+    """
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
     user = request.user
     if user.is_superuser:
-        cursos = Curso.objects.all().order_by('nombre')
+        # CORRECCIÓN: Filtrar cursos por el colegio actual.
+        cursos = Curso.objects.filter(colegio=request.colegio).order_by('nombre')
     else:
         try:
-            docente_actual = Docente.objects.get(user=user)
-            cursos_ids = AsignacionDocente.objects.filter(docente=docente_actual).values_list('curso_id', flat=True).distinct()
-            cursos = Curso.objects.filter(id__in=cursos_ids).order_by('nombre')
+            # CORRECCIÓN: Filtrar docente y cursos por el colegio actual.
+            docente_actual = Docente.objects.get(user=user, colegio=request.colegio)
+            cursos_ids = AsignacionDocente.objects.filter(docente=docente_actual, colegio=request.colegio).values_list('curso_id', flat=True).distinct()
+            cursos = Curso.objects.filter(id__in=cursos_ids, colegio=request.colegio).order_by('nombre')
         except Docente.DoesNotExist:
-            return HttpResponseForbidden("Acceso denegado. Su perfil no está configurado como docente.")
+            return HttpResponseForbidden("Acceso denegado. Su perfil no está configurado como docente en este colegio.")
 
-    periodos = PeriodoAcademico.objects.all().order_by('-ano_lectivo', '-fecha_inicio')
-    anos_lectivos = PeriodoAcademico.objects.values_list('ano_lectivo', flat=True).distinct().order_by('-ano_lectivo')
-    context = {'cursos': cursos, 'periodos': periodos, 'anos_lectivos': anos_lectivos, 'ano_actual': datetime.date.today().year}
+    # CORRECCIÓN: Filtrar periodos y años por el colegio actual.
+    periodos = PeriodoAcademico.objects.filter(colegio=request.colegio).order_by('-ano_lectivo', '-fecha_inicio')
+    anos_lectivos = PeriodoAcademico.objects.filter(colegio=request.colegio).values_list('ano_lectivo', flat=True).distinct().order_by('-ano_lectivo')
+    
+    context = {
+        'cursos': cursos, 
+        'periodos': periodos, 
+        'anos_lectivos': anos_lectivos, 
+        'ano_actual': datetime.date.today().year,
+        'colegio': request.colegio
+    }
     return render(request, 'notas/estadisticas/panel_estadisticas.html', context)
 
 
 @user_passes_test(es_docente_o_superuser)
 def datos_graficos_ajax(request):
+    """
+    Vista AJAX que recopila los datos para los gráficos, asegurando que todos
+    los cálculos se realicen dentro del contexto del colegio actual.
+    """
+    if not request.colegio:
+        return JsonResponse({'error': 'Colegio no identificado'}, status=404)
+
     ano_lectivo = request.GET.get('ano_lectivo')
     periodo_id = request.GET.get('periodo_id')
     curso_ids = request.GET.getlist('curso_ids[]')
 
-    filtros = {}
+    # CORRECCIÓN CLAVE: Añadir el colegio actual a los filtros que se pasarán a la lógica de negocio.
+    filtros = {'colegio': request.colegio}
     if ano_lectivo and ano_lectivo != 'todos': filtros['ano_lectivo'] = int(ano_lectivo)
     if periodo_id and periodo_id != 'todos': filtros['periodo_id'] = periodo_id
     if curso_ids: filtros['curso_ids'] = [int(cid) for cid in curso_ids]
 
+    # Se asume que las siguientes funciones de 'estadisticas_logic' han sido
+    # actualizadas para usar el filtro `colegio`.
     datos_rendimiento = get_rendimiento_general(filtros)
     datos_por_materia = get_promedios_por_materia(filtros)
     datos_boxplot_materia = get_distribucion_por_materia(filtros)
     datos_histograma = get_histograma_distribucion(filtros)
 
-    reportes_filtrados = ReporteParcial.objects.all()
+    # CORRECCIÓN: Filtrar la consulta de ReporteParcial por el colegio actual.
+    reportes_filtrados = ReporteParcial.objects.filter(colegio=request.colegio)
     if 'ano_lectivo' in filtros: reportes_filtrados = reportes_filtrados.filter(periodo__ano_lectivo=filtros['ano_lectivo'])
     if 'periodo_id' in filtros: reportes_filtrados = reportes_filtrados.filter(periodo_id=filtros['periodo_id'])
     if 'curso_ids' in filtros: reportes_filtrados = reportes_filtrados.filter(estudiante__curso_id__in=filtros['curso_ids'])

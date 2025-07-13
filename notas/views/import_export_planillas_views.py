@@ -3,57 +3,80 @@
 import openpyxl
 from openpyxl.styles import Font, Alignment, Border, Side, PatternFill
 from openpyxl.drawing.image import Image as OpenpyxlImage
-from django.http import HttpResponse
+# Se añade HttpResponseNotFound para manejar errores
+from django.http import HttpResponse, HttpResponseNotFound
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 import os
 
-from ..models.academicos import AsignacionDocente, PeriodoAcademico, Estudiante
-from ..models.perfiles import Docente
+from ..models import AsignacionDocente, PeriodoAcademico, Estudiante, Docente
 
 @login_required
 def exportar_planillas_docente(request, docente_id, periodo_id):
     """
-    Genera y descarga un único archivo Excel con una hoja por cada asignación
-    y un encabezado institucional completo con logos.
+    Genera y descarga un único archivo Excel con una hoja por cada asignación,
+    asegurando que los datos correspondan al colegio actual.
     """
-    docente = get_object_or_404(Docente, id=docente_id)
-    periodo = get_object_or_404(PeriodoAcademico, id=periodo_id)
-    asignaciones = AsignacionDocente.objects.filter(docente=docente).order_by('curso__nombre', 'materia__nombre')
+    # CORRECCIÓN: Verificar que se ha identificado un colegio.
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
+    # CORRECCIÓN: Filtrar docente y periodo por el colegio actual para seguridad.
+    docente = get_object_or_404(Docente, id=docente_id, colegio=request.colegio)
+    periodo = get_object_or_404(PeriodoAcademico, id=periodo_id, colegio=request.colegio)
+    
+    # CORRECCIÓN: Filtrar las asignaciones también por el colegio actual para doble seguridad.
+    asignaciones = AsignacionDocente.objects.filter(
+        docente=docente, 
+        colegio=request.colegio
+    ).order_by('curso__nombre', 'materia__nombre')
 
     if not asignaciones.exists():
-        return HttpResponse("Este docente no tiene asignaturas para el periodo seleccionado.", status=404)
+        return HttpResponse("Este docente no tiene asignaturas asignadas en este colegio.", status=404)
 
     workbook = openpyxl.Workbook()
     if "Sheet" in workbook.sheetnames:
         workbook.remove(workbook["Sheet"])
 
+    # MEJORA A FUTURO: Los logos deberían cargarse desde el objeto `request.colegio`
+    # en lugar de una ruta estática para permitir personalización.
+    # Por ahora, se mantiene la lógica original.
     try:
-        logo_colegio_path = os.path.join(settings.STATICFILES_DIRS[0], 'img', 'logo_colegio.png')
+        # Usamos el logo del modelo Colegio si existe, si no, el de por defecto.
+        if request.colegio.logo:
+            logo_colegio_path = request.colegio.logo.path
+        else:
+            logo_colegio_path = os.path.join(settings.STATICFILES_DIRS[0], 'img', 'logo_colegio.png')
+        
         logo_gob_path = os.path.join(settings.STATICFILES_DIRS[0], 'img', 'Logo_govtolima.png')
-        logo_colegio = OpenpyxlImage(logo_colegio_path)
-        logo_gob = OpenpyxlImage(logo_gob_path)
-        logo_colegio.height = 65
-        logo_colegio.width = 65
-        logo_gob.height = 65
-        logo_gob.width = 65
+        logo_colegio_img = OpenpyxlImage(logo_colegio_path)
+        logo_gob_img = OpenpyxlImage(logo_gob_path)
+        logo_colegio_img.height = 65
+        logo_colegio_img.width = 65
+        logo_gob_img.height = 65
+        logo_gob_img.width = 65
         logos_cargados = True
-    except (FileNotFoundError, IndexError):
+    except (FileNotFoundError, IndexError, AttributeError):
         logos_cargados = False
         print("ADVERTENCIA: No se encontraron los archivos de logo. El Excel se generará sin ellos.")
 
     for asignacion in asignaciones:
         sheet = workbook.create_sheet(title=f"{asignacion.curso.nombre}-{asignacion.materia.abreviatura}")
-        estudiantes = Estudiante.objects.filter(curso=asignacion.curso, is_active=True).order_by('user__last_name', 'user__first_name')
+        
+        # CORRECCIÓN: Filtrar estudiantes por el colegio actual.
+        estudiantes = Estudiante.objects.filter(
+            curso=asignacion.curso, 
+            colegio=request.colegio, 
+            is_active=True
+        ).order_by('user__last_name', 'user__first_name')
 
         # --- ENCABEZADO INSTITUCIONAL ---
         font_titulo = Font(name='Arial', size=11, bold=True)
         font_info_label = Font(name='Arial', size=10, bold=True)
         font_info_value = Font(name='Arial', size=10)
         center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
-        left_align = Alignment(horizontal='left', vertical='center')
-
+        
         sheet.column_dimensions['A'].width = 15
         sheet.column_dimensions['B'].width = 15
         sheet.column_dimensions['C'].width = 15
@@ -61,13 +84,17 @@ def exportar_planillas_docente(request, docente_id, periodo_id):
         
         sheet.merge_cells('B1:C4')
         cell_titulo = sheet['B1']
-        cell_titulo.value = ("INSTITUCIÓN EDUCATIVA TÉCNICA\nALFONSO PALACIO RUDAS\nNit. 890.701.233-7\nDANE 173349000026\nHonda-Tolima")
+        # Usamos el nombre del colegio del objeto `request.colegio`
+        cell_titulo.value = (f"{request.colegio.nombre.upper()}\n"
+                             f"Nit. [NIT del Colegio]\n" # Estos datos podrían ser campos en el modelo Colegio
+                             f"DANE [DANE del Colegio]\n"
+                             f"[Ciudad]")
         cell_titulo.font = font_titulo
         cell_titulo.alignment = center_align
         
         if logos_cargados:
-            sheet.add_image(logo_gob, 'A1')
-            sheet.add_image(logo_colegio, 'D1')
+            sheet.add_image(logo_gob_img, 'A1')
+            sheet.add_image(logo_colegio_img, 'D1')
         
         info_row_start = 6
         info_data = {
@@ -83,7 +110,7 @@ def exportar_planillas_docente(request, docente_id, periodo_id):
             sheet.cell(row=row_idx, column=2, value=value).font = font_info_value
             row_idx += 1
         
-        # --- ESTRUCTURA DE TABLA DE NOTAS ---
+        # --- ESTRUCTURA DE TABLA DE NOTAS (sin cambios en la lógica de celdas) ---
         header_row = row_idx + 1
         sub_header_row = header_row + 1
         header_font = Font(bold=True, color="FFFFFF")
