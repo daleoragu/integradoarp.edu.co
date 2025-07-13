@@ -25,6 +25,7 @@ ALLOWED_HOSTS.extend([
     'integradoapr.edu.co',
     'www.integradoapr.edu.co',
     'mcolegio.com.co', 
+    '.mcolegio.com.co',
     'www.mcolegio.com.co',
     '127.0.0.1',
     'localhost',
