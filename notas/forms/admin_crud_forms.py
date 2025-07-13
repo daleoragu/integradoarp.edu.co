@@ -2,8 +2,41 @@
 from django import forms
 from django.contrib.auth.models import User
 from ..models import (
-    Estudiante, FichaEstudiante, Curso, Docente, AreaConocimiento, Materia, FichaDocente
+    Estudiante, FichaEstudiante, Curso, Docente, AreaConocimiento, Materia, FichaDocente, Colegio
 )
+
+# --- INICIO: NUEVO FORMULARIO PARA CONFIGURACIÓN DEL COLEGIO ---
+class ConfiguracionColegioForm(forms.ModelForm):
+    class Meta:
+        model = Colegio
+        # Seleccionamos todos los campos que el admin puede personalizar
+        fields = [
+            'nit', 'resolucion_aprobacion', 'direccion_fisica',
+            'telefono_contacto', 'email_contacto', 'whatsapp_numero',
+            'url_facebook', 'url_instagram', 'url_twitter_x', 'url_youtube',
+            'logo', 'logo_secundario', 'color_primario', 'color_secundario', 'portal_publico_activo'
+        ]
+        widgets = {
+            # Añadimos el selector de color para una mejor experiencia
+            'color_primario': forms.TextInput(attrs={'type': 'color'}),
+            'color_secundario': forms.TextInput(attrs={'type': 'color'}),
+            # Añadimos clases de bootstrap para que se vea bien
+            'nit': forms.TextInput(attrs={'class': 'form-control'}),
+            'resolucion_aprobacion': forms.TextInput(attrs={'class': 'form-control'}),
+            'direccion_fisica': forms.TextInput(attrs={'class': 'form-control'}),
+            'telefono_contacto': forms.TextInput(attrs={'class': 'form-control'}),
+            'email_contacto': forms.EmailInput(attrs={'class': 'form-control'}),
+            'whatsapp_numero': forms.TextInput(attrs={'class': 'form-control'}),
+            'url_facebook': forms.URLInput(attrs={'class': 'form-control'}),
+            'url_instagram': forms.URLInput(attrs={'class': 'form-control'}),
+            'url_twitter_x': forms.URLInput(attrs={'class': 'form-control'}),
+            'url_youtube': forms.URLInput(attrs={'class': 'form-control'}),
+            'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'logo_secundario': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'portal_publico_activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+# --- FIN: NUEVO FORMULARIO ---
+
 
 # --- Formularios para Cursos / Grados ---
 class CursoForm(forms.ModelForm):
@@ -19,16 +52,11 @@ class CursoForm(forms.ModelForm):
             'director_grado': 'Director de Grado (Opcional)',
         }
 
-    # 👇 INICIO: MODIFICACIÓN MULTI-COLEGIO
     def __init__(self, *args, **kwargs):
-        # Extraemos el 'colegio' que nos pasa la vista
         colegio = kwargs.pop('colegio', None)
         super().__init__(*args, **kwargs)
-        
-        # Si recibimos un colegio, filtramos el queryset de 'director_grado'
         if colegio:
             self.fields['director_grado'].queryset = Docente.objects.filter(colegio=colegio).order_by('user__last_name')
-    # 👆 FIN: MODIFICACIÓN MULTI-COLEGIO
 
 # --- Formularios para Gestión de Docentes ---
 class AdminCrearDocenteForm(forms.Form):
@@ -89,13 +117,11 @@ class AdminCrearEstudianteForm(forms.Form):
     numero_documento = forms.CharField(label="Número de Documento (Opcional)", required=False, max_length=20, widget=forms.TextInput(attrs={'class': 'form-control'}))
     curso = forms.ModelChoiceField(label="Asignar al Curso", queryset=Curso.objects.none(), widget=forms.Select(attrs={'class': 'form-select'}))
     
-    # 👇 INICIO: MODIFICACIÓN MULTI-COLEGIO
     def __init__(self, *args, **kwargs):
         colegio = kwargs.pop('colegio', None)
         super().__init__(*args, **kwargs)
         if colegio:
             self.fields['curso'].queryset = Curso.objects.filter(colegio=colegio).order_by('nombre')
-    # 👆 FIN: MODIFICACIÓN MULTI-COLEGIO
 
     def clean_nombres(self):
         return self.cleaned_data.get('nombres', '').upper()
@@ -136,7 +162,6 @@ class AdminEditarEstudianteForm(forms.ModelForm):
             'compromiso_estudiante': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
         }
 
-    # 👇 INICIO: MODIFICACIÓN MULTI-COLEGIO
     def __init__(self, *args, **kwargs):
         colegio = kwargs.pop('colegio', None)
         super().__init__(*args, **kwargs)
@@ -150,7 +175,6 @@ class AdminEditarEstudianteForm(forms.ModelForm):
             self.fields['last_name'].initial = estudiante_profile.user.last_name
             self.fields['curso'].initial = estudiante_profile.curso
             self.fields['is_active'].initial = estudiante_profile.is_active
-    # 👆 FIN: MODIFICACIÓN MULTI-COLEGIO
 
     def save(self, commit=True):
         ficha = super().save(commit=False)

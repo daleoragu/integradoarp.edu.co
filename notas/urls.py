@@ -51,6 +51,10 @@ urlpatterns = [
     path('panel-administrador/estadisticas/', estadisticas_views.panel_estadisticas_vista, name='panel_estadisticas'),
     path('panel-administrador/publicar-boletines/', publicacion_views.panel_publicacion_vista, name='panel_publicacion'),
     path('panel-administrador/configuracion-calificaciones/', admin_tools_views.configuracion_calificaciones_vista, name='configuracion_calificaciones'),
+    
+    # --- INICIO: NUEVA URL PARA CONFIGURACIÓN DEL COLEGIO ---
+    path('panel-administrador/configuracion-colegio/', admin_tools_views.configuracion_colegio_vista, name='configuracion_colegio'),
+    # --- FIN: NUEVA URL ---
 
     # --- RUTAS PARA EL PANEL DE CONFIGURACIÓN DEL PORTAL ---
     path('panel-administrador/configuracion-portal/', portal_admin_views.configuracion_portal_vista, name='configuracion_portal'),
@@ -151,17 +155,11 @@ urlpatterns = [
     path('panel-administrador/gestion-docentes/editar/<int:docente_id>/', gestion_docentes_views.editar_docente_vista, name='editar_docente'),
     path('panel-administrador/gestion-docentes/eliminar/<int:docente_id>/', gestion_docentes_views.eliminar_docente_vista, name='eliminar_docente'),
 
-    # ==============================================================================
-    # INICIO: CORRECCIÓN DEL ERROR NoReverseMatch
-    # Se añade el bloque de URLs para la gestión de estudiantes que faltaba.
-    # ==============================================================================
+    # --- Gestión de Estudiantes ---
     path('panel-administrador/gestion-estudiantes/', gestion_estudiantes_views.gestion_estudiantes_vista, name='gestion_estudiantes'),
     path('panel-administrador/gestion-estudiantes/crear/', gestion_estudiantes_views.crear_estudiante_vista, name='crear_estudiante'),
     path('panel-administrador/gestion-estudiantes/editar/<int:estudiante_id>/', gestion_estudiantes_views.editar_estudiante_vista, name='editar_estudiante'),
     path('panel-administrador/gestion-estudiantes/eliminar/<int:estudiante_id>/', gestion_estudiantes_views.eliminar_estudiante_vista, name='eliminar_estudiante'),
-    # ==============================================================================
-    # FIN: CORRECCIÓN
-    # ==============================================================================
 
     # --- Gestión de Cursos / Grados ---
     path('panel-administrador/gestion-cursos/', gestion_academica_views.gestion_cursos_vista, name='gestion_cursos'),

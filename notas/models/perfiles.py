@@ -4,38 +4,48 @@ from django.contrib.auth.models import User
 from django.utils.text import slugify
 
 # ==============================================================================
-# INICIO: MODELO CENTRAL PARA MULTI-COLEGIO
+# MODELO CENTRAL PARA MULTI-COLEGIO
 # ==============================================================================
 
 class Colegio(models.Model):
     """
     Modelo central que representa a cada institución educativa en la plataforma.
+    Ahora incluye campos para una personalización completa.
     """
+    # --- Campos de Identificación ---
     nombre = models.CharField(max_length=255, unique=True, verbose_name="Nombre del Colegio")
     slug = models.SlugField(max_length=255, unique=True, blank=True, help_text="Identificador para la URL (se genera automáticamente)")
-    
-    # 👇 INICIO: Nuevos campos para dominios y contacto
-    domain = models.CharField(
-        max_length=255, 
-        unique=True, 
-        null=True, 
-        blank=True, 
-        verbose_name="Dominio Principal",
-        help_text="Ej: integradoapr.edu.co (sin www ni http://)"
-    )
-    telefono = models.CharField(max_length=50, blank=True, verbose_name="Teléfono de Contacto")
-    email_contacto = models.EmailField(max_length=255, blank=True, verbose_name="Email de Contacto")
-    # Aquí puedes añadir más campos en el futuro (redes_sociales, etc.)
-    # 👇 FIN: Nuevos campos
-
-    # Personalización
-    logo = models.ImageField(upload_to='logos_colegios/', blank=True, null=True, verbose_name="Logo del Colegio")
-    color_primario = models.CharField(max_length=7, default='#0d6efd', verbose_name="Color Primario")
-    color_secundario = models.CharField(max_length=7, default='#6c757d', verbose_name="Color Secundario")
-
-    # Configuración
+    domain = models.CharField(max_length=255, unique=True, null=True, blank=True, verbose_name="Dominio Personalizado", help_text="Ej: integradoapr.edu.co")
     admin_general = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="colegios_administrados", verbose_name="Administrador Principal")
+
+    # --- INICIO: NUEVOS CAMPOS DE PERSONALIZACIÓN ---
+
+    # Datos Oficiales (para encabezados de documentos)
+    nit = models.CharField(max_length=50, blank=True, verbose_name="NIT del Colegio")
+    resolucion_aprobacion = models.CharField(max_length=255, blank=True, verbose_name="Resolución de Aprobación")
+    direccion_fisica = models.CharField(max_length=255, blank=True, verbose_name="Dirección Física")
+
+    # Datos de Contacto (para enlaces dinámicos)
+    telefono_contacto = models.CharField(max_length=50, blank=True, verbose_name="Teléfono Principal")
+    email_contacto = models.EmailField(max_length=255, blank=True, verbose_name="Email de Contacto")
+    whatsapp_numero = models.CharField(max_length=20, blank=True, verbose_name="Número de WhatsApp", help_text="Incluir código de país, ej: 573001234567")
+    
+    # Redes Sociales (URLs completas)
+    url_facebook = models.URLField(max_length=255, blank=True, verbose_name="URL de Facebook")
+    url_instagram = models.URLField(max_length=255, blank=True, verbose_name="URL de Instagram")
+    url_twitter_x = models.URLField(max_length=255, blank=True, verbose_name="URL de Twitter / X")
+    url_youtube = models.URLField(max_length=255, blank=True, verbose_name="URL de YouTube")
+
+    # Identidad Visual
+    logo = models.ImageField(upload_to='logos_colegios/', blank=True, null=True, verbose_name="Logo Principal del Colegio")
+    logo_secundario = models.ImageField(upload_to='logos_colegios/', blank=True, null=True, verbose_name="Logo Secundario (Opcional)", help_text="Logo adicional, como el de una gobernación o secretaría de educación.")
+    color_primario = models.CharField(max_length=7, default='#923E2B', verbose_name="Color Primario (Botones, enlaces)")
+    color_secundario = models.CharField(max_length=7, default='#4F4F4F', verbose_name="Color Secundario (Fondos, acentos)")
+
+    # Configuración del Portal
     portal_publico_activo = models.BooleanField(default=True, verbose_name="¿Portal Público Activo?")
+
+    # --- FIN: NUEVOS CAMPOS DE PERSONALIZACIÓN ---
 
     def __str__(self):
         return self.nombre
@@ -50,13 +60,9 @@ class Colegio(models.Model):
         verbose_name_plural = "Colegios"
         ordering = ['nombre']
 
-# ==============================================================================
-# FIN: MODELO CENTRAL
-# ==============================================================================
-
 
 class Curso(models.Model):
-    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="cursos", null=True)
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="cursos")
     nombre = models.CharField(max_length=100, verbose_name="Nombre del Curso")
     director_grado = models.ForeignKey('Docente', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Director de Grado", related_name="cursos_dirigidos")
     def __str__(self): return self.nombre
@@ -68,7 +74,7 @@ class Curso(models.Model):
         verbose_name = "Curso"; verbose_name_plural = "Cursos"; ordering = ['nombre']
 
 class Docente(models.Model):
-    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="docentes", null=True)
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="docentes")
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Usuario de Login")
     def __str__(self): return self.user.get_full_name() or self.user.username
     class Meta:
@@ -76,7 +82,7 @@ class Docente(models.Model):
         verbose_name = "Docente"; verbose_name_plural = "Docentes"; ordering = ['user__last_name', 'user__first_name']
 
 class Estudiante(models.Model):
-    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="estudiantes", null=True)
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="estudiantes")
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Usuario de Login")
     curso = models.ForeignKey(Curso, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Curso Asignado")
     is_active = models.BooleanField(default=True, verbose_name="¿Estudiante Activo?")
