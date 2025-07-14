@@ -10,7 +10,7 @@ class ColegioMiddleware:
     """
     def __init__(self, get_response):
         self.get_response = get_response
-        self.main_domain = "mcolegio.com.co"
+        self.main_domain = "notas.mcolegio.com.co"
 
     def __call__(self, request):
         # Obtiene el host y lo limpia (elimina el puerto y 'www.')
