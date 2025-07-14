@@ -1,47 +1,52 @@
 # notas/middleware.py
-
 from .models import Colegio
 
 class ColegioMiddleware:
     """
     Middleware que identifica el colegio activo basándose en el dominio.
-    Esta versión tiene una lógica simplificada y más robusta para asegurar
-    el correcto funcionamiento del dominio principal y los subdominios.
+    Esta versión es más robusta para manejar errores de base de datos durante
+    el despliegue y para seleccionar un colegio principal por defecto.
     """
     def __init__(self, get_response):
         self.get_response = get_response
-        self.main_domain = "notas.mcolegio.com.co"
 
     def __call__(self, request):
-        # Obtiene el host y lo limpia (elimina el puerto y 'www.')
+        # No ejecutar este middleware para rutas del admin, para evitar problemas
+        if request.path.startswith('/admin'):
+            return self.get_response(request)
+
+        # Limpia el host para obtener el dominio base
         host = request.get_host().split(':')[0].lower()
         if host.startswith('www.'):
             host = host[4:]
-
-        request.colegio = None
-
-        # --- LÓGICA CORREGIDA Y SIMPLIFICADA ---
-
-        # 1. Buscar una coincidencia EXACTA en el campo de dominio personalizado.
-        #    Esto debería encontrar 'mcolegio.com.co' o 'integradoapr.edu.co'.
-        try:
-            request.colegio = Colegio.objects.get(domain=host)
-        except Colegio.DoesNotExist:
-            # 2. Si no se encuentra, y SOLO si no se encuentra, verificar si es un subdominio.
-            #    La condición `host != self.main_domain` evita que el dominio principal
-            #    sea procesado como un subdominio de sí mismo.
-            if host.endswith(self.main_domain) and host != self.main_domain:
-                
-                # Extrae el slug (ej: 'colegio-nuevo' de 'colegio-nuevo.mcolegio.com.co')
-                subdomain = host.replace(f'.{self.main_domain}', '')
-                
-                try:
-                    request.colegio = Colegio.objects.get(slug=subdomain)
-                except Colegio.DoesNotExist:
-                    # El subdominio tiene el formato correcto pero no está registrado.
-                    # request.colegio permanecerá como None.
-                    pass
         
-        # Todas las rutas de código terminan aquí, pasando la petición a la siguiente capa.
+        # Inicializamos request.colegio como None para evitar errores
+        request.colegio = None
+        
+        try:
+            # --- LÓGICA MEJORADA ---
+            # 1. Intenta encontrar el colegio por el dominio exacto.
+            #    Ej: 'integradoapr.edu.co' o 'colegio2.mcolegio.com.co'
+            request.colegio = Colegio.objects.get(domain=host)
+
+        except Colegio.DoesNotExist:
+            # Si no hay un dominio exacto, buscamos un colegio "principal"
+            try:
+                # 2. Busca el colegio que tenga marcada la casilla "Es el colegio principal".
+                request.colegio = Colegio.objects.get(es_principal=True)
+            except Colegio.DoesNotExist:
+                # 3. Si tampoco hay un principal, toma el primero que encuentre como último recurso.
+                request.colegio = Colegio.objects.first()
+            except Exception:
+                # Si hay cualquier otro error de base de datos, no hace nada y deja request.colegio como None.
+                pass
+                
+        except Exception:
+            # 4. ¡ESTA ES LA PARTE CLAVE!
+            # Si ocurre CUALQUIER error de base de datos (como que la tabla o la columna no existan
+            # durante el despliegue), simplemente ignora el error y deja request.colegio como None.
+            # Esto permite que el proceso de migración de Render se complete sin que la app se rompa.
+            pass
+        
         response = self.get_response(request)
         return response
