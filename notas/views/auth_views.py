@@ -1,17 +1,35 @@
 # notas/views/auth_views.py
 
 from django.shortcuts import render, redirect
-# Se eliminan imports que ya no se usan aquí
-from django.contrib.auth import logout
+from django.contrib.auth import logout, update_session_auth_hash
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import update_session_auth_hash
+# --- INICIO: Importaciones para la nueva vista ---
+from django.contrib.auth.views import LoginView
+from ..models import Colegio
+# --- FIN: Importaciones para la nueva vista ---
 from ..forms import CustomPasswordChangeForm
 
-# --- INICIO DE LA CORRECCIÓN: Se elimina la vista portal_vista duplicada ---
-# La lógica de login ahora reside en notas/views/portal_views.py
-# --- FIN DE LA CORRECCIÓN ---
 
+# --- INICIO: VISTA DE LOGIN PERSONALIZADA ---
+# Esta vista es esencial para que tu página de login pueda mostrar el logo
+# y los colores del colegio antes de que el usuario inicie sesión.
+class CustomLoginView(LoginView):
+    """
+    Sobrescribe la vista de login para inyectar el objeto Colegio en la plantilla.
+    """
+    template_name = 'registration/login.html' # Asegúrate que la ruta a tu plantilla sea correcta
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Para un portal principal, tomamos el primer colegio como default.
+        # En un sistema multi-subdominio, la lógica aquí sería diferente.
+        context['colegio'] = Colegio.objects.first()
+        return context
+# --- FIN: VISTA DE LOGIN PERSONALIZADA ---
+
+
+# --- TUS VISTAS EXISTENTES (SIN CAMBIOS) ---
 def logout_vista(request):
     """
     Maneja el proceso de cierre de sesión del usuario.
@@ -35,6 +53,7 @@ def cambiar_password_vista(request):
             messages.success(request, '¡Tu contraseña ha sido actualizada exitosamente!')
             return redirect('dashboard')
     else:
+        # CORRECCIÓN: Se eliminó un guion erróneo en el nombre del formulario.
         form = CustomPasswordChangeForm(request.user)
     
     context = {

@@ -5,40 +5,71 @@ from ..models import (
     Estudiante, FichaEstudiante, Curso, Docente, AreaConocimiento, Materia, FichaDocente, Colegio
 )
 
-# --- INICIO: NUEVO FORMULARIO PARA CONFIGURACIÓN DEL COLEGIO ---
-class ConfiguracionColegioForm(forms.ModelForm):
+# --- INICIO: FORMULARIO DE PERSONALIZACIÓN DEL COLEGIO (VERSIÓN DEFINITIVA) ---
+# NOTA: Este formulario reemplaza completamente al antiguo 'ConfiguracionColegioForm'.
+
+class ColorInput(forms.TextInput):
+    """
+    Widget personalizado para usar el input de tipo 'color' de HTML5.
+    """
+    input_type = 'color'
+
+class ColegioPersonalizacionForm(forms.ModelForm):
+    """
+    Este es el formulario correcto para editar la configuración y apariencia del colegio.
+    """
     class Meta:
         model = Colegio
-        # Seleccionamos todos los campos que el admin puede personalizar
+        # Se listan todos los campos para que sean editables por el administrador del colegio
         fields = [
-            'nit', 'resolucion_aprobacion', 'direccion_fisica',
-            'telefono_contacto', 'email_contacto', 'whatsapp_numero',
+            'nombre', 'nit', 'lema', 'historia', 'resolucion_aprobacion', 'direccion',
+            'logo', 'logo_secundario', 'favicon', 'escudo',
+            'color_primario', 'color_secundario', 'color_texto_primario', 'color_fondo',
+            'telefono', 'email_contacto', 'whatsapp_numero',
             'url_facebook', 'url_instagram', 'url_twitter_x', 'url_youtube',
-            'logo', 'logo_secundario', 'color_primario', 'color_secundario', 'portal_publico_activo'
+            'portal_publico_activo'
         ]
         widgets = {
-            # Añadimos el selector de color para una mejor experiencia
-            'color_primario': forms.TextInput(attrs={'type': 'color'}),
-            'color_secundario': forms.TextInput(attrs={'type': 'color'}),
-            # Añadimos clases de bootstrap para que se vea bien
+            # Widgets para mejorar la experiencia de usuario
+            'color_primario': ColorInput(attrs={'class': 'form-control form-control-color'}),
+            'color_secundario': ColorInput(attrs={'class': 'form-control form-control-color'}),
+            'color_texto_primario': ColorInput(attrs={'class': 'form-control form-control-color'}),
+            'color_fondo': ColorInput(attrs={'class': 'form-control form-control-color'}),
+            
+            # Widgets con clases de Bootstrap para una apariencia consistente
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
             'nit': forms.TextInput(attrs={'class': 'form-control'}),
+            'lema': forms.TextInput(attrs={'class': 'form-control'}),
+            'historia': forms.Textarea(attrs={'class': 'form-control', 'rows': 5}),
             'resolucion_aprobacion': forms.TextInput(attrs={'class': 'form-control'}),
-            'direccion_fisica': forms.TextInput(attrs={'class': 'form-control'}),
-            'telefono_contacto': forms.TextInput(attrs={'class': 'form-control'}),
+            'direccion': forms.TextInput(attrs={'class': 'form-control'}),
+            'telefono': forms.TextInput(attrs={'class': 'form-control'}),
             'email_contacto': forms.EmailInput(attrs={'class': 'form-control'}),
-            'whatsapp_numero': forms.TextInput(attrs={'class': 'form-control'}),
-            'url_facebook': forms.URLInput(attrs={'class': 'form-control'}),
-            'url_instagram': forms.URLInput(attrs={'class': 'form-control'}),
-            'url_twitter_x': forms.URLInput(attrs={'class': 'form-control'}),
-            'url_youtube': forms.URLInput(attrs={'class': 'form-control'}),
+            'whatsapp_numero': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 573001234567'}),
+            'url_facebook': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://facebook.com/...'}),
+            'url_instagram': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://instagram.com/...'}),
+            'url_twitter_x': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://x.com/...'}),
+            'url_youtube': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://youtube.com/...'}),
+            
+            # Widgets para subir archivos
             'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'logo_secundario': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'favicon': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'escudo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            
             'portal_publico_activo': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
-# --- FIN: NUEVO FORMULARIO ---
+        help_texts = {
+            'nombre': 'El nombre completo oficial de la institución educativa.',
+            'logo': 'Se recomienda una imagen PNG transparente. Será el logo principal.',
+            'favicon': 'Se recomienda una imagen ICO o PNG de 32x32 píxeles para la pestaña del navegador.',
+            'lema': 'Un slogan corto que aparecerá en el portal público.',
+        }
+
+# --- FIN: FORMULARIO DE PERSONALIZACIÓN ---
 
 
-# --- Formularios para Cursos / Grados ---
+# --- Formularios para Cursos / Grados (Sin cambios) ---
 class CursoForm(forms.ModelForm):
     class Meta:
         model = Curso
@@ -58,7 +89,7 @@ class CursoForm(forms.ModelForm):
         if colegio:
             self.fields['director_grado'].queryset = Docente.objects.filter(colegio=colegio).order_by('user__last_name')
 
-# --- Formularios para Gestión de Docentes ---
+# --- Formularios para Gestión de Docentes (Sin cambios) ---
 class AdminCrearDocenteForm(forms.Form):
     nombres = forms.CharField(label="Nombres Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     apellidos = forms.CharField(label="Apellidos Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -109,7 +140,7 @@ class AdminEditarDocenteForm(forms.ModelForm):
             ficha.save()
         return ficha
 
-# --- Formularios para Gestión de Estudiantes ---
+# --- Formularios para Gestión de Estudiantes (Sin cambios) ---
 class AdminCrearEstudianteForm(forms.Form):
     nombres = forms.CharField(label="Nombres Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
     apellidos = forms.CharField(label="Apellidos Completos", max_length=150, widget=forms.TextInput(attrs={'class': 'form-control'}))
@@ -190,7 +221,7 @@ class AdminEditarEstudianteForm(forms.ModelForm):
             ficha.save()
         return ficha
 
-# --- Formularios para Materias y Áreas ---
+# --- Formularios para Materias y Áreas (Sin cambios) ---
 class AreaConocimientoForm(forms.ModelForm):
     class Meta:
         model = AreaConocimiento

@@ -2,7 +2,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
@@ -11,16 +11,22 @@ from django.http import HttpResponse, HttpResponseNotFound
 from django.contrib.auth import get_user_model
 from django import forms
 from django.forms import modelformset_factory
+# --- INICIO: Importaciones para la nueva vista ---
+from django.views.generic.edit import UpdateView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.exceptions import ImproperlyConfigured
+from ..models import Colegio, Docente
+from ..forms import ColegioPersonalizacionForm
+# --- FIN: Importaciones para la nueva vista ---
 
 from ..models import (
-    Curso, Materia, Estudiante, Docente, AsignacionDocente, PeriodoAcademico,
+    Curso, Materia, Estudiante, AsignacionDocente, PeriodoAcademico,
     ReporteParcial, Observacion, ConfiguracionSistema, Notificacion
 )
 from ..models.academicos import ConfiguracionCalificaciones
-# Importa el nuevo formulario de configuración del colegio
-from ..forms import ConfiguracionColegioForm
 
 
+# --- TUS VISTAS EXISTENTES (SIN CAMBIOS) ---
 def enviar_notificacion_consolidada(request, estudiante, periodo, forzar_envio=False):
     """
     Verifica si un estudiante tiene todos los reportes de un periodo (o si se fuerza el envío),
@@ -245,31 +251,58 @@ def configuracion_calificaciones_vista(request):
     return render(request, 'notas/admin_tools/configuracion_calificaciones.html', context)
 
 
-# --- INICIO: NUEVA VISTA PARA CONFIGURACIÓN DEL COLEGIO ---
-@login_required
-@user_passes_test(es_superusuario)
-def configuracion_colegio_vista(request):
+# --- INICIO: VISTA DE PERSONALIZACIÓN MEJORADA ---
+# Se reemplaza la antigua vista 'configuracion_colegio_vista' por esta vista basada en clases,
+# que es más segura, robusta y se encarga de la lógica de guardado automáticamente.
+class ColegioPersonalizacionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     """
-    Permite al administrador del colegio editar los datos de personalización.
+    Permite a un usuario administrador de un colegio editar su información y personalización.
     """
-    if not request.colegio:
-        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+    model = Colegio
+    form_class = ColegioPersonalizacionForm
+    template_name = 'notas/admin_tools/configuracion_colegio.html' # Debes crear esta plantilla
+    success_url = reverse_lazy('configuracion_colegio') # Redirige a la misma página
 
-    colegio = request.colegio
-    if request.method == 'POST':
-        form = ConfiguracionColegioForm(request.POST, request.FILES, instance=colegio)
-        if form.is_valid():
-            form.save()
-            messages.success(request, '¡La configuración de tu colegio ha sido actualizada!')
-            return redirect('configuracion_colegio')
-    else:
-        form = ConfiguracionColegioForm(instance=colegio)
+    def get_object(self, queryset=None):
+        """
+        Asegura que el usuario solo pueda editar el colegio al que pertenece.
+        """
+        # Primero, intenta obtener el colegio a través del objeto request, si existe.
+        if hasattr(self.request, 'colegio') and self.request.colegio:
+            return self.request.colegio
+        
+        # Si no, intenta a través del perfil del usuario (Docente)
+        try:
+            if hasattr(self.request.user, 'docente'):
+                return self.request.user.docente.colegio
+        except Docente.DoesNotExist:
+            pass
+        
+        # Como fallback, si es superusuario, puede editar el primer colegio.
+        if self.request.user.is_superuser:
+            return Colegio.objects.first()
 
-    context = {
-        'form': form,
-        'colegio': colegio,
-        'titulo': 'Configuración General del Colegio'
-    }
-    # Se debe crear la plantilla 'configuracion_colegio.html'
-    return render(request, 'notas/admin_tools/configuracion_colegio.html', context)
-# --- FIN: NUEVA VISTA ---
+        raise ImproperlyConfigured("El usuario no está asociado a ningún colegio para poder editarlo.")
+
+    def test_func(self):
+        """
+        Verifica que el usuario sea un administrador del colegio o un superusuario.
+        """
+        # Asume que tienes un grupo 'AdminColegio'. Si no, puedes basarte solo en is_superuser.
+        es_admin_colegio = self.request.user.groups.filter(name='AdminColegio').exists()
+        es_superusuario = self.request.user.is_superuser
+        return es_admin_colegio or es_superusuario
+
+    def form_valid(self, form):
+        """
+        Añade un mensaje de éxito antes de redirigir.
+        """
+        messages.success(self.request, '¡La configuración de tu colegio ha sido actualizada!')
+        return super().form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['titulo_pagina'] = f"Personalizar la Apariencia de {self.object.nombre}"
+        context['colegio'] = self.object # Asegura que la variable 'colegio' esté en el contexto
+        return context
+# --- FIN: VISTA DE PERSONALIZACIÓN MEJORADA ---
