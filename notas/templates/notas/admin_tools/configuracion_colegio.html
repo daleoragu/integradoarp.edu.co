@@ -1,0 +1,130 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}{{ titulo }} | Plataforma de Notas{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">{{ titulo }}</h4>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">
+                        Desde aquí puedes personalizar la información y la apariencia de tu colegio en toda la plataforma.
+                        Los cambios se reflejarán en el portal público y en los documentos generados (boletines, etc.).
+                    </p>
+                    <hr>
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- SECCIÓN DE DATOS OFICIALES -->
+                        <div class="row mb-4">
+                            <h5 class="mb-3 border-bottom pb-2">Datos Oficiales y de Contacto</h5>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.nit.id_for_label }}" class="form-label fw-bold">{{ form.nit.label }}</label>
+                                {{ form.nit }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.resolucion_aprobacion.id_for_label }}" class="form-label fw-bold">{{ form.resolucion_aprobacion.label }}</label>
+                                {{ form.resolucion_aprobacion }}
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label for="{{ form.direccion_fisica.id_for_label }}" class="form-label fw-bold">{{ form.direccion_fisica.label }}</label>
+                                {{ form.direccion_fisica }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.telefono_contacto.id_for_label }}" class="form-label fw-bold">{{ form.telefono_contacto.label }}</label>
+                                {{ form.telefono_contacto }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.email_contacto.id_for_label }}" class="form-label fw-bold">{{ form.email_contacto.label }}</label>
+                                {{ form.email_contacto }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.whatsapp_numero.id_for_label }}" class="form-label fw-bold">{{ form.whatsapp_numero.label }}</label>
+                                {{ form.whatsapp_numero }}
+                                <div class="form-text">{{ form.whatsapp_numero.help_text }}</div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN DE IDENTIDAD VISUAL -->
+                        <div class="row mb-4">
+                            <h5 class="mb-3 border-bottom pb-2">Identidad Visual</h5>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.logo.id_for_label }}" class="form-label fw-bold">{{ form.logo.label }}</label>
+                                {% if colegio.logo %}
+                                    <p class="form-text">Logo actual: <a href="{{ colegio.logo.url }}" target="_blank">{{ colegio.logo.name|cut:"logos_colegios/" }}</a></p>
+                                {% endif %}
+                                {{ form.logo }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.logo_secundario.id_for_label }}" class="form-label fw-bold">{{ form.logo_secundario.label }}</label>
+                                {% if colegio.logo_secundario %}
+                                    <p class="form-text">Logo actual: <a href="{{ colegio.logo_secundario.url }}" target="_blank">{{ colegio.logo_secundario.name|cut:"logos_colegios/" }}</a></p>
+                                {% endif %}
+                                {{ form.logo_secundario }}
+                                <div class="form-text">{{ form.logo_secundario.help_text }}</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.color_primario.id_for_label }}" class="form-label fw-bold">{{ form.color_primario.label }}</label>
+                                {{ form.color_primario }}
+                                <div class="form-text">{{ form.color_primario.help_text }}</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.color_secundario.id_for_label }}" class="form-label fw-bold">{{ form.color_secundario.label }}</label>
+                                {{ form.color_secundario }}
+                                <div class="form-text">{{ form.color_secundario.help_text }}</div>
+                            </div>
+                        </div>
+
+                        <!-- SECCIÓN DE REDES SOCIALES -->
+                        <div class="row mb-4">
+                            <h5 class="mb-3 border-bottom pb-2">Redes Sociales</h5>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.url_facebook.id_for_label }}" class="form-label fw-bold">{{ form.url_facebook.label }}</label>
+                                {{ form.url_facebook }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.url_instagram.id_for_label }}" class="form-label fw-bold">{{ form.url_instagram.label }}</label>
+                                {{ form.url_instagram }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.url_twitter_x.id_for_label }}" class="form-label fw-bold">{{ form.url_twitter_x.label }}</label>
+                                {{ form.url_twitter_x }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.url_youtube.id_for_label }}" class="form-label fw-bold">{{ form.url_youtube.label }}</label>
+                                {{ form.url_youtube }}
+                            </div>
+                        </div>
+                        
+                        <!-- SECCIÓN DE CONFIGURACIÓN DEL PORTAL -->
+                        <div class="row mb-4">
+                             <h5 class="mb-3 border-bottom pb-2">Configuración del Portal</h5>
+                             <div class="col-md-12">
+                                <div class="form-check">
+                                    {{ form.portal_publico_activo }}
+                                    <label class="form-check-label" for="{{ form.portal_publico_activo.id_for_label }}">
+                                        {{ form.portal_publico_activo.label }}
+                                    </label>
+                                </div>
+                             </div>
+                        </div>
+
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save me-2"></i>Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -18,3 +18,17 @@ def notificaciones_destacadas(request):
         }
     return {'notificaciones_destacadas': []}
 
+# --- NUEVA FUNCIÓN QUE DEBES AÑADIR ---
+def colegio_context(request):
+    """
+    Pone el objeto del colegio actual en el contexto de todas las plantillas.
+    """
+    # Este ejemplo asume que el usuario logueado tiene un perfil asociado a un colegio.
+    if request.user.is_authenticated and hasattr(request.user, 'perfil'):
+        return {'colegio': request.user.perfil.colegio}
+
+    # Para el portal público, se puede añadir lógica basada en el dominio.
+    # Si no se encuentra, devolvemos un diccionario vacío para evitar errores.
+    return {}
+
+

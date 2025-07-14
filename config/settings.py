@@ -79,6 +79,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'notas.context_processors.contador_notificaciones',    # Tu procesador existente
+                'notas.context_processors.notificaciones_destacadas', # Tu procesador existente
+                'notas.context_processors.colegio_context',           # <-- AÑADE ESTA NUEVA LÍNEA
             ],
         },
     },
