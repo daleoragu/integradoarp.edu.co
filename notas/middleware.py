@@ -1,6 +1,6 @@
 # notas/middleware.py
 from .models import Colegio
-
+# Probando el commit
 class ColegioMiddleware:
     """
     Middleware que identifica el colegio activo basándose en el dominio.
