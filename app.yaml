@@ -1,0 +1,28 @@
+# app.yaml - Archivo de configuración para Google App Engine
+
+# Elige el runtime de Python que coincida con tu entorno
+runtime: python310
+
+# El entrypoint le dice a App Engine cómo iniciar tu aplicación usando Gunicorn,
+# el servidor estándar para producción en Django.
+entrypoint: gunicorn -b :$PORT config.wsgi
+
+# Configuración de la instancia. F1 es la más pequeña y económica para empezar.
+instance_class: F1
+
+# Configuración de escalado automático.
+# min_instances: 0 permite que la app "duerma" si no hay tráfico, ahorrando costos.
+automatic_scaling:
+  min_instances: 0
+  max_instances: 1 # Limita a 1 instancia para controlar costos al principio
+
+# Variables de entorno que no son secretas.
+# Los secretos se manejarán a través de Cloud Build.
+env_variables:
+  DJANGO_SETTINGS_MODULE: 'config.settings'
+  # En producción, DEBUG siempre debe ser False por seguridad.
+  DEBUG: 'False'
+
+# Necesario para que las librerías que usan C (como psycopg2) se compilen correctamente.
+build_env_variables:
+  C_FORCE_ROOT: "true"

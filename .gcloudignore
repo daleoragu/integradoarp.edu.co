@@ -1,0 +1,25 @@
+# .gcloudignore
+
+# Archivos de la máquina virtual de Python
+.venv/
+venv/
+env/
+*.pyc
+__pycache__/
+
+# Archivos de configuración local
+.env
+db.sqlite3
+db.sqlite3-journal
+
+# Archivos de Git
+.git
+.gitignore
+
+# Archivos de IDEs
+.vscode/
+.idea/
+
+# Archivos de sistema operativo
+.DS_Store
+Thumbs.db
