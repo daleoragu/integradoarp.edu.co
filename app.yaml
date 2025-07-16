@@ -1,28 +1,37 @@
-# app.yaml - Archivo de configuración para Google App Engine
+# app.yaml - Configuración para Google App Engine
 
-# Elige el runtime de Python que coincida con tu entorno
-runtime: python310
+# Elige el runtime de Python que coincida con tu entorno de desarrollo
+runtime: python310 # O python311, python312, etc.
 
-# El entrypoint le dice a App Engine cómo iniciar tu aplicación usando Gunicorn,
-# el servidor estándar para producción en Django.
+# Las variables de entorno que tu aplicación necesita para funcionar.
+# Estas se cargan de forma segura desde Google Secret Manager.
+env_variables:
+  # --- Secretos ---
+  # Formato: projects/PROJECT_ID/secrets/SECRET_NAME/versions/latest
+  SECRET_KEY: "projects/supercolegios/secrets/django_secret_key/versions/latest"
+  DB_PASSWORD: "projects/supercolegios/secrets/db_password/versions/latest"
+  GCS_CREDENTIALS: "projects/supercolegios/secrets/gcs_credentials/versions/latest"
+
+  # --- Configuración de la Base de Datos ---
+  # El nombre de conexión de tu instancia de Cloud SQL.
+  # Puedes encontrarlo en la página de detalles de tu instancia en la consola de Google Cloud.
+  CLOUD_SQL_CONNECTION_NAME: "supercolegios:us-central1:mcolegio-db-prod"
+  DB_NAME: "supercolegios_db"
+  DB_USER: "postgres" # O el usuario que hayas configurado
+
+  # --- Configuración de Google Cloud Storage ---
+  GS_BUCKET_NAME: "media-supercolegios-plataforma"
+
+  # --- Configuración de Django ---
+  # Es importante que DEBUG sea 'False' en producción
+  DEBUG: "False"
+
+# Configuración para el punto de entrada de la aplicación (servidor Gunicorn)
 entrypoint: gunicorn -b :$PORT config.wsgi
 
-# Configuración de la instancia. F1 es la más pequeña y económica para empezar.
+# Configuración para instancias automáticas (puedes ajustarla más adelante)
 instance_class: F1
-
-# Configuración de escalado automático.
-# min_instances: 0 permite que la app "duerma" si no hay tráfico, ahorrando costos.
 automatic_scaling:
+  max_instances: 2
   min_instances: 0
-  max_instances: 1 # Limita a 1 instancia para controlar costos al principio
-
-# Variables de entorno que no son secretas.
-# Los secretos se manejarán a través de Cloud Build.
-env_variables:
-  DJANGO_SETTINGS_MODULE: 'config.settings'
-  # En producción, DEBUG siempre debe ser False por seguridad.
-  DEBUG: 'False'
-
-# Necesario para que las librerías que usan C (como psycopg2) se compilen correctamente.
-build_env_variables:
-  C_FORCE_ROOT: "true"
+  target_cpu_utilization: 0.65
