@@ -9,7 +9,11 @@ env_variables:
   # --- Secretos ---
   # Formato: projects/PROJECT_ID/secrets/SECRET_NAME/versions/latest
   SECRET_KEY: "projects/supercolegios/secrets/django_secret_key/versions/latest"
-  DB_PASSWORD: "projects/supercolegios/secrets/db_password/versions/latest"
+  
+  # CORRECCIÓN: Se apunta a una versión específica del secreto para asegurar que se usa la contraseña correcta.
+  # ¡IMPORTANTE! Reemplaza el '5' con el número de la última versión que creaste en Secret Manager.
+  DB_PASSWORD: "projects/supercolegios/secrets/db_password/versions/5"
+  
   GCS_CREDENTIALS: "projects/supercolegios/secrets/gcs_credentials/versions/latest"
 
   # --- Configuración de la Base de Datos ---
@@ -29,7 +33,7 @@ env_variables:
 # Configuración para el punto de entrada de la aplicación (servidor Gunicorn)
 entrypoint: gunicorn -b :$PORT config.wsgi
 
-# CORRECCIÓN: Se añade esta sección para declarar explícitamente la conexión a Cloud SQL.
+# Se añade esta sección para declarar explícitamente la conexión a Cloud SQL.
 # Es la práctica recomendada y asegura que App Engine configure el socket correctamente.
 beta_settings:
   cloud_sql_instances: "supercolegios:us-central1:mcolegio-db-prod"
