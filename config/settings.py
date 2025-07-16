@@ -15,7 +15,7 @@ except ModuleNotFoundError:
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-local-dev-key-fallback')
 # CORRECCIÓN: DEBUG activado temporalmente para ver el error detallado.
-DEBUG = True # ¡OJO! Solo para depurar. Cambiar a False para producción.
+DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 't')
 
 # --- Configuración de Hosts y Seguridad ---
 ALLOWED_HOSTS = []
