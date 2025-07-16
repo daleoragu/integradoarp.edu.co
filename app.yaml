@@ -12,7 +12,7 @@ env_variables:
   
   # CORRECCIÓN: Se apunta a una versión específica del secreto para asegurar que se usa la contraseña correcta.
   # ¡IMPORTANTE! Reemplaza el '5' con el número de la última versión que creaste en Secret Manager.
-  DB_PASSWORD: "projects/supercolegios/secrets/db_password/versions/3"
+  DB_PASSWORD: "T6\T%$:b1T&)VCG("
   
   GCS_CREDENTIALS: "projects/supercolegios/secrets/gcs_credentials/versions/latest"
 
