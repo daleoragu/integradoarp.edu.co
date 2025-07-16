@@ -29,6 +29,11 @@ env_variables:
 # Configuración para el punto de entrada de la aplicación (servidor Gunicorn)
 entrypoint: gunicorn -b :$PORT config.wsgi
 
+# CORRECCIÓN: Se añade esta sección para declarar explícitamente la conexión a Cloud SQL.
+# Es la práctica recomendada y asegura que App Engine configure el socket correctamente.
+beta_settings:
+  cloud_sql_instances: "supercolegios:us-central1:mcolegio-db-prod"
+
 # Configuración para instancias automáticas (puedes ajustarla más adelante)
 instance_class: F1
 automatic_scaling:
