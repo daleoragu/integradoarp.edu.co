@@ -1,0 +1,200 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Seleccionar Estudiante para Reporte - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .container-lista-estudiantes {
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        max-width: 800px;
+        margin: 30px auto;
+    }
+    .container-lista-estudiantes h2 {
+        color: #0056b3;
+        margin-bottom: 25px;
+        text-align: center;
+    }
+    .form-filtros-estudiantes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-bottom: 30px;
+        align-items: flex-end;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 20px;
+    }
+    .form-filtros-estudiantes .form-grupo {
+        flex: 1;
+        min-width: 200px;
+    }
+    .form-filtros-estudiantes label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+    }
+    .form-filtros-estudiantes select {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid var(--color-borde);
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    .form-filtros-estudiantes button {
+        padding: 10px 20px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .form-filtros-estudiantes button:hover {
+        background-color: #0056b3;
+    }
+
+    .table-estudiantes {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    .table-estudiantes th, .table-estudiantes td {
+        border: 1px solid #ddd;
+        padding: 12px;
+        text-align: left;
+        vertical-align: middle;
+    }
+    .table-estudiantes th {
+        background-color: #f8f8f8;
+        color: #0056b3;
+        font-weight: bold;
+    }
+    .table-estudiantes tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+    .table-estudiantes tbody tr:hover {
+        background-color: #f1f1f1;
+    }
+    .btn-ver-reporte {
+        padding: 8px 15px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+        font-size: 0.9rem;
+    }
+    .btn-ver-reporte:hover {
+        background-color: #218838;
+    }
+    .no-estudiantes {
+        text-align: center;
+        padding: 30px;
+        border: 1px dashed #ccc;
+        border-radius: 8px;
+        color: #777;
+        margin-top: 30px;
+    }
+    .btn-back {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #6c757d;
+        color: white;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+    .btn-back:hover {
+        background-color: #5a6268;
+    }
+    @media (max-width: 768px) {
+        .container-lista-estudiantes {
+            padding: 15px;
+        }
+        .form-filtros-estudiantes {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .form-filtros-estudiantes .form-grupo {
+            min-width: unset;
+            width: 100%;
+        }
+        .form-filtros-estudiantes button {
+            width: 100%;
+            margin-top: 10px;
+        }
+        .table-estudiantes th, .table-estudiantes td {
+            padding: 8px;
+            font-size: 0.9rem;
+        }
+        .btn-ver-reporte {
+            padding: 6px 10px;
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}Seleccionar Estudiante para Reporte{% endblock %}
+
+{% block content %}
+<div class="container-lista-estudiantes">
+    <h2>Listado de Estudiantes</h2>
+    <p class="text-muted text-center mb-4">Seleccione un estudiante para ver su acta de reporte parcial de desempeño.</p>
+
+    {# Formulario de filtro por grado #}
+    <form method="GET" action="{% url 'lista_estudiantes_reporte' %}" class="form-filtros-estudiantes">
+        <div class="form-grupo">
+            <label for="curso_id">Filtrar por Grado:</label>
+            <select name="curso_id" id="curso_id" class="form-select">
+                <option value="">Todos los Grados</option>
+                {% for curso_opcion in todos_los_cursos %}
+                    <option value="{{ curso_opcion.id }}" {% if curso_seleccionado_id|stringformat:"s" == curso_opcion.id|stringformat:"s" %}selected{% endif %}>
+                        {{ curso_opcion.nombre }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit"><i class="fas fa-filter me-2"></i>Filtrar</button>
+    </form>
+
+    {% if estudiantes %}
+        <table class="table-estudiantes">
+            <thead>
+                <tr>
+                    <th>Nombre Completo</th>
+                    <th>Curso</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for estudiante_obj in estudiantes %}
+                    <tr>
+                        <td>{{ estudiante_obj.user.get_full_name|default:estudiante_obj.user.username }}</td>
+                        <td>{{ estudiante_obj.curso.nombre }}</td>
+                        <td>
+                            <a href="{% url 'acta_reporte_parcial_estudiante' estudiante_obj.id %}" class="btn-ver-reporte">
+                                <i class="fas fa-file-alt me-2"></i>Ver Acta
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="no-estudiantes">
+            <p><i class="fas fa-info-circle fa-2x mb-3" style="color: #6c757d;"></i></p>
+            <p>No hay estudiantes disponibles para mostrar en este momento {% if curso_seleccionado_id %}en el grado seleccionado{% endif %}.</p>
+        </div>
+    {% endif %}
+
+    <div class="text-center mt-4">
+        <a href="javascript:history.back()" class="btn-back"><i class="fas fa-arrow-left me-2"></i>Volver</a>
+    </div>
+</div>
+{% endblock %}

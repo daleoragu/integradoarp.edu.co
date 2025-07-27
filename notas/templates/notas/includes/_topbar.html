@@ -1,8 +1,10 @@
 {% load static %}
 {% load nota_filters %}
+{% load auth_extras %}
 
 <header class="topbar-new">
     <div class="topbar-section left">
+         
         <!-- Menú Principal Desplegable -->
         <div class="dropdown">
             <button class="btn btn-outline-light dropdown-toggle" type="button" id="mainMenuDropdown" data-bs-toggle="dropdown" aria-expanded="false">
@@ -15,7 +17,7 @@
                 
                 {# --- 1. COMUNICACIONES --- #}
                 <li><h6 class="dropdown-header">Comunicaciones</h6></li>
-                <li><a class="dropdown-item {% if 'mensajes' in request.path %}active{% endif %}" href="{% url 'bandeja_entrada' %}"><i class="fas fa-envelope fa-fw me-2 text-muted"></i>CofraMail</a></li>
+                <li><a class="dropdown-item {% if 'mensajes' in request.path %}active{% endif %}" href="{% url 'bandeja_entrada' %}"><i class="fas fa-envelope fa-fw me-2 text-muted"></i>Correo interno</a></li>
                 
                 {# --- 2. PANEL DEL ESTUDIANTE --- #}
                 {% if user|has_group:"Estudiantes" %}
@@ -23,6 +25,10 @@
                     <li><h6 class="dropdown-header">Panel Estudiante</h6></li>
                     <li><a class="dropdown-item {% if request.resolver_match.url_name == 'mi_observador' %}active{% endif %}" href="{% url 'mi_observador' %}"><i class="fas fa-user-graduate fa-fw me-2 text-muted"></i>Mi Observador</a></li>
                     <li><a class="dropdown-item {% if request.resolver_match.url_name == 'mi_boletin' %}active{% endif %}" href="{% url 'mi_boletin' %}"><i class="fas fa-file-pdf fa-fw me-2 text-muted"></i>Mi Boletín</a></li>
+                    {# Nuevo enlace para el estudiante #}
+                    {% if user.estudiante %}
+                        <li><a class="dropdown-item {% if request.resolver_match.url_name == 'acta_reporte_parcial_estudiante' %}active{% endif %}" href="{% url 'acta_reporte_parcial_estudiante' user.estudiante.id %}"><i class="fas fa-file-alt fa-fw me-2 text-muted"></i>Mi Reporte Parcial</a></li>
+                    {% endif %}
                 {% endif %}
 
                 {# --- 3. GESTIÓN DOCENTE --- #}
@@ -31,7 +37,8 @@
                     <li><h6 class="dropdown-header">Gestión Docente</h6></li>
                     <li><a class="dropdown-item {% if request.resolver_match.url_name == 'ingresar_notas_periodo' %}active{% endif %}" href="{% url 'ingresar_notas_periodo' %}"><i class="fas fa-edit fa-fw me-2 text-muted"></i>Ingresar Notas</a></li>   
                     <li><a class="dropdown-item {% if request.resolver_match.url_name == 'plan_mejoramiento' %}active{% endif %}" href="{% url 'plan_mejoramiento' %}"><i class="fas fa-tasks fa-fw me-2 text-muted"></i>Planes de Mejoramiento</a></li>
-                    <li><a class="dropdown-item {% if request.resolver_match.url_name == 'reporte_parcial' %}active{% endif %}" href="{% url 'reporte_parcial' %}"><i class="fas fa-file-alt fa-fw me-2 text-muted"></i>Reporte Parcial</a></li>
+                    <li><a class="dropdown-item {% if request.resolver_match.url_name == 'reporte_parcial' %}active{% endif %}" href="{% url 'reporte_parcial' %}"><i class="fas fa-file-alt fa-fw me-2 text-muted"></i>Reporte Parcial (Docente)</a></li>
+                    <li><a class="dropdown-item {% if request.resolver_match.url_name == 'lista_estudiantes_reporte' %}active{% endif %}" href="{% url 'lista_estudiantes_reporte' %}"><i class="fas fa-user-times fa-fw me-2 text-muted"></i>Reporte Estudiantes</a></li>
                     <li><a class="dropdown-item {% if request.resolver_match.url_name == 'asistencia' %}active{% endif %}" href="{% url 'asistencia' %}"><i class="fas fa-user-check fa-fw me-2 text-muted"></i>Toma de Asistencia</a></li>
                     <li><a class="dropdown-item {% if 'observador' in request.path %}active{% endif %}" href="{% url 'observador_selector' %}"><i class="fas fa-eye fa-fw me-2 text-muted"></i>Observador</a></li>
                     <li><a class="dropdown-item {% if 'boletin' in request.path %}active{% endif %}" href="{% url 'selector_boletines' %}"><i class="fas fa-file-invoice fa-fw me-2 text-muted"></i>Generar Boletines</a></li>
@@ -52,29 +59,29 @@
                     <li><a class="dropdown-item {% if request.resolver_match.url_name == 'panel_control_promocion' %}active{% endif %}" href="{% url 'panel_control_promocion' %}"><i class="fas fa-gavel fa-fw me-2 text-muted"></i>Regla de Promoción</a></li>
                     <li><a class="dropdown-item {% if request.resolver_match.url_name == 'configuracion_calificaciones' %}active{% endif %}" href="{% url 'configuracion_calificaciones' %}"><i class="fas fa-percentage fa-fw me-2 text-muted"></i>Permisos de Porcentajes</a></li>
                     <li><a class="dropdown-item {% if request.resolver_match.url_name == 'gestion_ponderacion_areas' %}active{% endif %}" href="{% url 'gestion_ponderacion_areas' %}"><i class="fas fa-balance-scale fa-fw me-2 text-muted"></i>Ponderación de Áreas</a></li>
-                    
+                    {# Nuevo enlace para el reporte de estudiantes en Admin #}
+                    <li><a class="dropdown-item {% if request.resolver_match.url_name == 'lista_estudiantes_reporte' %}active{% endif %}" href="{% url 'lista_estudiantes_reporte' %}"><i class="fas fa-user-times fa-fw me-2 text-muted"></i>Reporte Estudiantes</a></li>
+                    <li><a class="dropdown-item {% if request.resolver_match.url_name == 'impresion_masiva_carnets' %}active{% endif %}" href="{% url 'impresion_masiva_carnets' %}"><i class="fas fa-id-card fa-fw me-2 text-muted"></i>Imprimir Carnets</a></li>
                 {% endif %}
             </ul>
         </div>
     </div>
 
     <div class="topbar-section center">
-        <a class="navbar-brand" href="{% url 'dashboard' %}">
-            <img src="{% static 'img/logo_colegio.png' %}" alt="Escudo del Colegio" class="topbar-logo">
-            <span class="school-name d-none d-md-inline-block">I.E.T. Alfonso Palacio Rudas</span>
+        <a class="navbar-brand d-flex align-items-center" href="{% url 'dashboard' %}">
+            {% if colegio.escudo %}
+                <img src="{{ colegio.escudo.url }}" class="topbar-logo" alt="Escudo del Colegio">
+            {% endif %}
+            <span class="school-name d-none d-md-inline-block">{{ colegio.nombre }}</span>
         </a>
     </div>
 
     <div class="topbar-section right">
-        <a href="{% url 'portal' %}" class="topbar-icon-link d-none d-md-block" title="Ir al Portal Público">
-            <i class="fas fa-globe fa-lg"></i>
-        </a>
-        <div class="notification-bell ms-3">
+            <div class="notification-bell ms-3">
             <a href="#" class="topbar-icon-link" id="notification-icon-link" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 <i class="fas fa-bell fa-lg"></i>
-                {% get_unread_notification_count user as unread_count %}
-                {% if unread_count > 0 %}
-                    <span class="badge bg-danger rounded-pill notification-badge-abs">{{ unread_count }}</span>
+                {% if contador_notificaciones_no_leidas > 0 %}
+                    <span class="badge rounded-pill notification-badge-abs">{{ contador_notificaciones_no_leidas }}</span>
                 {% endif %}
             </a>
             <ul class="dropdown-menu dropdown-menu-end notification-list" aria-labelledby="notification-icon-link">
@@ -99,7 +106,7 @@
                 {% elif user|has_group:"Docentes" and user.docente %}
                      <li><a class="dropdown-item" href="{% url 'editar_docente' user.docente.id %}"><i class="fas fa-id-card fa-fw me-2 text-muted"></i>Mi Ficha</a></li>
                 {% endif %}
-                <li><a class="dropdown-item" href="{% url 'cambiar_password' %}"><i class="fas fa-key fa-fw me-2 text-muted"></i>Cambiar Contraseña</a></li>
+                <li><a class="dropdown-item" href="{% url 'cambiar_password' %}\"><i class="fas fa-key fa-fw me-2 text-muted"></i>Cambiar Contraseña</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i class="fas fa-sign-out-alt fa-fw me-2"></i>Salir</a></li>
             </ul>

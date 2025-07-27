@@ -1,0 +1,44 @@
+{% comment %}
+Este template solo contiene el cuerpo del reporte de asistencia.
+El encabezado y los estilos principales son añadidos por el generador de PDF.
+{% endcomment %}
+
+<h2>REPORTE DE ASISTENCIA</h2>
+<p>
+    <strong>CURSO:</strong> {{ asignacion.curso.nombre }} | 
+    <strong>ASIGNATURA:</strong> {{ asignacion.materia.nombre }} | 
+    <strong>DOCENTE:</strong> {{ asignacion.docente.user.get_full_name }}
+</p>
+
+{% for reporte in reportes_por_mes %}
+{# --- NUEVO: Contenedor para aplicar el salto de página --- #}
+<div class="reporte-mensual">
+    <table class="tabla-asistencia">
+        <thead>
+            <tr>
+                <th colspan="{{ reporte.fechas|length|add:1 }}">{{ reporte.nombre_mes|upper }}</th>
+            </tr>
+            <tr>
+                <th class="nombre-estudiante">Estudiante</th>
+                {% for fecha in reporte.fechas %}
+                <th>{{ fecha.day }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for fila in reporte.tabla_asistencia %}
+            <tr>
+                <td class="nombre-estudiante">{{ fila.nombre }}</td>
+                {% for estado in fila.estados %}
+                <td>{{ estado }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endfor %}
+
+{% if not reportes_por_mes %}
+<p>No se encontraron datos para generar el reporte.</p>
+{% endif %}

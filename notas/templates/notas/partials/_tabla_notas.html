@@ -1,121 +1,130 @@
 {% comment %}
   Plantilla rediseñada para la tabla de calificaciones.
-  Ahora incluye un panel condicional para modificar los porcentajes.
 {% endcomment %}
 
 {% if asignacion_seleccionada and periodo_seleccionado %}
-<div class="card shadow-sm mt-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Calificaciones: {{ asignacion_seleccionada.materia }} en {{ asignacion_seleccionada.curso }}</h5>
-        <div id="status-indicator" class="status-indicator" title="Estado de los cambios"></div>
-    </div>
 
-    <!-- INICIO: PANEL DE PONDERACIÓN CONDICIONAL -->
-    {% if permiso_modificar_porcentajes %}
-    <div class="card-body bg-light border-bottom" id="panel-ponderacion">
-        <h6 class="card-title"><i class="fas fa-sliders-h me-2"></i>Ajustar Ponderación de la Asignatura</h6>
-        <p class="card-text text-muted small">
-            Puedes ajustar los porcentajes para esta asignatura. La suma debe ser exactamente 100%.
-        </p>
-        <div class="row align-items-center">
-            <!-- CORRECCIÓN: Se han ajustado los id y for para que coincidan -->
-            <div class="col-md-3">
-                <label for="p-ser" class="form-label mb-0">Ser (%):</label>
-                <input type="number" class="form-control form-control-sm porcentaje-input" id="p-ser" value="{{ asignacion_seleccionada.porcentaje_ser }}" min="0" max="100">
-            </div>
-            <div class="col-md-3">
-                <label for="p-saber" class="form-label mb-0">Saber (%):</label>
-                <input type="number" class="form-control form-control-sm porcentaje-input" id="p-saber" value="{{ asignacion_seleccionada.porcentaje_saber }}" min="0" max="100">
-            </div>
-            <div class="col-md-3">
-                <label for="p-hacer" class="form-label mb-0">Hacer (%):</label>
-                <input type="number" class="form-control form-control-sm porcentaje-input" id="p-hacer" value="{{ asignacion_seleccionada.porcentaje_hacer }}" min="0" max="100">
-            </div>
-            <div class="col-md-3">
-                <label class="form-label mb-0">Suma Total:</label>
-                <div id="suma-porcentajes" class="fw-bold fs-5 p-1 border rounded text-center bg-white">100%</div>
+    {% if not hay_indicadores %}
+    <div class="card shadow-sm mt-4">
+        <div class="card-body text-center p-5">
+            <div class="alert alert-warning mb-0" role="alert">
+                <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Atención: Faltan los Indicadores de Logro</h4>
+                <p>Para poder ingresar calificaciones, primero debe definir al menos un indicador o desempeño para esta asignatura en el periodo seleccionado.</p>
+                <hr>
+                <p class="mb-0">Por favor, utilice el panel de <strong>"Indicadores de Logro / Desempeños del Periodo"</strong> que se encuentra arriba para agregarlos.</p>
             </div>
         </div>
-        <div id="error-porcentajes" class="text-danger small mt-2" style="display: none;">La suma debe ser 100%.</div>
+    </div>
+    {% else %}
+    <div class="card shadow-sm mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Calificaciones: {{ asignacion_seleccionada.materia }} en {{ asignacion_seleccionada.curso }}</h5>
+            <div id="status-indicator" class="status-indicator" title="Estado de los cambios"></div>
+        </div>
+
+        {% if permiso_modificar_porcentajes %}
+        <div class="card-body bg-light border-bottom" id="panel-ponderacion">
+            <h6 class="card-title"><i class="fas fa-sliders-h me-2"></i>Ajustar Ponderación de la Asignatura</h6>
+            <p class="card-text text-muted small">
+                Puedes ajustar los porcentajes para esta asignatura. La suma debe ser exactamente 100%.
+            </p>
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <label for="p-ser" class="form-label mb-0">Ser (%):</label>
+                    <input type="number" class="form-control form-control-sm porcentaje-input" id="p-ser" value="{{ asignacion_seleccionada.porcentaje_ser }}" min="0" max="100">
+                </div>
+                <div class="col-md-3">
+                    <label for="p-saber" class="form-label mb-0">Saber (%):</label>
+                    <input type="number" class="form-control form-control-sm porcentaje-input" id="p-saber" value="{{ asignacion_seleccionada.porcentaje_saber }}" min="0" max="100">
+                </div>
+                <div class="col-md-3">
+                    <label for="p-hacer" class="form-label mb-0">Hacer (%):</label>
+                    <input type="number" class="form-control form-control-sm porcentaje-input" id="p-hacer" value="{{ asignacion_seleccionada.porcentaje_hacer }}" min="0" max="100">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-0">Suma Total:</label>
+                    <div id="suma-porcentajes" class="fw-bold fs-5 p-1 border rounded text-center bg-white">100%</div>
+                </div>
+            </div>
+            <div id="error-porcentajes" class="text-danger small mt-2" style="display: none;">La suma debe ser 100%.</div>
+        </div>
+        {% endif %}
+        
+        <div id="mensaje-indicadores" class="p-3" style="display: none;"></div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover tabla-notas-excel" 
+                   id="tabla-calificaciones"
+                   data-hay-indicadores="{{ hay_indicadores|yesno:'true,false' }}">
+                {# El JavaScript construirá aquí el thead y el tbody completos. #}
+            </table>
+        </div>
+        <div class="card-footer d-flex justify-content-between align-items-center">
+            <small class="text-muted">Haga clic en los encabezados (n1, n2...) para describirlos.</small>
+            <div>
+                {% if not periodo_cerrado %}
+                    <button class="btn btn-primary" id="guardarTodoBtn" disabled>
+                        <i class="fas fa-save me-2"></i>Guardar Cambios
+                    </button>
+                {% else %}
+                    <p class="mb-0 text-warning"><i class="fas fa-lock me-2"></i>El periodo está cerrado.</p>
+                {% endif %}
+            </div>
+        </div>
     </div>
     {% endif %}
-    <!-- FIN: PANEL DE PONDERACIÓN CONDICIONAL -->
 
-    <div id="mensaje-indicadores" class="p-3" style="display: none;"></div>
+    <!-- Datos JSON para que JavaScript los lea. -->
+    <div id="estudiantes-data-json" style="display: none;">{{ estudiantes_data_json|safe }}</div>
+    <div id="url-get-inasistencias" data-url="{% url 'ajax_get_inasistencias_auto' %}"></div>
+    
+    <!-- --- INICIO: DIV AÑADIDO PARA LA ESCALA DE VALORACIÓN --- -->
+    <div id="escala-valoracion-json" style="display: none;">{{ escala_valoracion_json|safe }}</div>
+    <!-- --- FIN: DIV AÑADIDO --- -->
 
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover tabla-notas-excel" 
-               id="tabla-calificaciones"
-               data-hay-indicadores="{{ hay_indicadores|yesno:'true,false' }}">
-            {# El JavaScript construirá aquí el thead y el tbody completos. #}
-        </table>
+
+    <div id="asignacion-details" 
+         data-usar-ponderacion-equitativa="{{ asignacion_seleccionada.usar_ponderacion_equitativa|yesno:'true,false' }}"
+         data-p-ser="{{ asignacion_seleccionada.ser_calc }}"
+         data-p-saber="{{ asignacion_seleccionada.saber_calc }}"
+         data-p-hacer="{{ asignacion_seleccionada.hacer_calc }}">
     </div>
-    <div class="card-footer d-flex justify-content-between align-items-center">
-        <small class="text-muted">Haga clic en los encabezados (n1, n2...) para describirlos.</small>
-        <div>
-            {% if not periodo_cerrado %}
-                <button class="btn btn-primary" id="guardarTodoBtn" disabled>
-                    <i class="fas fa-save me-2"></i>Guardar Cambios
-                </button>
-            {% else %}
-                <p class="mb-0 text-warning"><i class="fas fa-lock me-2"></i>El periodo está cerrado.</p>
-            {% endif %}
-        </div>
-    </div>
-</div>
 
-<!-- Datos JSON para que JavaScript los lea. -->
-<div id="estudiantes-data-json" style="display: none;">{{ estudiantes_data_json|safe }}</div>
-<div id="url-get-inasistencias" data-url="{% url 'ajax_get_inasistencias_auto' %}"></div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const panelPonderacion = document.getElementById('panel-ponderacion');
+        if (panelPonderacion) {
+            const inputs = panelPonderacion.querySelectorAll('.porcentaje-input');
+            const sumaDiv = document.getElementById('suma-porcentajes');
+            const errorDiv = document.getElementById('error-porcentajes');
+            const guardarBtn = document.getElementById('guardarTodoBtn');
 
-<!-- Datos de la asignación para que JavaScript los use. -->
-<div id="asignacion-details" 
-     data-usar-ponderacion-equitativa="{{ asignacion_seleccionada.usar_ponderacion_equitativa|yesno:'true,false' }}"
-     data-p-ser="{{ asignacion_seleccionada.ser_calc }}"
-     data-p-saber="{{ asignacion_seleccionada.saber_calc }}"
-     data-p-hacer="{{ asignacion_seleccionada.hacer_calc }}">
-</div>
+            function validarSuma() {
+                let suma = 0;
+                inputs.forEach(input => {
+                    suma += parseInt(input.value, 10) || 0;
+                });
 
-<!-- INICIO: SCRIPT PARA VALIDAR PORCENTAJES EN TIEMPO REAL -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const panelPonderacion = document.getElementById('panel-ponderacion');
-    if (panelPonderacion) {
-        const inputs = panelPonderacion.querySelectorAll('.porcentaje-input');
-        const sumaDiv = document.getElementById('suma-porcentajes');
-        const errorDiv = document.getElementById('error-porcentajes');
-        const guardarBtn = document.getElementById('guardarTodoBtn');
+                sumaDiv.textContent = suma + '%';
 
-        function validarSuma() {
-            let suma = 0;
-            inputs.forEach(input => {
-                suma += parseInt(input.value, 10) || 0;
-            });
-
-            sumaDiv.textContent = suma + '%';
-
-            if (suma === 100) {
-                sumaDiv.classList.remove('text-danger', 'bg-warning-subtle');
-                sumaDiv.classList.add('text-success', 'bg-success-subtle');
-                errorDiv.style.display = 'none';
-                if(guardarBtn) guardarBtn.disabled = false; // Habilita el botón si la suma es correcta
-            } else {
-                sumaDiv.classList.add('text-danger', 'bg-warning-subtle');
-                sumaDiv.classList.remove('text-success', 'bg-success-subtle');
-                errorDiv.style.display = 'block';
-                if(guardarBtn) guardarBtn.disabled = true; // Deshabilita el botón si la suma es incorrecta
+                if (suma === 100) {
+                    sumaDiv.classList.remove('text-danger', 'bg-warning-subtle');
+                    sumaDiv.classList.add('text-success', 'bg-success-subtle');
+                    errorDiv.style.display = 'none';
+                    if(guardarBtn) guardarBtn.disabled = false;
+                } else {
+                    sumaDiv.classList.add('text-danger', 'bg-warning-subtle');
+                    sumaDiv.classList.remove('text-success', 'bg-success-subtle');
+                    errorDiv.style.display = 'block';
+                    if(guardarBtn) guardarBtn.disabled = true;
+                }
             }
+
+            inputs.forEach(input => {
+                input.addEventListener('input', validarSuma);
+            });
+            validarSuma();
         }
-
-        inputs.forEach(input => {
-            input.addEventListener('input', validarSuma);
-        });
-
-        // Ejecutar la validación al cargar la página por si los valores iniciales son incorrectos
-        validarSuma();
-    }
-});
-</script>
-<!-- FIN: SCRIPT PARA VALIDAR PORCENTAJES -->
-
+    });
+    </script>
 {% endif %}

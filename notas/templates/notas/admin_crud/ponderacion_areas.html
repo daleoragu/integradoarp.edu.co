@@ -5,15 +5,39 @@
 
 {% block extra_css %}
 <style>
-    .area-card {
-        transition: box-shadow 0.3s ease-in-out;
+    /* Estilos para la tabla principal */
+    .table-ponderacion {
+        border: 1px solid #dee2e6;
     }
-    .area-card:hover {
-        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important;
+    .table-ponderacion thead th {
+        background-color: #343a40; /* Fondo oscuro para la cabecera */
+        color: white;
+        text-align: center;
+        vertical-align: middle;
+    }
+    /* Estilo para la celda del nombre del Área y Acciones que usan rowspan */
+    .area-cell {
+        background-color: #f8f9fa; /* Un fondo gris claro para destacar el área */
+        font-weight: bold;
+        vertical-align: middle !important;
+        text-align: center;
+        border-right: 1px solid #dee2e6;
+    }
+    .actions-cell {
+        background-color: #f8f9fa;
+        vertical-align: middle !important;
+        text-align: center;
+        border-left: 1px solid #dee2e6;
+    }
+    /* Estilo para la fila de la suma total de un área */
+    .total-row td {
+        background-color: #f8f9fa;
+        border-top: 2px solid #dee2e6; /* Línea más gruesa para separar áreas */
     }
     .table th, .table td {
         vertical-align: middle;
     }
+    /* Estilos para el div que muestra la suma */
     .sum-total {
         font-weight: bold;
         font-size: 1.1rem;
@@ -35,84 +59,120 @@
 {% block content %}
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="mb-0">Gestión de Ponderación por Áreas</h1>
-        <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left me-2"></i>Volver al Panel
-        </a>
+        <div>
+            <h1 class="mb-0">Gestión de Ponderación por Áreas</h1>
+            <p class="lead text-muted mb-0">
+                Asigne el peso porcentual y añada materias a cada área.
+            </p>
+        </div>
+        <div>
+            <a href="{% url 'admin_dashboard' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Volver
+            </a>
+            <a href="{% url 'crear_area' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Crear Área
+            </a>
+        </div>
     </div>
-
-    <p class="lead text-muted mb-4">
-        Asigne el peso porcentual que cada materia tendrá en la nota final de su área correspondiente. La suma de los porcentajes para cada área debe ser exactamente 100%.
-    </p>
 
     <form method="POST">
         {% csrf_token %}
-        <div class="row g-4">
-            {% for area in areas_con_ponderaciones %}
-            <div class="col-md-6">
-                <div class="card shadow-sm area-card h-100">
-                    <div class="card-header bg-dark text-white">
-                        <h5 class="mb-0">{{ area.nombre }}</h5>
-                    </div>
-                    <div class="card-body">
-                        {% if area.ponderaciones %}
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Materia</th>
-                                        <th style="width: 120px;">Porcentaje (%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for p in area.ponderaciones %}
-                                    <tr>
-                                        <td>{{ p.materia.nombre }}</td>
-                                        <td>
-                                            <input type="number" 
-                                                   class="form-control form-control-sm porcentaje-input"
-                                                   name="peso-{{ p.id }}" 
-                                                   value="{{ p.peso_porcentual|stringformat:"g" }}" 
-                                                   min="0" 
-                                                   max="100" 
-                                                   step="0.01"
-                                                   data-area-id="{{ area.id }}"
-                                                   required>
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td class="text-end fw-bold">Suma Total:</td>
-                                        <td>
-                                            <div class="sum-total text-center" id="sum-area-{{ area.id }}">100%</div>
-                                        </td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        {% else %}
-                            <p class="text-muted">No hay materias asignadas a esta área. Puede asignarlas desde el <a href="{% url 'admin:notas_areaconocimiento_change' area.id %}">panel de administración</a>.</p>
-                        {% endif %}
-                    </div>
-                </div>
+        <div class="card shadow-sm">
+            <div class="card-body p-0">
+                <table class="table table-bordered table-hover table-ponderacion mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">Área de Conocimiento</th>
+                            <th>Materia</th>
+                            <th style="width: 150px;">Ponderación (%)</th>
+                            <th style="width: 180px;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for area in areas_con_ponderaciones %}
+                            {% if area.ponderaciones %}
+                                {% for p in area.ponderaciones %}
+                                <tr>
+                                    {% if forloop.first %}
+                                    <td class="area-cell" rowspan="{{ area.ponderaciones|length|add:1 }}">
+                                        {{ area.nombre }}
+                                    </td>
+                                    {% endif %}
+                                    <td>{{ p.materia.nombre }}</td>
+                                    <td>
+                                        <input type="number" 
+                                               class="form-control form-control-sm porcentaje-input"
+                                               name="peso-{{ p.id }}" 
+                                               value="{{ p.peso_porcentual|stringformat:"g" }}" 
+                                               min="0" 
+                                               max="100" 
+                                               step="0.01"
+                                               data-area-id="{{ area.id }}"
+                                               required>
+                                    </td>
+                                    {% if forloop.first %}
+                                    <td class="actions-cell" rowspan="{{ area.ponderaciones|length|add:1 }}">
+                                        <!-- 👇 BOTÓN CORREGIDO 👇 -->
+                                        <a href="{% url 'gestion_materias' %}" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-tasks me-1"></i> Gestionar Materias
+                                        </a>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                                <tr class="total-row">
+                                    <td colspan="2" class="text-end fw-bold px-3">Suma Total:</td>
+                                    <td>
+                                        <div class="sum-total text-center" id="sum-area-{{ area.id }}"></div>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <!-- Caso para un área sin materias -->
+                                <tr>
+                                    <td class="area-cell">{{ area.nombre }}</td>
+                                    <td colspan="2" class="text-center text-muted fst-italic">
+                                        No hay materias asignadas.
+                                    </td>
+                                    <td class="actions-cell">
+                                        <!-- 👇 BOTÓN CORREGIDO 👇 -->
+                                        <a href="{% url 'gestion_materias' %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-tasks me-1"></i> Gestionar Materias
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% empty %}
+                        <!-- Mensaje si no hay áreas creadas -->
+                        <tr>
+                            <td colspan="4" class="text-center p-5">
+                                <div class="alert alert-info mb-0">
+                                    <h4 class="alert-heading">¡No se encontraron áreas de conocimiento!</h4>
+                                    <p>Para comenzar, por favor, crea tu primera área de conocimiento.</p>
+                                    <a href="{% url 'crear_area' %}" class="btn btn-primary">
+                                        <i class="fas fa-plus me-2"></i>Crear la primera Área
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-            {% empty %}
-            <div class="col-12">
-                <div class="alert alert-info">No se encontraron áreas de conocimiento.</div>
-            </div>
-            {% endfor %}
         </div>
 
+        {% if areas_con_ponderaciones %}
         <div class="mt-4 text-center">
             <button type="submit" class="btn btn-primary btn-lg" id="guardar-todo-btn">
                 <i class="fas fa-save me-2"></i>Guardar Todos los Cambios
             </button>
         </div>
+        {% endif %}
     </form>
 </div>
 {% endblock %}
 
 {% block extra_js %}
+<!-- El script JS no necesita cambios -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const inputs = document.querySelectorAll('.porcentaje-input');
@@ -130,7 +190,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         sumaDiv.textContent = suma.toFixed(2) + '%';
         
-        if (Math.abs(suma - 100) < 0.001) { // Comparamos con una pequeña tolerancia
+        if (Math.abs(suma - 100) < 0.01) { 
             sumaDiv.classList.remove('sum-error');
             sumaDiv.classList.add('sum-ok');
         } else {
@@ -141,24 +201,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function validarEstadoBotonGuardar() {
+        if (!guardarBtn) return;
         let todosValidos = true;
         const areas = new Set(Array.from(inputs).map(i => i.dataset.areaId));
-        areas.forEach(areaId => {
-            const sumaDiv = document.getElementById(`sum-area-${areaId}`);
-            if (sumaDiv && sumaDiv.classList.contains('sum-error')) {
-                todosValidos = false;
-            }
-        });
+        
+        if (areas.size === 0) {
+            todosValidos = false;
+        } else {
+            areas.forEach(areaId => {
+                const sumaDiv = document.getElementById(`sum-area-${areaId}`);
+                // Si el área no tiene materias, no tiene sumaDiv, por lo que no la validamos
+                if (sumaDiv && sumaDiv.classList.contains('sum-error')) {
+                    todosValidos = false;
+                }
+            });
+        }
         guardarBtn.disabled = !todosValidos;
     }
+
+    const initialAreas = new Set(Array.from(inputs).map(i => i.dataset.areaId));
+    initialAreas.forEach(areaId => {
+        calcularSuma(areaId);
+    });
 
     inputs.forEach(input => {
         input.addEventListener('input', function() {
             calcularSuma(this.dataset.areaId);
         });
-        // Calcular al inicio
-        calcularSuma(input.dataset.areaId);
     });
+
+    validarEstadoBotonGuardar();
 });
 </script>
 {% endblock %}

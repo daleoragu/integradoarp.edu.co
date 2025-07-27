@@ -1,73 +1,34 @@
 {% extends "admin/base_site.html" %}
 {% load i18n static %}
 
-{# --- Bloque para Estilos Personalizados --- #}
-{% block extrastyle %}
-    {{ block.super }}
-    <link rel="stylesheet" href="{% static "admin/css/dashboard.css" %}">
-    <style>
-        /* Paleta de Colores del Colegio */
-        :root {
-            --vinotinto-oscuro: #4A001E;
-            --vinotinto-claro: #78002e;
-            --dorado-acento: #F5DD5D;
-            --blanco: #FFFFFF;
-        }
-
-        /* Encabezado Principal */
-        #header {
-            background: var(--vinotinto-oscuro);
-            color: var(--dorado-acento);
-        }
-        #header a:link, #header a:visited {
-            color: var(--blanco);
-        }
-
-        /* Títulos de los Módulos (Grupos) */
-        .module caption, .module h2 {
-            background: var(--vinotinto-claro);
-        }
-
-        /* Botones y Enlaces Principales */
-        .button, input[type=submit], input[type=button], .submit-row input, a.button {
-            background: var(--vinotinto-oscuro);
-            color: var(--blanco);
-        }
-        .button.default, .submit-row input.default {
-            background: #c4dce8; /* Un color neutro para botones secundarios */
-            color: #333;
-        }
-    </style>
-{% endblock %}
-
-
 {# --- Bloque para el Logo en el Encabezado --- #}
+{# Se mantiene este bloque para mostrar el logo. #}
 {% block branding %}
     <div id="site-name">
         <a href="{% url 'admin:index' %}">
-            <img src="{% static 'img/logo_colegio.png' %}" alt="Logo Colegio" style="height: 35px; margin-right: 10px; vertical-align: middle;">
-            {{ site_header|default:_('Django administration') }}
+            {# Asegúrate de que la ruta a tu logo sea correcta en la carpeta 'static' #}
+            <img src="{% static 'img/logo_colegio.png' %}" alt="Logo del Proyecto" style="height: 35px; margin-right: 10px; vertical-align: middle;">
+            {{ site_header|default:_('Administración') }}
         </a>
     </div>
 {% endblock %}
 
-
-{# --- Bloques Estándar de Django (No tocar) --- #}
+{# --- Bloques Estándar de Django --- #}
 {% block coltype %}colM{% endblock %}
 {% block bodyclass %}{{ block.super }} dashboard{% endblock %}
 {% block breadcrumbs %}{% endblock %}
 
-
-{# --- Bloque de Contenido Principal --- #}
+{# --- Bloque de Contenido Principal (CORREGIDO) --- #}
 {% block content %}
 <div id="content-main">
-    {# Este archivo simplemente llama a app_list.html, donde está toda la lógica del orden #}
+    {# CORRECCIÓN: Se incluye 'admin/app_list.html' directamente y sin bucles adicionales. #}
+    {# Esta es la forma correcta en que Django lo hace por defecto. #}
     {% include "admin/app_list.html" with app_list=app_list %}
 </div>
 {% endblock %}
 
-
 {# --- Bloque de la Barra Lateral --- #}
+{# Se mantiene la barra lateral por defecto de Django #}
 {% block sidebar %}
 <div id="content-related">
     <div class="module" id="recent-actions-module">

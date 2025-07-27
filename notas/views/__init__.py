@@ -32,3 +32,5 @@ from . import gestion_docentes_views
 from . import gestion_estudiantes_views
 from . import gestion_academica_views
 from . import import_export_planillas_views
+from . import carnet_views
+from . import certificados_views

@@ -11,5 +11,11 @@
 <div class="app-grid">
     <a href="{% url 'mi_observador' %}" class="app-icon"><div class="icon-container bg-est-observador"><i class="fas fa-user-graduate"></i></div><span class="app-label">Mi Observador</span></a>
     <a href="{% url 'mi_boletin' %}" class="app-icon"><div class="icon-container bg-est-boletin"><i class="fas fa-file-pdf"></i></div><span class="app-label">Mis Boletines</span></a>
-     <a href="{% url 'bandeja_entrada' %}" class="app-icon"><div class="icon-container" style="background: linear-gradient(135deg, #dc3545, #b02130);"><i class="fas fa-envelope"></i></div><span class="app-label">CofraMail</span></a>
+    <a href="{% url 'bandeja_entrada' %}" class="app-icon"><div class="icon-container" style="background: linear-gradient(135deg, #dc3545, #b02130);"><i class="fas fa-envelope"></i></div><span class="app-label">CofraMail</span></a>
+    {% if user.estudiante %} {# Asegurarse de que el usuario es un estudiante antes de mostrar el enlace #}
+        <a href="{% url 'acta_reporte_parcial_estudiante' user.estudiante.id %}" class="app-icon">
+            <div class="icon-container" style="background: linear-gradient(135deg, #a0522d, #8b4513);"><i class="fas fa-file-alt"></i></div>
+            <span class="app-label">Mi Reporte Parcial</span>
+        </a>
+    {% endif %}
 </div>

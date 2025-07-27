@@ -2,9 +2,8 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views_django # Renombramos para evitar conflictos
 
-# --- INICIO: IMPORTACIONES CORREGIDAS ---
-# Se importan las nuevas vistas directamente desde sus archivos específicos.
-# Esto soluciona el error 'ImportError: attempted relative import beyond top-level package'.
+# --- INICIO: IMPORTACIONES CORREGIDAS Y COMPLETAS ---
+# Se importan las vistas directamente desde sus archivos específicos.
 from .views.admin_tools_views import ColegioPersonalizacionUpdateView
 from .views.auth_views import CustomLoginView
 
@@ -39,6 +38,8 @@ from .views import (
     gestion_estudiantes_views,
     gestion_academica_views,
     import_export_planillas_views,
+    carnet_views,
+    certificados_views
 )
 # --- FIN: IMPORTACIONES CORREGIDAS ---
 
@@ -46,10 +47,6 @@ from .views import (
 urlpatterns = [
     # --- Rutas del Portal Público y Autenticación ---
     path('', portal_views.portal_vista, name='portal'),
-    
-    # NOTA: Tu URL de login principal (en config/urls.py) debería apuntar a la CustomLoginView
-    # para que la página de login sea personalizable.
-    # Ejemplo: path('accounts/login/', CustomLoginView.as_view(), name='login'),
     
     path('logout/', auth_views.logout_vista, name='logout'),
     path('logout/confirmacion/', auth_views.logout_confirmacion_vista, name='logout_confirmacion'),
@@ -68,10 +65,10 @@ urlpatterns = [
     path('panel-administrador/publicar-boletines/', publicacion_views.panel_publicacion_vista, name='panel_publicacion'),
     path('panel-administrador/configuracion-calificaciones/', admin_tools_views.configuracion_calificaciones_vista, name='configuracion_calificaciones'),
     
-    # --- CORRECCIÓN: URL para la nueva vista de personalización del colegio ---
     path('panel-administrador/configuracion-colegio/', ColegioPersonalizacionUpdateView.as_view(), name='configuracion_colegio'),
     
-    # --- RUTAS PARA EL PANEL DE CONFIGURACIÓN DEL PORTAL (Sin cambios) ---
+    # --- INICIO: RUTAS PARA EL PANEL DE CONFIGURACIÓN Y PERSONALIZACIÓN DEL PORTAL ---
+    path('panel-administrador/personalizacion-portal/', portal_admin_views.personalizacion_portal_vista, name='personalizacion_portal'),
     path('panel-administrador/configuracion-portal/', portal_admin_views.configuracion_portal_vista, name='configuracion_portal'),
     path('panel-administrador/gestion-documentos/', portal_admin_views.gestion_documentos_vista, name='gestion_documentos'),
     path('panel-administrador/eliminar-documento/<int:pk>/', portal_admin_views.eliminar_documento_vista, name='eliminar_documento'),
@@ -85,12 +82,12 @@ urlpatterns = [
     path('panel-administrador/gestion-carrusel/', portal_admin_views.gestion_carrusel_vista, name='gestion_carrusel'),
     path('panel-administrador/eliminar-imagen-carrusel/<int:pk>/', portal_admin_views.eliminar_imagen_carrusel_vista, name='eliminar_imagen_carrusel'),
     path('panel-administrador/editar-imagen-carrusel/<int:pk>/', portal_admin_views.editar_imagen_carrusel_vista, name='editar_imagen_carrusel'),
-    
-    # --- Rutas AJAX del Portal (Sin cambios) ---
+    # --- FIN: RUTAS DEL PORTAL ---
+
+    # --- Rutas AJAX del Portal ---
     path('ajax/noticia/<int:pk>/', portal_views.ajax_noticia_detalle, name='ajax_noticia_detalle'),
     path('ajax/directorio-docentes/', portal_views.directorio_docentes_json, name='ajax_directorio_docentes'),
     path('ajax/documentos-publicos/', portal_views.documentos_publicos_json, name='ajax_documentos_publicos'),
-    path('ajax/galeria-fotos/', portal_views.galeria_fotos_json, name='ajax_galeria_fotos'),
     path('ajax/noticias/', portal_views.noticias_json, name='ajax_noticias'),
     path('ajax/carrusel/', portal_views.carrusel_imagenes_json, name='ajax_carrusel'),
     path('ajax/historia/', portal_views.ajax_historia, name='ajax_historia'),
@@ -98,8 +95,9 @@ urlpatterns = [
     path('ajax/modelo-pedagogico/', portal_views.ajax_modelo_pedagogico, name='ajax_modelo_pedagogico'),
     path('ajax/recursos-educativos/', portal_views.ajax_recursos_educativos, name='ajax_recursos_educativos'),
     path('ajax/redes-sociales/', portal_views.ajax_redes_sociales, name='ajax_redes_sociales'),
+    path('ajax/galeria-fotos/', portal_views.ajax_galeria_vista, name='ajax_galeria_fotos'),
 
-    # --- El resto de tus URLs se mantienen igual ---
+    # --- El resto de tus URLs (SIN CAMBIOS) ---
     path('docente/ingresar-notas/', ingreso_notas_views.IngresoNotasView.as_view(), name='ingresar_notas_periodo'),
     path('docente/exportar-planillas/<int:docente_id>/<int:periodo_id>/', import_export_planillas_views.exportar_planillas_docente, name='exportar_planillas_docente'),
     path('docente/reporte-parcial/', reporte_parcial_views.reporte_parcial_vista, name='reporte_parcial'),
@@ -164,6 +162,7 @@ urlpatterns = [
     path('panel-administrador/gestion-areas/', gestion_academica_views.gestion_areas_vista, name='gestion_areas'),
     path('panel-administrador/gestion-areas/crear/', gestion_academica_views.crear_area_vista, name='crear_area'),
     path('panel-administrador/gestion-areas/editar/<int:area_id>/', gestion_academica_views.editar_area_vista, name='editar_area'),
+    path('panel-administrador/gestion-materias/crear/para-area/<int:area_id>/', gestion_academica_views.crear_materia_vista, name='crear_materia_para_area'),
     path('panel-administrador/gestion-areas/eliminar/<int:area_id>/', gestion_academica_views.eliminar_area_vista, name='eliminar_area'),
     path('panel-administrador/gestion-ponderacion-areas/', gestion_academica_views.gestion_ponderacion_areas_vista, name='gestion_ponderacion_areas'),
     path('panel-administrador/importar/', import_views.importacion_vista, name='importacion_datos'),
@@ -172,4 +171,45 @@ urlpatterns = [
     path('panel-administrador/exportar-materias/', export_views.exportar_materias_excel, name='exportar_materias_excel'),
     path('panel-administrador/descargar-plantilla-docentes/', export_views.descargar_plantilla_docentes, name='descargar_plantilla_docentes'),
     path('panel-administrador/descargar-plantilla-materias/', export_views.descargar_plantilla_materias, name='descargar_plantilla_materias'),   
+    path('panel-administrador/periodos/crear/', admin_tools_views.crear_periodo_vista, name='crear_periodo'),
+    path('panel-administrador/periodos/editar/<int:periodo_id>/', admin_tools_views.editar_periodo_vista, name='editar_periodo'),
+    path('panel-administrador/periodos/eliminar/<int:periodo_id>/', admin_tools_views.eliminar_periodo_vista, name='eliminar_periodo'),
+    
+    path('panel-administrador/configuracion/escala-valoracion/', admin_tools_views.configuracion_escala_valoracion_vista, name='configuracion_escala_valoracion'),
+    path('panel-administrador/configuracion/escala-valoracion/editar/<int:escala_id>/', admin_tools_views.editar_escala_valoracion_vista, name='editar_escala_valoracion'),
+    
+    path('docente/reporte-asistencia/excel/', reporte_views.generar_reporte_individual_excel, name='generar_reporte_individual_excel'),
+    path('docente/reporte-asistencia/pdf/', reporte_views.generar_reporte_individual_pdf, name='generar_reporte_individual_pdf'),
+
+    path('reportes/estadisticas-pdf/', estadisticas_views.estadisticas_pdf_vista, name='estadisticas_pdf'),
+
+    path('reporte-parcial/', reporte_parcial_views.reporte_parcial_vista, name='reporte_parcial'),
+    path('reporte-parcial/acta/<int:estudiante_id>/', reporte_parcial_views.acta_reporte_parcial_estudiante, name='acta_reporte_parcial_estudiante'),
+    path('reporte-parcial/estudiantes/', reporte_parcial_views.lista_estudiantes_reporte, name='lista_estudiantes_reporte'),
+
+    path('carnet/generar/<int:estudiante_id>/',carnet_views.generar_carnet_estudiante,name='generar_carnet_estudiante'),
+           
+    path('asistencia/kiosko/',carnet_views.vista_kiosko_asistencia,name='vista_kiosko_asistencia'),        
+    path('asistencia/registrar-qr/<int:estudiante_id>/', carnet_views.registrar_asistencia_qr,name='registrar_asistencia_qr'),
+    path('herramientas/imprimir-carnets/', carnet_views.impresion_masiva_carnets,  name='impresion_masiva_carnets'),
+
+    path('carnet/generar/<int:estudiante_id>/', carnet_views.generar_carnet_estudiante, name='generar_carnet_estudiante'),
+         
+    # URL para el modo "Kiosko" de asistencia
+    path('asistencia/kiosko/', carnet_views.vista_kiosko_asistencia, name='vista_kiosko_asistencia'),
+         
+    # URL interna para el escaneo del QR
+    path('asistencia/registrar-qr/<int:estudiante_id>/', carnet_views.registrar_asistencia_qr, name='registrar_asistencia_qr'),
+         
+    # --- SOLUCIÓN: URL para la impresión masiva ---
+    # Se cambia el prefijo 'admin/' por 'herramientas/' para evitar conflictos.
+    path('herramientas/imprimir-carnets/', carnet_views.impresion_masiva_carnets,name='impresion_masiva_carnets'),
+
+     # --- INICIO: URLs PARA CERTIFICADOS ---
+    path('herramientas/certificados/', certificados_views.selector_certificados_vista, name='selector_certificados'),
+    path('herramientas/certificados/generar/<int:estudiante_id>/', certificados_views.generar_certificado_estudio_pdf,name='generar_certificado_estudio'),
+    # --- FIN: URLs PARA CERTIFICADOS ---
 ]
+
+
+

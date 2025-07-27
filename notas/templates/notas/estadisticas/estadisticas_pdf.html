@@ -1,0 +1,282 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte Estadístico</title>
+    <style>
+        @page {
+            size: letter portrait;
+            margin: 1.5cm;
+        }
+        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 9px; color: #333; }
+        .encabezado-tabla, .encabezado-sin-bordes { width: 100%; border-collapse: collapse; }
+        .encabezado-tabla td { vertical-align: middle; text-align: center; padding: 5px; border: 1px solid #000; }
+        .encabezado-sin-bordes td { vertical-align: middle; text-align: center; padding: 5px; border: none; }
+        .escudo { max-width: 100px; max-height: 100px; }
+        .info-institucion { font-size: 10px; font-weight: bold; }
+        .info-institucion p { margin: 1px 0; }
+        h1 { text-align: center; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; }
+        h3 { font-size: 12px; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 20px; }
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 8px; }
+        .report-table th, .report-table td { border: 1px solid #ccc; padding: 4px; text-align: left; }
+        .report-table th { background-color: #f2f2f2; font-weight: bold; }
+        .report-table .center { text-align: center; }
+        .report-table .right { text-align: right; }
+        .grid-container { display: -webkit-flex; display: flex; -webkit-flex-wrap: wrap; flex-wrap: wrap; gap: 20px; page-break-inside: avoid; }
+        .grid-item { -webkit-flex: 1; flex: 1; min-width: 45%; vertical-align: top; }
+        .filtros-info {
+            border: 1px solid #ddd; padding: 8px; margin-bottom: 20px;
+            border-radius: 5px; background-color: #f9f9f9;
+        }
+        .filtros-info p { margin: 2px 0; font-size: 10px; }
+        .grafico-container {
+            text-align: center; margin-top: 15px;
+            page-break-inside: avoid;
+        }
+        .grafico-container img { max-width: 100%; height: auto; border: 1px solid #eee; }
+        .conclusiones-box {
+            border: 1px solid #eee;
+            padding: 10px 10px 10px 25px;
+            background-color: #fdfdfd;
+            border-radius: 5px;
+            page-break-inside: avoid;
+            font-size: 9px;
+            margin-top: 10px;
+        }
+        .conclusiones-box ul { margin: 0; padding: 0; list-style-type: disc; }
+        .conclusiones-box li { margin-bottom: 5px; line-height: 1.4; }
+        
+        /* --- INICIO: CAMBIO REALIZADO --- */
+        /* Nueva clase para agrupar contenido y evitar saltos de página indeseados */
+        .bloque-contenido {
+            page-break-inside: avoid; /* Intenta mantener este bloque junto (título + contenido) */
+        }
+        /* --- FIN: CAMBIO REALIZADO --- */
+
+        .card-container {
+            display: -webkit-flex; display: flex;
+            gap: 10px; width: 100%; margin-top: 15px; page-break-inside: avoid;
+        }
+        .card {
+            -webkit-flex: 1; flex: 1; border: 1px solid #ddd; border-radius: 5px;
+            padding: 8px; text-align: center; background-color: #fdfdfd;
+        }
+        .card .value { font-size: 16px; font-weight: bold; color: #d9534f; }
+        .card .label { font-size: 8px; color: #666; margin-top: 5px; text-transform: uppercase; }
+        
+        .dist-table { font-size: 7.5px; }
+        .dist-table th { text-transform: uppercase; }
+        .dist-table .item-name { width: 25%; }
+        .dist-table .level-cell { white-space: nowrap; }
+    </style>
+</head>
+<body>
+    <header>
+        {% include "notas/fragmentos/encabezado_pdf.html" %}
+        <h1>Informe Estadístico - {{ titulo_reporte }}</h1>
+    </header>
+
+    <div class="filtros-info">
+        <p><strong>Filtros Aplicados:</strong></p>
+        <p><strong>Cursos/Grados:</strong> {{ nombres_cursos }}</p>
+        <p><strong>Año Lectivo:</strong> {{ filtros.ano_lectivo|default:"Todos" }}</p>
+        <p><strong>Periodo Académico:</strong> {{ nombre_periodo|default:"Consolidado" }}</p>
+    </div>
+
+    <main>
+        {% if tipo_reporte == 'general' %}
+            <h3>Resumen de Rendimiento General</h3>
+
+            <div class="card-container">
+                <div class="card"><div class="value">{{ datos.tarjetas.promedio_general|floatformat:1|default:"--" }}</div><div class="label">Promedio General</div></div>
+                <div class="card"><div class="value">± {{ datos.tarjetas.desviacion_estandar|floatformat:1|default:"--" }}</div><div class="label">Desviación Estándar</div></div>
+                <div class="card"><div class="value">{{ datos.tarjetas.puesto_curso|default:"N/A" }}</div><div class="label">Puesto del Curso</div></div>
+                <div class="card"><div class="value">{{ datos.tarjetas.total_estudiantes|default:"0" }}</div><div class="label">Total Estudiantes</div></div>
+            </div>
+
+            <div class="grid-container" style="margin-top: 20px;">
+                <div class="grid-item">
+                    <table class="report-table">
+                        <thead><tr><th colspan="2" class="center">Distribución de Rendimiento</th></tr></thead>
+                        <tbody>
+                            {% for item in datos.distribucion_rendimiento %}
+                            <tr>
+                                <td>{{ item.nombre }}</td>
+                                <td class="center">{{ item.total }} Est. ({{ item.porcentaje|floatformat:1 }}%)</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="grid-item">
+                     {% if datos.cuadro_honor %}
+                        <table class="report-table">
+                            <thead><tr><th colspan="3" class="center">Cuadro de Honor</th></tr></thead>
+                            <tbody>
+                                {% for est in datos.cuadro_honor %}
+                                <tr>
+                                    <td class="center" style="width:15%;">{{ est.puesto }}</td>
+                                    <td>{{ est.nombre }} ({{ est.curso }})</td>
+                                    <td class="center" style="width:20%;">{{ est.promedio|floatformat:2 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if grafico_base64 %}
+                <div class="grafico-container" style="width: 50%; margin: 10px auto 0 auto;">
+                    <img src="data:image/png;base64,{{ grafico_base64 }}" alt="Gráfico de Distribución de Rendimiento">
+                </div>
+            {% endif %}
+
+            <h3 style="margin-top: 25px;">Distribución por Área de Conocimiento</h3>
+            <table class="report-table dist-table">
+                <thead>
+                    <tr>
+                        <th class="item-name">Área</th>
+                        <th class="center">Prom.</th>
+                        {% for nivel in datos.escala_valoracion %}
+                            <th class="center">{{ nivel.nombre }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for area in datos.distribucion_area %}
+                    <tr>
+                        <td>{{ area.area_nombre }}</td>
+                        <td class="center">{{ area.promedio|floatformat:2 }}</td>
+                        {% for nivel in area.distribucion %}
+                            <td class="center level-cell">{{ nivel.total }} ({{ nivel.porcentaje|floatformat:1 }}%)</td>
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="{{ datos.escala_valoracion|length|add:2 }}" class="center">No hay datos para mostrar.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <h3 style="margin-top: 25px;">Distribución por Asignatura</h3>
+            <table class="report-table dist-table">
+                <thead>
+                    <tr>
+                        <th class="item-name">Asignatura</th>
+                        <th class="center">Prom.</th>
+                        {% for nivel in datos.escala_valoracion %}
+                            <th class="center">{{ nivel.nombre }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for materia in datos.distribucion_materia %}
+                    <tr>
+                        <td>{{ materia.materia_nombre }}</td>
+                        <td class="center">{{ materia.promedio|floatformat:2 }}</td>
+                        {% for nivel in materia.distribucion %}
+                            <td class="center level-cell">{{ nivel.total }} ({{ nivel.porcentaje|floatformat:1 }}%)</td>
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="{{ datos.escala_valoracion|length|add:2 }}" class="center">No hay datos para mostrar.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- --- INICIO: CAMBIO REALIZADO --- -->
+            <!-- Se agrupa el contenido en bloques para un mejor control de saltos de página -->
+            <div class="bloque-contenido">
+                <h3>Análisis de Promedios por Área</h3>
+                {% if grafico_promedios_area_base64 %}
+                    <div class="grafico-container" style="width: 50%; margin: 10px auto 0 auto;">
+                        <img src="data:image/png;base64,{{ grafico_promedios_area_base64 }}" alt="Gráfico de Promedios por Área">
+                    </div>
+                {% else %}
+                    <p class="center" style="margin-top: 15px;">No hay datos para el gráfico de promedios por área.</p>
+                {% endif %}
+            </div>
+            
+            {% if conclusiones %}
+                <div class="bloque-contenido">
+                    <h3>Conclusiones del Reporte</h3>
+                    <div class="conclusiones-box">
+                        <ul>
+                            {% for conclusion in conclusiones %}
+                                <li>{{ conclusion|safe }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+            <!-- --- FIN: CAMBIO REALIZADO --- -->
+
+        {% elif tipo_reporte == 'reprobados_docente' %}
+            <h3>Resumen de Reprobados por Docente</h3>
+            <table class="report-table">
+                <thead><tr><th>Docente</th><th class="center">Nº de Reprobados</th></tr></thead>
+                <tbody>
+                    {% for docente, total in datos.reprobados_por_docente %}
+                    <tr><td>{{ docente }}</td><td class="center">{{ total }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="2" class="center">No hay datos de reprobados para los filtros seleccionados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        {% elif tipo_reporte == 'reprobados_materia' %}
+            <h3>Resumen de Reprobados por Materia</h3>
+            <table class="report-table">
+                <thead><tr><th>Materia</th><th class="center">Nº de Reprobados</th></tr></thead>
+                <tbody>
+                    {% for item in datos.reprobados_por_materia %}
+                    <tr><td>{{ item.materia__nombre }}</td><td class="center">{{ item.total_reprobados }}</td></tr>
+                    {% empty %}
+                    <tr><td colspan="2" class="center">No hay datos de reprobados para los filtros seleccionados.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        {% elif tipo_reporte == 'reprobados_area' %}
+            <h3>Resumen de Reprobados por Área y Materia</h3>
+            {% if grafico_base64 %}
+                <div class="grafico-container">
+                    <h4>Gráfico de Reprobados por Área</h4>
+                    <img src="data:image/png;base64,{{ grafico_base64 }}" alt="Gráfico de Reprobados por Área">
+                </div>
+            {% else %}
+                <p>No hay datos suficientes para generar el gráfico.</p>
+            {% endif %}
+            
+            {% if datos.reprobados_por_area.datasets %}
+                <h4>Tabla de Datos</h4>
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Área</th>
+                            {% for dataset in datos.reprobados_por_area.datasets %}
+                                <th class="center">{{ dataset.label }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for area_nombre in datos.reprobados_por_area.labels %}
+                        <tr>
+                            <td><strong>{{ area_nombre }}</strong></td>
+                            {% for dataset in datos.reprobados_por_area.datasets %}
+                                <td class="center">
+                                    {{ dataset.data|slice:forloop.counter0|last }}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                 <p class="center">No hay datos de reprobados por área para los filtros seleccionados.</p>
+            {% endif %}
+        {% endif %}
+    </main>
+</body>
+</html>

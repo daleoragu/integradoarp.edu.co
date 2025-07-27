@@ -1,0 +1,66 @@
+{% comment %}
+  Este template renderiza las tarjetas de las fotos para la galería.
+  La propiedad 'object-fit' ha sido cambiada a 'contain'.
+{% endcomment %}
+
+<!-- Estilos para la galería -->
+<style>
+  .galeria-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+  .foto-card {
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    background-color: #fff;
+    display: flex;
+    flex-direction: column;
+  }
+  .foto-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+  .foto-card .img-container {
+    width: 100%;
+    height: 200px;
+    background-color: #f0f2f5; /* Un fondo sutil para el espacio vacío */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .foto-card img {
+    width: 100%;
+    height: 100%;
+    /* ===== INICIO DE LA CORRECCIÓN ===== */
+    object-fit: contain; /* <-- Esta línea hace que la imagen se vea completa */
+    /* ===== FIN DE LA CORRECCIÓN ===== */
+  }
+  .foto-card .titulo {
+    padding: 1rem;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+    margin-top: auto; /* Empuja el título hacia abajo si la imagen es pequeña */
+  }
+</style>
+
+<div class="container py-5">
+  <h2 class="text-center mb-5">Galería de Fotos</h2>
+  <div class="galeria-grid">
+    {% for foto in fotos %}
+      <div class="foto-card">
+        <div class="img-container">
+            <img src="{{ foto.imagen.url }}" alt="{{ foto.titulo }}" loading="lazy">
+        </div>
+        <div class="titulo">
+          {{ foto.titulo }}
+        </div>
+      </div>
+    {% empty %}
+      <p class="text-center text-muted w-100">No hay fotos en la galería en este momento.</p>
+    {% endfor %}
+  </div>
+</div>

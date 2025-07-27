@@ -4,27 +4,27 @@
         box-shadow: 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 30px;
     }
     .filter-form {
-        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
         gap: 20px; align-items: end;
     }
     .form-group label { display: block; font-weight: bold; margin-bottom: 8px; }
     .form-group select {
-        width: 100%; padding: 10px; border: 1px solid var(--color-borde); border-radius: 5px;
+        width: 100%; padding: 10px; border: 1px solid #ced4da; border-radius: 5px;
     }
     .dropdown-check-list { position: relative; display: inline-block; width: 100%; }
     .dropdown-check-list .anchor {
         position: relative; cursor: pointer; display: block; padding: 10px;
-        border: 1px solid var(--color-borde); border-radius: 5px; background-color: #fff;
+        border: 1px solid #ced4da; border-radius: 5px; background-color: #fff;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .dropdown-check-list .anchor:after {
-        position: absolute; content: ""; border-left: 2px solid var(--color-texto);
-        border-top: 2px solid var(--color-texto); padding: 5px; right: 15px;
+        position: absolute; content: ""; border-left: 2px solid #333;
+        border-top: 2px solid #333; padding: 5px; right: 15px;
         top: 35%; transform: rotate(-135deg);
     }
     .dropdown-check-list.visible .anchor:after { transform: rotate(45deg); }
     .dropdown-check-list ul.items {
-        padding: 2px; display: none; margin: 0; border: 1px solid var(--color-borde);
+        padding: 2px; display: none; margin: 0; border: 1px solid #ced4da;
         border-top: none; max-height: 200px; overflow-y: auto; background-color: #fff;
         position: absolute; width: 100%; z-index: 1000; border-radius: 0 0 5px 5px;
         box-sizing: border-box;
@@ -36,25 +36,56 @@
     }
     .dropdown-check-list ul.items label:hover { background-color: #eee; }
     .btn-apply {
-        background-color: #0d6efd; color: white; border: none; padding: 10px 25px;
+        background-color: #0d6efd; color: white; border: none; padding: 10px 20px;
         border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%;
+    }
+    .btn-pdf {
+        background-color: #6c757d;
+        color: white; border: none; padding: 10px 20px;
+        border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%;
+    }
+    .button-group {
+        display: flex;
+        gap: 10px;
     }
 </style>
 <div class="filter-card">
     <form id="statsFilterForm">
         <div class="filter-form">
             <div class="form-group">
+                <label for="tipo_grafico_select">Tipo de Estadística</label>
+                <select name="tipo_grafico" id="tipo_grafico_select" class="form-control">
+                    <option value="general" selected>Rendimiento General</option>
+                    <option value="reprobados_docente">Reprobados por Docente</option>
+                    <option value="reprobados_materia">Reprobados por Materia</option>
+                    <option value="reprobados_area">Reprobados por Área (Detallado)</option>
+                    <option value="materias_reprobadas_por_docente">Materias Reprobadas por Docente</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
                 <label for="ano_lectivo_select">Año Lectivo</label>
-                <select name="ano_lectivo" id="ano_lectivo_select">
+                <select name="ano_lectivo" id="ano_lectivo_select" class="form-control">
                     <option value="todos">Todos los Años</option>
                     {% for ano in anos_lectivos %}
                         <option value="{{ ano }}" {% if ano == ano_actual %}selected{% endif %}>{{ ano }}</option>
                     {% endfor %}
                 </select>
             </div>
+
+            <div class="form-group">
+                <label for="area_select">Área</label>
+                <select name="area_id" id="area_select" class="form-control">
+                    <option value="todos">Todas las Áreas</option>
+                    {% for area in areas %}
+                        <option value="{{ area.id }}">{{ area.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
             <div class="form-group">
                 <label for="periodo_select">Periodo</label>
-                <select name="periodo" id="periodo_select">
+                <select name="periodo_id" id="periodo_select" class="form-control">
                     <option value="todos">Todos los Periodos</option>
                     <option value="CONSOLIDADO">Consolidado Anual</option>
                     {% for periodo in periodos %}
@@ -68,13 +99,17 @@
                     <span class="anchor">Seleccionar Cursos...</span>
                     <ul class="items">
                         {% for curso in cursos %}
-                            <li><label><input type="checkbox" name="cursos" value="{{ curso.id }}" data-nombre="{{ curso.nombre }}" /> {{ curso.nombre }} </label></li>
+                            <li><label><input type="checkbox" name="curso_ids[]" value="{{ curso.id }}" data-nombre="{{ curso.nombre }}" /> {{ curso.nombre }} </label></li>
                         {% endfor %}
                     </ul>
                 </div>
             </div>
-            <div class="form-group">
-                <button type="button" id="applyFiltersBtn" class="btn-apply">Aplicar Filtros</button>
+            
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <div class="button-group">
+                    <button type="button" id="applyFiltersBtn" class="btn-apply">Aplicar</button>
+                    <button type="button" id="downloadPdfBtn" class="btn-pdf"><i class="fas fa-file-pdf me-1"></i> PDF</button>
+                </div>
             </div>
         </div>
     </form>

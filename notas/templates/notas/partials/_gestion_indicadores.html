@@ -1,6 +1,6 @@
 {% comment %}
     Este parcial maneja la visualización, creación y gestión de los
-    indicadores de logro para una asignación y periodo específicos.
+    indicadores de logro, ahora con un modal para la edición.
 {% endcomment %}
 
 {% if asignacion_seleccionada and periodo_seleccionado %}
@@ -10,18 +10,14 @@
     {% if periodo_cerrado %}
         <p class="text-muted">No se pueden añadir o editar indicadores porque el periodo está cerrado.</p>
     {% else %}
-        {# El formulario ahora apunta a la URL correcta del nuevo sistema #}
         <form method="POST" action="{% url 'crear_indicador_vista' %}" class="form-indicador my-3">
             {% csrf_token %}
             <input type="hidden" name="asignacion_id" value="{{ asignacion_seleccionada.id }}">
             <input type="hidden" name="periodo_id" value="{{ periodo_seleccionado.id }}">
             
-            {# --- INICIO DE LA MEJORA: Campo oculto para el admin --- #}
-            {# Si el usuario es un admin y ha seleccionado un docente, enviamos ese ID #}
             {% if request.user.is_superuser and docente_seleccionado_id %}
                 <input type="hidden" name="docente_id" value="{{ docente_seleccionado_id }}">
             {% endif %}
-            {# --- FIN DE LA MEJORA --- #}
             
             <textarea name="descripcion" class="form-control" rows="2" placeholder="Escriba aquí un nuevo indicador y presione 'Agregar'..." required></textarea>
             <div class="text-end mt-2">
@@ -33,15 +29,21 @@
     <h6 class="mt-4">Indicadores Actuales:</h6>
     
     {% if indicadores %}
+        {# --- CAMPO OCULTO ELIMINADO --- #}
         <ul class="list-group">
             {% for indicador in indicadores %}
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     <span>{{ indicador.descripcion }}</span>
                     {% if not periodo_cerrado %}
                         <div class="d-flex">
-                            <a href="{% url 'editar_indicador' indicador.id %}" class="btn btn-sm btn-outline-secondary py-0 px-1 me-1" title="Editar">
+                            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 me-1" 
+                                    title="Editar"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#editarIndicadorModal"
+                                    data-indicador-id="{{ indicador.id }}"
+                                    data-descripcion="{{ indicador.descripcion }}">
                                 <i class="fas fa-pencil-alt"></i>
-                            </a>
+                            </button>
                             <form action="{% url 'eliminar_indicador' indicador.id %}" method="post" class="d-inline" onsubmit="return confirm('¿Está seguro de que desea eliminar este indicador?');">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Eliminar">
@@ -58,4 +60,27 @@
     {% endif %}
 </div>
 <hr class="separador">
+
+<!-- CÓDIGO DEL MODAL PARA EDITAR INDICADORES (Sin cambios) -->
+<div class="modal fade" id="editarIndicadorModal" tabindex="-1" aria-labelledby="editarIndicadorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editarIndicadorModalLabel">Editar Indicador de Logro</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="editarIndicadorForm" method="POST">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p class="text-muted">Modifique la descripción del indicador y haga clic en "Guardar Cambios".</p>
+          <textarea name="descripcion" id="descripcionIndicadorTextarea" class="form-control" rows="4" required></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endif %}

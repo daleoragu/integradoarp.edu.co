@@ -1,0 +1,41 @@
+{% load static %}
+<table class="{% if colegio.encabezado_pdf_sin_bordes %}encabezado-sin-bordes{% else %}encabezado-con-bordes{% endif %}">
+    <tr>
+        <td style="width: 20%; text-align: left;">
+            {% if colegio.logo_izquierdo %}
+            <img src="{{ colegio.logo_izquierdo.url }}" alt="Escudo" class="escudo">
+            {% else %}
+            <img src="{% static 'img/Logo_govtolima.png' %}" alt="Escudo Tolima" class="escudo">
+            {% endif %}
+        </td>
+        <td style="width: 60%;" class="info-institucion">
+            {% if colegio.linea_encabezado_1 %}
+                <p style="font-family: '{{ colegio.linea_encabezado_1_fuente }}', sans-serif; font-size: {{ colegio.linea_encabezado_1_tamano }}pt;{% if colegio.linea_encabezado_1_negrilla %} font-weight: bold;{% endif %}{% if colegio.linea_encabezado_1_cursiva %} font-style: italic;{% endif %}{% if colegio.linea_encabezado_1_subrayado %} text-decoration: underline;{% endif %}">
+                    {{ colegio.linea_encabezado_1 }}
+                </p>
+            {% endif %}
+            {% if colegio.linea_encabezado_2 %}
+                <p style="font-family: '{{ colegio.linea_encabezado_2_fuente }}', sans-serif; font-size: {{ colegio.linea_encabezado_2_tamano }}pt;{% if colegio.linea_encabezado_2_negrilla %} font-weight: bold;{% endif %}{% if colegio.linea_encabezado_2_cursiva %} font-style: italic;{% endif %}{% if colegio.linea_encabezado_2_subrayado %} text-decoration: underline;{% endif %}">
+                    {{ colegio.linea_encabezado_2 }}
+                </p>
+            {% endif %}
+            {% if colegio.linea_encabezado_3 %}
+                <p style="font-family: '{{ colegio.linea_encabezado_3_fuente }}', sans-serif; font-size: {{ colegio.linea_encabezado_3_tamano }}pt;{% if colegio.linea_encabezado_3_negrilla %} font-weight: bold;{% endif %}{% if colegio.linea_encabezado_3_cursiva %} font-style: italic;{% endif %}{% if colegio.linea_encabezado_3_subrayado %} text-decoration: underline;{% endif %}">
+                    {{ colegio.linea_encabezado_3 }}
+                </p>
+            {% endif %}
+            {% if colegio.linea_encabezado_4 %}
+                <p style="font-family: '{{ colegio.linea_encabezado_4_fuente }}', sans-serif; font-size: {{ colegio.linea_encabezado_4_tamano }}pt;{% if colegio.linea_encabezado_4_negrilla %} font-weight: bold;{% endif %}{% if colegio.linea_encabezado_4_cursiva %} font-style: italic;{% endif %}{% if colegio.linea_encabezado_4_subrayado %} text-decoration: underline;{% endif %}">
+                    {{ colegio.linea_encabezado_4 }}
+                </p>
+            {% endif %}
+        </td>
+        <td style="width: 20%; text-align: right;">
+            {% if colegio.logo_derecho %}
+            <img src="{{ colegio.logo_derecho.url }}" alt="Logo Colegio" class="escudo">
+            {% else %}
+            <img src="{% static 'img/logo_colegio.png' %}" alt="Logo Colegio" class="escudo">
+            {% endif %}
+        </td>
+    </tr>
+</table>

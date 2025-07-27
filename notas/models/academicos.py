@@ -87,9 +87,14 @@ class Calificacion(models.Model):
     materia = models.ForeignKey(Materia, on_delete=models.CASCADE)
     periodo = models.ForeignKey(PeriodoAcademico, on_delete=models.CASCADE)
     docente = models.ForeignKey(Docente, on_delete=models.SET_NULL, null=True)
-    TIPO_NOTA_CHOICES = [('SER', 'Promedio Ser'), ('SABER', 'Promedio Saber'), ('HACER', 'Promedio Hacer'), ('PROM_PERIODO', 'Promedio del Periodo')]
+    # --- INICIO: CAMBIO ---
+    # Se añade 'NIVELACION' a las opciones para consistencia
+    TIPO_NOTA_CHOICES = [('SER', 'Promedio Ser'), ('SABER', 'Promedio Saber'), ('HACER', 'Promedio Hacer'), ('PROM_PERIODO', 'Promedio del Periodo'), ('NIVELACION', 'Nota de Nivelación')]
     tipo_nota = models.CharField(max_length=12, choices=TIPO_NOTA_CHOICES)
     valor_nota = models.DecimalField(max_digits=4, decimal_places=2, validators=[MinValueValidator(Decimal('1.0')), MaxValueValidator(Decimal('5.0'))])
+    # Se añade el campo 'es_recuperada' que faltaba en el modelo
+    es_recuperada = models.BooleanField(default=False, help_text="Indica si esta calificación de periodo fue recuperada con una nivelación.")
+    # --- FIN: CAMBIO ---
     class Meta:
         unique_together = ('estudiante', 'materia', 'periodo', 'tipo_nota', 'colegio')
         verbose_name = "Calificación (Promedio)"; verbose_name_plural = "Calificaciones (Promedios)"
@@ -170,11 +175,8 @@ class InasistenciasManualesPeriodo(models.Model):
 
 class ConfiguracionSistema(models.Model):
     colegio = models.OneToOneField(Colegio, on_delete=models.CASCADE, related_name="configuracion", null=True)
-    max_materias_reprobadas = models.PositiveSmallIntegerField(default=2, verbose_name="Máximo de materias reprobadas para ser promovido")
+    max_areas_reprobadas = models.PositiveSmallIntegerField(default=2, verbose_name="Máximo de áreas reprobadas para ser promovido")
     
-    # 👇 CORRECCIÓN: Se elimina el método save() que causaba conflictos.
-    # El OneToOneField ya garantiza una única configuración por colegio.
-
     def __str__(self):
         if self.colegio:
             return f"Configuración de Promoción para {self.colegio.nombre}"
@@ -206,9 +208,6 @@ class ConfiguracionCalificaciones(models.Model):
     colegio = models.OneToOneField(Colegio, on_delete=models.CASCADE, related_name="configuracion_calificaciones", null=True)
     docente_puede_modificar = models.BooleanField(default=False, verbose_name="Permitir que los docentes modifiquen los porcentajes de calificación")
     
-    # 👇 CORRECCIÓN: Se elimina el método save() que forzaba el pk=1 y causaba el error.
-    # El OneToOneField ya garantiza una única configuración por colegio.
-
     def __str__(self):
         if self.colegio:
             return f"Configuración de Calificaciones para {self.colegio.nombre}"
@@ -225,3 +224,36 @@ class PonderacionAreaMateria(models.Model):
         unique_together = ('area', 'materia', 'colegio')
         verbose_name = "Ponderación de Materia en Área"; verbose_name_plural = "Ponderaciones de Materias en Áreas"
     def __str__(self): return f"{self.materia.nombre} en {self.area.nombre} ({self.peso_porcentual}%)"
+
+class EscalaValoracion(models.Model):
+    colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="escala_valoracion")
+    nombre_desempeno = models.CharField(max_length=50, verbose_name="Nombre del Desempeño (e.g., Bajo, Superior)")
+    valor_minimo = models.DecimalField(max_digits=3, decimal_places=1, verbose_name="Valor Mínimo")
+    valor_maximo = models.DecimalField(max_digits=3, decimal_places=1, verbose_name="Valor Máximo")
+    mensaje_boletin = models.TextField(blank=True, help_text="Mensaje opcional para mostrar en el boletín para este rango de notas.")
+
+    def __str__(self):
+        return f"{self.nombre_desempeno} ({self.valor_minimo} - {self.valor_maximo}) para {self.colegio.nombre}"
+
+    def clean(self):
+        if self.valor_minimo >= self.valor_maximo:
+            raise ValidationError("El valor mínimo debe ser menor que el valor máximo.")
+        
+        superposiciones = EscalaValoracion.objects.filter(
+            colegio=self.colegio,
+            valor_maximo__gte=self.valor_minimo,
+            valor_minimo__lte=self.valor_maximo
+        ).exclude(pk=self.pk)
+        
+        if superposiciones.exists():
+            raise ValidationError(f"El rango de notas se superpone con otra escala ya definida: '{superposiciones.first()}'.")
+
+    def save(self, *args, **kwargs):
+        self.nombre_desempeno = self.nombre_desempeno.upper()
+        super().save(*args, **kwargs)
+
+    class Meta:
+        unique_together = ('colegio', 'nombre_desempeno')
+        ordering = ['valor_minimo']
+        verbose_name = "Escala de Valoración"
+        verbose_name_plural = "Escalas de Valoración"

@@ -78,6 +78,7 @@ def coma_decimal(value):
         # Si el valor no puede ser convertido a número, se devuelve como está.
         return value
 # --- FIN DEL NUEVO FILTRO --
+
 @register.simple_tag
 def get_unread_notification_count(user):
     """
@@ -92,3 +93,24 @@ def get_unread_notification_count(user):
     except:
         # Si hay algún error, simplemente retorna 0 para no romper la página.
         return 0
+
+# ---------------------- NUEVO FILTRO: desempeNO ---------------------------
+from notas.models import EscalaValoracion
+
+@register.filter(name='desempeno')
+def obtener_desempeno(nota, colegio):
+    """
+    Devuelve el nombre del desempeño según la escala de valoración del colegio.
+    Si la nota no corresponde a ningún rango, retorna ''.
+    """
+    if nota is None or colegio is None:
+        return ''
+    try:
+        escala = EscalaValoracion.objects.filter(colegio=colegio).order_by('-valor_maximo')
+        nota_decimal = Decimal(str(nota))
+        for rango in escala:
+            if rango.valor_minimo <= nota_decimal <= rango.valor_maximo:
+                return rango.nombre_desempeno.upper()
+    except Exception:
+        return ''
+    return ''

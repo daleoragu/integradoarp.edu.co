@@ -1,6 +1,10 @@
 # notas/admin.py
 from django.contrib import admin
 from django.core.exceptions import ValidationError
+# --- INICIO: Importaciones añadidas ---
+from django.urls import reverse
+from django.utils.html import format_html
+# --- FIN: Importaciones añadidas ---
 
 from .models import (
     Colegio, PeriodoAcademico, AreaConocimiento, Curso, Materia, Docente, Estudiante,
@@ -20,16 +24,10 @@ class BaseColegioAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         if not request.user.is_superuser:
-            # Esta es una implementación simple. En el futuro, podrías tener
-            # un modelo que relacione usuarios administradores con colegios.
-            # Por ahora, asumimos que un no-superuser no debería ver nada aquí.
             return qs.none()
         return qs
 
     def save_model(self, request, obj, form, change):
-        # Si el objeto es nuevo y no tiene colegio, y el usuario es superusuario
-        # podría necesitar seleccionar uno. Para un admin de colegio, se asignaría automáticamente.
-        # Esta lógica se puede refinar más adelante.
         super().save_model(request, obj, form, change)
 
 class PonderacionAreaMateriaInline(admin.TabularInline):
@@ -79,14 +77,28 @@ class DocenteAdmin(BaseColegioAdmin):
 
 @admin.register(Estudiante)
 class EstudianteAdmin(BaseColegioAdmin):
-    list_display = ('get_full_name', 'get_username', 'curso', 'is_active', 'colegio')
+    # --- INICIO: CAMBIO - Se añade 'acciones_carnet' a la lista ---
+    list_display = ('get_full_name', 'get_username', 'curso', 'is_active', 'colegio', 'acciones_carnet')
+    # --- FIN: CAMBIO ---
     list_filter = ('colegio', 'curso', 'is_active')
     search_fields = ('user__first_name', 'user__last_name', 'user__username')
     autocomplete_fields = ['curso', 'user']
+    
     @admin.display(description="Nombre Completo", ordering='user__last_name')
     def get_full_name(self, obj): return obj.user.get_full_name()
+    
     @admin.display(description="Usuario", ordering='user__username')
     def get_username(self, obj): return obj.user.username
+
+    # --- INICIO: CAMBIO - Se añade la función para el botón del carnet ---
+    @admin.display(description='Carnet QR')
+    def acciones_carnet(self, obj):
+        # Genera la URL para la vista del carnet del estudiante específico
+        url = reverse('generar_carnet_estudiante', args=[obj.id])
+        # Retorna un enlace HTML seguro
+        return format_html('<a class="button" href="{}" target="_blank">Ver Carnet</a>', url)
+    # --- FIN: CAMBIO ---
+
 
 @admin.register(AsignacionDocente)
 class AsignacionDocenteAdmin(BaseColegioAdmin):
@@ -101,7 +113,6 @@ class IndicadorLogroPeriodoAdmin(BaseColegioAdmin):
     list_filter = ('colegio', 'asignacion__curso', 'periodo')
     autocomplete_fields = ['asignacion', 'periodo']
     
-    # 👇 INICIO: CORRECCIÓN - Se añaden las funciones que faltaban
     @admin.display(description='Curso', ordering='asignacion__curso__nombre')
     def get_curso(self, obj): return obj.asignacion.curso
     
@@ -109,7 +120,6 @@ class IndicadorLogroPeriodoAdmin(BaseColegioAdmin):
     def get_materia(self, obj): return obj.asignacion.materia
     
     def descripcion_corta(self, obj): return (obj.descripcion[:75] + '...') if len(obj.descripcion) > 75 else obj.descripcion
-    # 👆 FIN: CORRECCIÓN
 
 @admin.register(Calificacion)
 class CalificacionAdmin(BaseColegioAdmin):
@@ -117,8 +127,7 @@ class CalificacionAdmin(BaseColegioAdmin):
     list_filter = ('colegio', 'periodo', 'materia', 'tipo_nota')
     autocomplete_fields = ['estudiante', 'materia', 'docente', 'periodo']
 
-# --- Registros simples (se pueden mejorar con BaseColegioAdmin si es necesario) ---
-# Por ahora, estos solo los podrá gestionar el superusuario.
+# --- Registros simples ---
 admin.site.register(Asistencia)
 admin.site.register(Observacion)
 admin.site.register(PlanDeMejoramiento)

@@ -1,4 +1,5 @@
 {% extends 'notas/base.html' %}
+{% load static %}
 
 {% block title %}Panel de Control de Periodos{% endblock %}
 
@@ -17,17 +18,30 @@
         padding-bottom: 0.75rem;
         margin-bottom: 1.5rem;
     }
-    .status-dot {
-        height: 12px;
-        width: 12px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 8px;
+    .table th, .table td {
         vertical-align: middle;
     }
-    .status-abierto { background-color: #28a745; }
-    .status-cerrado { background-color: #dc3545; }
+    .form-switch .form-check-input {
+        width: 3em;
+        height: 1.5em;
+    }
 </style>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="mb-0 h2">Gestión de Períodos Académicos</h1>
+        <p class="lead text-muted mb-0 small">
+            Crea, edita y gestiona los plazos de los períodos lectivos.
+        </p>
+    </div>
+    <div>
+        <!-- Botón para abrir el modal de creación -->
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#periodoModal" data-action="crear">
+            <i class="fas fa-plus me-2"></i>Crear Nuevo Período
+        </button>
+    </div>
+</div>
+
 
 <div class="admin-panel-card">
     <h4><i class="fas fa-toggle-on me-2"></i>Gestión de Plazos por Periodo</h4>
@@ -37,56 +51,79 @@
             <thead class="table-light">
                 <tr>
                     <th scope="col">Periodo Académico</th>
+                    <th scope="col">Fechas</th>
                     <th scope="col" class="text-center">Ingreso de Notas</th>
                     <th scope="col" class="text-center">Reporte Parcial</th>
                     <th scope="col" class="text-center">Nivelaciones</th>
+                    <th scope="col" class="text-end">Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for periodo in periodos %}
                 <tr>
-                    <td><strong>{{ periodo }}</strong></td>
+                    <td><strong>{{ periodo.get_nombre_display }}</strong><br><small class="text-muted">{{ periodo.ano_lectivo }}</small></td>
+                    <td>{{ periodo.fecha_inicio|date:"d/m/Y" }} - {{ periodo.fecha_fin|date:"d/m/Y" }}</td>
                     
                     <td class="text-center">
-                        {% if periodo.esta_activo %}
-                            <span class="badge bg-success"><span class="status-dot status-abierto"></span> Abierto</span>
-                        {% else %}
-                            <span class="badge bg-danger"><span class="status-dot status-cerrado"></span> Cerrado</span>
-                        {% endif %}
-                        <form method="POST" class="d-inline ms-2">
+                        <form method="POST" class="d-inline">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle_ingreso_notas">
                             <input type="hidden" name="periodo_id" value="{{ periodo.id }}">
-                            <button type="submit" class="btn btn-sm btn-outline-secondary">Cambiar</button>
+                            <button type="submit" class="btn btn-sm {% if periodo.esta_activo %}btn-success{% else %}btn-secondary{% endif %}">
+                                {% if periodo.esta_activo %}Abierto{% else %}Cerrado{% endif %}
+                            </button>
                         </form>
                     </td>
 
                     <td class="text-center">
-                        {% if periodo.reporte_parcial_activo %}
-                            <span class="badge bg-success"><span class="status-dot status-abierto"></span> Abierto</span>
-                        {% else %}
-                            <span class="badge bg-danger"><span class="status-dot status-cerrado"></span> Cerrado</span>
-                        {% endif %}
-                        <form method="POST" class="d-inline ms-2">
+                        <form method="POST" class="d-inline">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle_reporte_parcial">
                             <input type="hidden" name="periodo_id" value="{{ periodo.id }}">
-                            <button type="submit" class="btn btn-sm btn-outline-secondary">Cambiar</button>
+                            <button type="submit" class="btn btn-sm {% if periodo.reporte_parcial_activo %}btn-success{% else %}btn-secondary{% endif %}">
+                                {% if periodo.reporte_parcial_activo %}Abierto{% else %}Cerrado{% endif %}
+                            </button>
                         </form>
                     </td>
 
                     <td class="text-center">
-                        {% if periodo.nivelaciones_activas %}
-                            <span class="badge bg-success"><span class="status-dot status-abierto"></span> Abierto</span>
-                        {% else %}
-                            <span class="badge bg-danger"><span class="status-dot status-cerrado"></span> Cerrado</span>
-                        {% endif %}
-                        <form method="POST" class="d-inline ms-2">
+                        <form method="POST" class="d-inline">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle_nivelaciones">
                             <input type="hidden" name="periodo_id" value="{{ periodo.id }}">
-                            <button type="submit" class="btn btn-sm btn-outline-secondary">Cambiar</button>
+                            <button type="submit" class="btn btn-sm {% if periodo.nivelaciones_activas %}btn-success{% else %}btn-secondary{% endif %}">
+                                {% if periodo.nivelaciones_activas %}Abierto{% else %}Cerrado{% endif %}
+                            </button>
                         </form>
+                    </td>
+                    <td class="text-end">
+                        <!-- Botón para abrir el modal de edición -->
+                        <button type="button" class="btn btn-sm btn-outline-info"
+                                data-bs-toggle="modal" 
+                                data-bs-target="#periodoModal"
+                                data-action="editar"
+                                data-url="{% url 'editar_periodo' periodo.id %}"
+                                data-nombre="{{ periodo.nombre }}"
+                                data-ano="{{ periodo.ano_lectivo }}"
+                                data-inicio="{{ periodo.fecha_inicio|date:'Y-m-d' }}"
+                                data-fin="{{ periodo.fecha_fin|date:'Y-m-d' }}"
+                                data-esta-activo="{{ periodo.esta_activo|yesno:'true,false' }}"
+                                data-reporte-activo="{{ periodo.reporte_parcial_activo|yesno:'true,false' }}"
+                                data-nivelaciones-activas="{{ periodo.nivelaciones_activas|yesno:'true,false' }}"
+                                title="Editar Período">
+                            <i class="fas fa-pencil-alt"></i>
+                        </button>
+                        <!-- Formulario para eliminar -->
+                        <form action="{% url 'eliminar_periodo' periodo.id %}" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de que quieres eliminar el período \'{{ periodo.get_nombre_display }}\'?')">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar Período"><i class="fas fa-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        No hay períodos académicos registrados. ¡Crea el primero para comenzar!
                     </td>
                 </tr>
                 {% endfor %}
@@ -94,4 +131,110 @@
         </table>
     </div>
 </div>
+
+<!-- Modal para Crear/Editar Período -->
+<div class="modal fade" id="periodoModal" tabindex="-1" aria-labelledby="periodoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="periodoForm" method="post">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="periodoModalLabel">Crear Nuevo Período Académico</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_nombre" class="form-label">Nombre del Período</label>
+                            <select name="nombre" id="id_nombre" class="form-select" required>
+                                <option value="PRIMERO">Primer Período</option>
+                                <option value="SEGUNDO">Segundo Período</option>
+                                <option value="TERCERO">Tercer Período</option>
+                                <option value="CUARTO">Cuarto Período</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_ano_lectivo" class="form-label">Año Lectivo</label>
+                            <input type="number" name="ano_lectivo" id="id_ano_lectivo" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="id_fecha_inicio" class="form-label">Fecha de Inicio</label>
+                            <input type="date" name="fecha_inicio" id="id_fecha_inicio" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="id_fecha_fin" class="form-label">Fecha de Fin</label>
+                            <input type="date" name="fecha_fin" id="id_fecha_fin" class="form-control" required>
+                        </div>
+                    </div>
+                    <hr class="my-3">
+                    <p class="fw-bold">Configuración de Estados (se puede cambiar luego):</p>
+                    <div class="d-flex justify-content-around">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="id_esta_activo" name="esta_activo">
+                            <label class="form-check-label" for="id_esta_activo">Ingreso de Notas</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="id_reporte_parcial_activo" name="reporte_parcial_activo">
+                            <label class="form-check-label" for="id_reporte_parcial_activo">Reporte Parcial</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="id_nivelaciones_activas" name="nivelaciones_activas">
+                            <label class="form-check-label" for="id_nivelaciones_activas">Nivelaciones</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Período</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const periodoModal = document.getElementById('periodoModal');
+    if (!periodoModal) return;
+
+    const modalForm = document.getElementById('periodoForm');
+    const modalTitle = document.getElementById('periodoModalLabel');
+
+    periodoModal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const action = button.getAttribute('data-action');
+
+        if (action === 'editar') {
+            // --- MODO EDICIÓN ---
+            modalTitle.textContent = 'Editar Período Académico';
+            const formUrl = button.getAttribute('data-url');
+            modalForm.setAttribute('action', formUrl);
+
+            // Rellenar el formulario con los datos del botón
+            document.getElementById('id_nombre').value = button.getAttribute('data-nombre');
+            document.getElementById('id_ano_lectivo').value = button.getAttribute('data-ano');
+            document.getElementById('id_fecha_inicio').value = button.getAttribute('data-inicio');
+            document.getElementById('id_fecha_fin').value = button.getAttribute('data-fin');
+            
+            document.getElementById('id_esta_activo').checked = button.getAttribute('data-esta-activo') === 'true';
+            document.getElementById('id_reporte_parcial_activo').checked = button.getAttribute('data-reporte-activo') === 'true';
+            document.getElementById('id_nivelaciones_activas').checked = button.getAttribute('data-nivelaciones-activas') === 'true';
+
+        } else {
+            // --- MODO CREACIÓN ---
+            modalTitle.textContent = 'Crear Nuevo Período Académico';
+            modalForm.setAttribute('action', "{% url 'crear_periodo' %}"); // Asegúrate que esta URL exista
+            modalForm.reset(); // Limpiar el formulario
+            
+            // Poner el año actual por defecto
+            const currentYear = new Date().getFullYear();
+            document.getElementById('id_ano_lectivo').value = currentYear;
+        }
+    });
+});
+</script>
 {% endblock %}

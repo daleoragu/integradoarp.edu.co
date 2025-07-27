@@ -8,7 +8,7 @@ from .perfiles import Colegio, Curso, Docente, Estudiante, FichaEstudiante, Fich
 from .academicos import (
     AreaConocimiento, Materia, PeriodoAcademico, AsignacionDocente,
     Calificacion, NotaDetallada, IndicadorLogroPeriodo, ReporteParcial, Observacion,
-    PlanDeMejoramiento, Asistencia, InasistenciasManualesPeriodo,
+    PlanDeMejoramiento, Asistencia, InasistenciasManualesPeriodo, EscalaValoracion, 
     ConfiguracionSistema, PublicacionBoletin, PublicacionBoletinFinal,PonderacionAreaMateria
 )
 from .comunicaciones import Mensaje, RegistroObservador, Notificacion
@@ -19,7 +19,7 @@ from .portal_models import DocumentoPublico, FotoGaleria, Noticia, ImagenCarruse
 # Se ha corregido una coma faltante.
 __all__ = [
     'Colegio', 'Curso', 'Docente', 'Estudiante', 'FichaEstudiante', 'FichaDocente',
-    'AreaConocimiento', 'Materia', 'PeriodoAcademico', 'AsignacionDocente',
+    'AreaConocimiento', 'Materia', 'PeriodoAcademico', 'AsignacionDocente', 'EscalaValoracion', 
     'Calificacion', 'NotaDetallada', 'IndicadorLogroPeriodo', 'ReporteParcial', 'Observacion',
     'PlanDeMejoramiento', 'Asistencia', 'InasistenciasManualesPeriodo','PonderacionAreaMateria',
     'ConfiguracionSistema', 'PublicacionBoletin', 'PublicacionBoletinFinal',

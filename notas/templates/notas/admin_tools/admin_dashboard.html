@@ -90,10 +90,17 @@
     .bg-portal-config { background-color: #212529; }
     .bg-asignacion { background-color: #fd7e14; }
     .bg-portal-publico { background-color: #0d6efd; }
-    .bg-ponderacion { background-color: #6610f2; } /* Morado */
-    /* INICIO: COLOR AÑADIDO */
+    .bg-ponderacion { background-color: #6610f2; }
     .bg-permisos { background-color: #20c997; }
-    /* FIN: COLOR AÑADIDO */
+    /* --- INICIO: NUEVO COLOR AÑADIDO --- */
+    .bg-escala-valoracion { background-color: #d63384; } /* Color Rosa para la nueva opción */
+    /* --- FIN: NUEVO COLOR AÑADIDO --- */
+    .bg-personalizacion{ background-color: #616515; }
+    /* Nuevo color para el reporte de estudiantes en Admin */
+    .bg-admin-reporte-estudiantes { background: linear-gradient(135deg, #a0522d, #8b4513); }
+    .bg-impresion-carnets { background: linear-gradient(135deg, #17a2b8, #138496); }
+    .bg-certificado-de-estudios {background: linear-gradient(135deg, #6610f2, #8540f5);}
+
 
     /* Colores Panel Docente */
     .bg-notas { background-color: #0d6efd; }
@@ -110,6 +117,8 @@
     /* Colores Panel Estudiante */
     .bg-est-observador { background-color: #6610f2; }
     .bg-est-boletin { background-color: #0d6efd; }
+    .bg-est-reporte-parcial { background: linear-gradient(135deg, #a0522d, #8b4513); } /* Definición para el estudiante */
+
 
 </style>
 {% endblock %}
@@ -157,7 +166,14 @@
                 <a href="{% url 'panel_control_promocion' %}" class="app-icon"><div class="icon-container bg-promocion"><i class="fas fa-gavel"></i></div><span class="app-label">Regla de Promoción</span></a>
                 <a href="{% url 'gestion_ponderacion_areas' %}" class="app-icon"><div class="icon-container bg-ponderacion"><i class="fas fa-balance-scale"></i></div><span class="app-label">Ponderación Áreas</span></a>
                 <a href="{% url 'configuracion_calificaciones' %}" class="app-icon"><div class="icon-container bg-permisos"><i class="fas fa-percentage"></i></div><span class="app-label">Permisos Porcentajes</span></a>
-
+                
+                <!-- --- INICIO: NUEVO ENLACE AÑADIDO --- -->
+                <a href="{% url 'configuracion_escala_valoracion' %}" class="app-icon"><div class="icon-container bg-escala-valoracion"><i class="fas fa-ruler-combined"></i></div><span class="app-label">Escala de Valoración</span></a>
+                <a href="{% url 'personalizacion_portal' %}" class="app-icon"><div class="icon-container bg-personalizacion"><i class="fas fa-palette"></i></div><span class="app-label">Personalizar Portal</span></a>
+                <a href="{% url 'lista_estudiantes_reporte' %}" class="app-icon"><div class="icon-container bg-admin-reporte-estudiantes"><i class="fas fa-user-times"></i></div><span class="app-label">Reporte Estudiantes</span></a>
+                <a href="{% url 'impresion_masiva_carnets' %}" class="app-icon"><div class="icon-container bg-impresion-carnets"><i class="fas fa-id-card"></i></div><span class="app-label">Imprimir Carnets</span></a>
+                <a href="{% url 'selector_certificados' %}" class="app-icon"><div class="icon-container bg-certificado-de-estudios" ><i class="fas fa-award"></i></div><span class="app-label">Generar Certificados</span>
+</a>
             </div>
         </div>
 

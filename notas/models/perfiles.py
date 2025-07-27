@@ -4,14 +4,29 @@ from django.contrib.auth.models import User
 from django.utils.text import slugify
 
 # ==============================================================================
-# MODELO CENTRAL PARA MULTI-COLEGIO (VERSIÓN DEFINITIVA)
+# MODELO CENTRAL PARA MULTI-COLEGIO (VERSIÓN COMPLETA Y CORREGIDA)
 # ==============================================================================
 
 class Colegio(models.Model):
     """
     Modelo central que representa a cada institución educativa en la plataforma.
-    Esta es la versión definitiva que combina tu modelo con los campos de personalización.
     """
+    FONT_CHOICES = [
+        ('Helvetica', 'Helvetica (Estándar)'),
+        ('Arial', 'Arial'),
+        ('Times New Roman', 'Times New Roman'),
+        ('Courier', 'Courier (Máquina de escribir)'),
+        ('Verdana', 'Verdana'),
+        ('Georgia', 'Georgia'),
+        ('Garamond', 'Garamond'),
+        ('Game On_PersonalUseOnly', 'Game On (Personalizada)'),
+    ]
+
+    LAYOUT_CHOICES = [
+        ('topbar', 'Diseño Clásico (Barra de Navegación Superior)'),
+        ('sidebar', 'Diseño Moderno (Barra de Navegación Lateral)'),
+    ]
+
     # --- Campos de Identificación ---
     nombre = models.CharField(max_length=255, unique=True, verbose_name="Nombre del Colegio")
     slug = models.SlugField(max_length=255, unique=True, blank=True, help_text="Identificador para la URL (se genera automáticamente)")
@@ -22,22 +37,64 @@ class Colegio(models.Model):
     nit = models.CharField(max_length=50, blank=True, verbose_name="NIT del Colegio")
     resolucion_aprobacion = models.CharField(max_length=255, blank=True, verbose_name="Resolución de Aprobación")
     direccion = models.CharField(max_length=255, blank=True, verbose_name="Dirección Física")
+    ciudad = models.CharField(max_length=100, blank=True, null=True, verbose_name="Ciudad")
+    departamento = models.CharField(max_length=100, blank=True, null=True, verbose_name="Departamento")
+    dane = models.CharField(max_length=20, blank=True, null=True, verbose_name="Código DANE")
+
+    # --- Campos para Encabezado Personalizado en PDF ---
+    linea_encabezado_1 = models.CharField(max_length=255, blank=True, null=True, verbose_name="Línea 1 del Encabezado")
+    linea_encabezado_1_fuente = models.CharField(max_length=100, choices=FONT_CHOICES, default='Helvetica', verbose_name="Fuente L1")
+    linea_encabezado_1_tamano = models.PositiveSmallIntegerField(default=11, verbose_name="Tamaño L1 (pt)")
+    linea_encabezado_1_negrilla = models.BooleanField(default=True, verbose_name="Negrilla L1")
+    linea_encabezado_1_cursiva = models.BooleanField(default=False, verbose_name="Cursiva L1")
+    linea_encabezado_1_subrayado = models.BooleanField(default=False, verbose_name="Subrayado L1")
+
+    linea_encabezado_2 = models.CharField(max_length=255, blank=True, null=True, verbose_name="Línea 2 del Encabezado")
+    linea_encabezado_2_fuente = models.CharField(max_length=100, choices=FONT_CHOICES, default='Helvetica', verbose_name="Fuente L2")
+    linea_encabezado_2_tamano = models.PositiveSmallIntegerField(default=8, verbose_name="Tamaño L2 (pt)")
+    linea_encabezado_2_negrilla = models.BooleanField(default=False, verbose_name="Negrilla L2")
+    linea_encabezado_2_cursiva = models.BooleanField(default=False, verbose_name="Cursiva L2")
+    linea_encabezado_2_subrayado = models.BooleanField(default=False, verbose_name="Subrayado L2")
+
+    linea_encabezado_3 = models.CharField(max_length=255, blank=True, null=True, verbose_name="Línea 3 del Encabezado")
+    linea_encabezado_3_fuente = models.CharField(max_length=100, choices=FONT_CHOICES, default='Helvetica', verbose_name="Fuente L3")
+    linea_encabezado_3_tamano = models.PositiveSmallIntegerField(default=8, verbose_name="Tamaño L3 (pt)")
+    linea_encabezado_3_negrilla = models.BooleanField(default=False, verbose_name="Negrilla L3")
+    linea_encabezado_3_cursiva = models.BooleanField(default=False, verbose_name="Cursiva L3")
+    linea_encabezado_3_subrayado = models.BooleanField(default=False, verbose_name="Subrayado L3")
+
+    linea_encabezado_4 = models.CharField(max_length=255, blank=True, null=True, verbose_name="Línea 4 del Encabezado")
+    linea_encabezado_4_fuente = models.CharField(max_length=100, choices=FONT_CHOICES, default='Helvetica', verbose_name="Fuente L4")
+    linea_encabezado_4_tamano = models.PositiveSmallIntegerField(default=8, verbose_name="Tamaño L4 (pt)")
+    linea_encabezado_4_negrilla = models.BooleanField(default=False, verbose_name="Negrilla L4")
+    linea_encabezado_4_cursiva = models.BooleanField(default=False, verbose_name="Cursiva L4")
+    linea_encabezado_4_subrayado = models.BooleanField(default=False, verbose_name="Subrayado L4")
+    
+    encabezado_pdf_sin_bordes = models.BooleanField(default=False, verbose_name="Quitar bordes del encabezado en PDF", help_text="Marcar si el encabezado debe ocupar todo el ancho sin bordes (diseño especial).")
 
     # --- Campos de Contenido del Portal ---
     lema = models.CharField(max_length=255, blank=True, null=True, verbose_name="Lema o Slogan")
     historia = models.TextField(blank=True, null=True, verbose_name="Historia / Quiénes Somos")
+    mision = models.TextField(blank=True, null=True, verbose_name="Misión")
+    vision = models.TextField(blank=True, null=True, verbose_name="Visión")
+    modelo_pedagogico = models.TextField(blank=True, null=True, verbose_name="Modelo Pedagógico")
 
     # --- Identidad Visual ---
-    logo = models.ImageField(upload_to='logos_colegios/', blank=True, null=True, verbose_name="Logo Principal (PNG transparente recomendado)")
-    logo_secundario = models.ImageField(upload_to='logos_colegios/', blank=True, null=True, verbose_name="Logo Secundario (ej. Gobernación)")
+    logo_izquierdo = models.ImageField(upload_to='logos_colegios/', blank=True, null=True, verbose_name="Logo Izquierdo (Reportes)", help_text="Ej: Logo del Colegio")
+    logo_derecho = models.ImageField(upload_to='logos_colegios/', blank=True, null=True, verbose_name="Logo Derecho (Reportes)", help_text="Ej: Logo de la Gobernación")
     favicon = models.ImageField(upload_to='logos_colegios/', blank=True, null=True, help_text="Icono para la pestaña del navegador (32x32px)")
-    escudo = models.ImageField(upload_to='logos_colegios/', blank=True, null=True, help_text="Escudo para usar como marca de agua en PDFs")
+    escudo = models.ImageField(upload_to='logos_colegios/', blank=True, null=True, verbose_name="Logo/Escudo Principal del Portal", help_text="Escudo para el portal y marca de agua en PDFs")
+    alto_logos_pdf = models.PositiveSmallIntegerField(default=65, verbose_name="Altura Máxima de Logos en PDF (px)", help_text="Ajusta la altura de los logos para que se alineen con el texto del encabezado.")
 
-    # --- Paleta de Colores ---
-    color_primario = models.CharField(max_length=7, default='#923E2B', verbose_name="Color Primario (Botones, Encabezados)")
-    color_secundario = models.CharField(max_length=7, default='#4F4F4F', verbose_name="Color Secundario (Acentos)")
+    # --- Paleta de Colores del Portal ---
+    color_primario = models.CharField(max_length=7, default='#0D6EFD', verbose_name="Color Primario (Botones, Acentos)")
+    color_secundario = models.CharField(max_length=7, default='#6C757D', verbose_name="Color Secundario (Textos sutiles)")
     color_texto_primario = models.CharField(max_length=7, default='#FFFFFF', help_text="Color del texto sobre el color primario (ej. en botones)")
     color_fondo = models.CharField(max_length=7, default='#F8F9FA', help_text="Color de fondo general de las páginas")
+    color_topbar = models.CharField(max_length=7, default='#343A40', verbose_name="Color de Fondo Barra Superior/Lateral")
+    color_topbar_texto = models.CharField(max_length=7, default='#FFFFFF', verbose_name="Color de Texto Barra Superior/Lateral")
+    color_footer = models.CharField(max_length=7, default='#212529', verbose_name="Color de Fondo Pie de Página")
+    color_footer_texto = models.CharField(max_length=7, default='#FFFFFF', verbose_name="Color de Texto Pie de Página")
 
     # --- Datos de Contacto ---
     telefono = models.CharField(max_length=50, blank=True, verbose_name="Teléfono Principal")
@@ -52,6 +109,7 @@ class Colegio(models.Model):
 
     # --- Configuración del Portal ---
     portal_publico_activo = models.BooleanField(default=True, verbose_name="¿Portal Público Activo?")
+    layout_portal = models.CharField(max_length=10, choices=LAYOUT_CHOICES, default='topbar', verbose_name="Diseño del Portal")
 
     def __str__(self):
         return self.nombre
@@ -67,9 +125,20 @@ class Colegio(models.Model):
         ordering = ['nombre']
 
 
+# ======================================================================
+#               CAMBIO: Campo "nivel" agregado a Curso
+# ======================================================================
+NIVEL_CHOICES = [
+    ('PRE', 'Preescolar'),
+    ('PRI', 'Primaria'),
+    ('BAS', 'Básica Secundaria'),
+    ('MED', 'Media')
+]
+
 class Curso(models.Model):
     colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="cursos")
     nombre = models.CharField(max_length=100, verbose_name="Nombre del Curso")
+    nivel = models.CharField(max_length=4, choices=NIVEL_CHOICES, default='BAS', verbose_name="Nivel Escolar")  # <-- NUEVO CAMPO
     director_grado = models.ForeignKey('Docente', on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Director de Grado", related_name="cursos_dirigidos")
     
     def __str__(self): 
@@ -85,6 +154,10 @@ class Curso(models.Model):
         verbose_name_plural = "Cursos"
         ordering = ['nombre']
 
+# ======================================================================
+#                    Resto de modelos sin cambios
+# ======================================================================
+
 class Docente(models.Model):
     colegio = models.ForeignKey(Colegio, on_delete=models.CASCADE, related_name="docentes")
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name="Usuario de Login")
@@ -92,6 +165,9 @@ class Docente(models.Model):
     def __str__(self): 
         return self.user.get_full_name() or self.user.username
         
+    def es_director_de_grupo(self, curso):
+        return self.cursos_dirigidos.filter(pk=curso.pk).exists()
+
     class Meta:
         unique_together = ('user', 'colegio')
         verbose_name = "Docente"

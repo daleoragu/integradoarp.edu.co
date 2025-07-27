@@ -19,7 +19,7 @@
     .card-header h3 {
         margin: 0;
         font-size: 1.4rem;
-        color: var(--color-primario);
+        color: #333;
     }
     .card-header p {
         margin: 5px 0 0;
@@ -37,9 +37,9 @@
     }
     .form-group input[type="number"] {
         width: 100%;
-        max-width: 200px; /* Limita el ancho para que no sea excesivo */
+        max-width: 200px;
         padding: 10px;
-        border: 1px solid var(--color-borde);
+        border: 1px solid #ccc;
         border-radius: 5px;
         font-size: 1.1rem;
         text-align: center;
@@ -49,7 +49,7 @@
         text-align: left;
     }
     .btn-submit {
-        background-color: var(--color-primario);
+        background-color: #007bff;
         color: #fff;
         border: none;
         padding: 12px 25px;
@@ -60,7 +60,7 @@
         transition: background-color 0.3s;
     }
     .btn-submit:hover {
-        background-color: var(--color-primario-oscuro);
+        background-color: #0056b3;
     }
     .help-text {
         font-size: 0.85rem;
@@ -76,21 +76,27 @@
         <p>Define el criterio para la promoción de estudiantes al final del año lectivo.</p>
     </div>
 
+    <!-- El formulario envía los datos a la URL 'panel_control_promocion' usando el método POST -->
     <form method="POST" action="{% url 'panel_control_promocion' %}">
         {% csrf_token %}
         
         <div class="form-group">
-            <label for="id_max_materias_reprobadas">Máximo de materias reprobadas permitidas</label>
+            <label for="id_max_areas_reprobadas">Máximo de áreas reprobadas permitidas</label>
+            <!-- 
+              Es crucial que el atributo 'name' sea 'max_areas_reprobadas', 
+              ya que este es el nombre que la vista de Django buscará en los datos del POST.
+              El valor se carga desde el objeto 'config' que pasa la vista.
+            -->
             <input type="number" 
-                   id="id_max_materias_reprobadas" 
-                   name="max_materias_reprobadas" 
-                   value="{{ config.max_materias_reprobadas }}" 
+                   id="id_max_areas_reprobadas" 
+                   name="max_areas_reprobadas" 
+                   value="{{ config.max_areas_reprobadas }}" 
                    min="0"
                    required>
             <p class="help-text">
-                Un estudiante con <strong>MÁS</strong> de este número de materias con valoración "BAJO" en su nota definitiva, será marcado como "NO PROMOVIDO".
+                Un estudiante con <strong>MÁS</strong> de este número de áreas con valoración "BAJO" en su nota definitiva, será marcado como "NO PROMOVIDO".
                 <br>
-                <strong>Ejemplo:</strong> Si el valor es <strong>2</strong>, un estudiante con 3 materias reprobadas no será promovido.
+                <strong>Ejemplo:</strong> Si el valor es <strong>2</strong>, un estudiante con 3 áreas reprobadas no será promovido.
             </p>
         </div>
 

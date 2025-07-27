@@ -1,0 +1,172 @@
+{% load static %}
+{% load nota_filters %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Boletín Final del Año</title>
+   <style>
+        @page {
+            size: letter portrait;
+            margin: 1.5cm;
+            @bottom-right {
+                content: "Página " counter(page);
+                font-family: 'Helvetica', sans-serif;
+                font-size: 8px; color: #555;
+            }
+        }
+        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 10px; color: #333; line-height: 1.3; }
+        .boletin { page-break-after: always; }
+        .boletin:last-child { page-break-after: auto; }
+        .encabezado { text-align: center; margin-bottom: 10px; }
+        
+        /* --- INICIO: ESTILOS DEFINITIVOS DEL ENCABEZADO --- */
+        .encabezado-con-bordes, .encabezado-sin-bordes {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .encabezado-con-bordes td, .encabezado-sin-bordes td {
+            vertical-align: middle;
+        }
+        .encabezado-con-bordes td {
+            border: 1px solid #000;
+        }
+        .encabezado-sin-bordes td {
+            border: none;
+        }
+        .logo-cell-left { width: 20%; text-align: left; padding: 0; }
+        .info-institucion { width: 60%; text-align: center; padding: 2px 5px; }
+        .logo-cell-right { width: 20%; text-align: right; padding: 0; }
+
+        .escudo {max-width: 100px;  max-height: {{ colegio.alto_logos_pdf|default:65 }}px; height: auto; width: auto;}
+        
+        .info-institucion p { margin: 2px 0; font-weight: bold; }
+        /* --- FIN: ESTILOS DEFINITIVOS DEL ENCABEZADO --- */
+
+        .info-estudiante { width: 100%; font-size: 9px; border-collapse: collapse; margin-bottom: 10px; }
+        .info-estudiante td { padding: 2px 4px; }
+        .tabla-notas { width: 100%; border-collapse: collapse; font-size: 9px; }
+        .tabla-notas th, .tabla-notas td { border: 1px solid #999; padding: 5px; text-align: center; }
+        .tabla-notas th { background-color: #E0E0E0; font-weight: bold; }
+
+        .pie-pagina { margin-top: 40px; text-align: center; font-size: 9px; }
+        
+        .val-icon svg { width: 40px; height: 40px; }
+        .leyenda-tabla {
+            width: 100%;
+            margin-top: 10px;
+            margin-bottom: 15px;
+            border-collapse: collapse;
+            font-size: 9px;
+        }
+        .leyenda-tabla td {
+            border: 1px solid #ccc;
+            padding: 4px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .leyenda-tabla svg {
+            width: 24px;
+            height: 24px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+{% for boletin in boletines %}
+    <div class="boletin">
+        <header class="encabezado">
+            {% include "notas/fragmentos/encabezado_pdf.html" %}
+            <h3 style="text-align: center; margin: 10px 0;">INFORME FINAL DE CALIFICACIONES AÑO {{ ano_lectivo }}</h3>
+        </header>
+
+        <table class="info-estudiante">
+            <tr>
+                <td><strong>Estudiante:</strong> {{ boletin.estudiante.user.last_name|upper }} {{ boletin.estudiante.user.first_name|upper }}</td>
+                <td><strong>Identificación:</strong> {{ boletin.identificacion|default:boletin.estudiante.user.username }}</td>
+                <td><strong>Grupo:</strong> {{ curso.nombre }}</td>
+            </tr>
+             <tr>
+                <td><strong>Dirección:</strong> {{ colegio.direccion|default:'N/A' }}</td>
+                <td colspan="2"><strong>Año:</strong> {{ ano_lectivo }}</td>
+            </tr>
+        </table>
+
+        <table class="leyenda-tabla">
+            <tr>
+                <td colspan="4" style="background-color: #E0E0E0; font-weight: bold;">CONVENCIONES DE VALORACIÓN</td>
+            </tr>
+            <tr>
+                <td>
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="black" stroke-width="1.5" fill="#a7d7c5"/><path d="M16.5 14.5c-1.5 2.5-7.5 2.5-9 0" stroke="black" stroke-width="1.5" stroke-linecap="round"/><path d="M8,10 C8.5,8.5 9.5,8.5 10,10" stroke="black" stroke-width="1.5" stroke-linecap="round"/><path d="M14,10 C14.5,8.5 15.5,8.5 16,10" stroke="black" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    <strong>Superior</strong>
+                </td>
+                <td>
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="black" stroke-width="1.5" fill="#c1e1c5"/><path d="M16 14c-1.5 1.5-6.5 1.5-8 0" stroke="black" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="9" r="1.5" fill="black"/><circle cx="15" cy="9" r="1.5" fill="black"/></svg>
+                    <strong>Alto</strong>
+                </td>
+                <td>
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="black" stroke-width="1.5" fill="#fcf4a3"/><line x1="8" y1="14" x2="16" y2="14" stroke="black" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="9" r="1.5" fill="black"/><circle cx="15" cy="9" r="1.5" fill="black"/></svg>
+                    <strong>Básico</strong>
+                </td>
+                <td>
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="black" stroke-width="1.5" fill="#e4c1f4"/><path d="M16 15c-1.5-1.5-6.5-1.5-8 0" stroke="black" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="9" r="1.5" fill="black"/><circle cx="15" cy="9" r="1.5" fill="black"/></svg>
+                    <strong>Bajo</strong>
+                </td>
+            </tr>
+        </table>
+        <table class="tabla-notas">
+            <thead>
+                <tr>
+                    <th style="width: 60%;">Dimensión</th>
+                    <th style="width: 30%;">Valoración Final</th>
+                    <th style="width: 10%;">IH</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for area in boletin.areas %}
+                <tr class="area-header">
+                    <td colspan="5">{{ area.nombre }}</td>
+                </tr>
+                {% for materia in area.materias %}
+                <tr>
+                    <td style="text-align: left;">{{ materia.nombre|default:area.nombre }}</td>
+                                        <td>
+                        <span class="val-icon">
+                        {% if materia.valoracion == 'SUPERIOR' %}
+                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="black" stroke-width="1.5" fill="#a7d7c5"/><path d="M16.5 14.5c-1.5 2.5-7.5 2.5-9 0" stroke="black" stroke-width="1.5" stroke-linecap="round"/><path d="M8,10 C8.5,8.5 9.5,8.5 10,10" stroke="black" stroke-width="1.5" stroke-linecap="round"/><path d="M14,10 C14.5,8.5 15.5,8.5 16,10" stroke="black" stroke-width="1.5" stroke-linecap="round"/></svg>
+                        {% elif materia.valoracion == 'ALTO' %}
+                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="black" stroke-width="1.5" fill="#c1e1c5"/><path d="M16 14c-1.5 1.5-6.5 1.5-8 0" stroke="black" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="9" r="1.5" fill="black"/><circle cx="15" cy="9" r="1.5" fill="black"/></svg>
+                        {% elif materia.valoracion == 'BASICO' %}
+                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="black" stroke-width="1.5" fill="#fcf4a3"/><line x1="8" y1="14" x2="16" y2="14" stroke="black" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="9" r="1.5" fill="black"/><circle cx="15" cy="9" r="1.5" fill="black"/></svg>
+                        {% elif materia.valoracion == 'BAJO' %}
+                            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="black" stroke-width="1.5" fill="#e4c1f4"/><path d="M16 15c-1.5-1.5-6.5-1.5-8 0" stroke="black" stroke-width="1.5" stroke-linecap="round"/><circle cx="9" cy="9" r="1.5" fill="black"/><circle cx="15" cy="9" r="1.5" fill="black"/></svg>
+                        {% else %}
+                            <span style="color: #bbb;">-</span>
+                        {% endif %}
+                        </span>
+                    </td>
+                    <td>{{ materia.ih|default:'-' }}</td>
+
+                </tr>
+                {% endfor %}
+            {% empty %}
+                 <tr>
+                    <td colspan="3" style="padding: 15px; text-align: center; color: #D8000C; background-color: #FFBABA;">
+                        <b>No se encontraron datos para generar el boletín final.</b>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="pie-pagina">
+             <p>_________________________</p>
+            <p>{{ curso.director_grado.user.get_full_name|default_if_none:"DIRECTOR(A) DE GRUPO" }}</p>
+            <p><strong>Director(a) de Grupo</strong></p>
+        </div>
+    </div>
+{% endfor %}
+</body>
+</html>

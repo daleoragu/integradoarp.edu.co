@@ -1,0 +1,248 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Acta de Reporte Parcial - {{ estudiante.user.get_full_name|default:estudiante.user.username }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .acta-container {
+        background-color: white;
+        padding: 40px;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        max-width: 900px;
+        margin: 30px auto;
+        font-family: 'Inter', sans-serif;
+        line-height: 1.6;
+        color: #333;
+    }
+    .acta-header {
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid #eee;
+        padding-bottom: 20px;
+    }
+    .acta-header h1 {
+        color: #0056b3;
+        font-size: 2.2rem;
+        margin-bottom: 10px;
+    }
+    .acta-header h2 {
+        color: #555;
+        font-size: 1.5rem;
+        margin-bottom: 5px;
+    }
+    .acta-info {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 25px;
+        flex-wrap: wrap;
+    }
+    .acta-info div {
+        flex: 1;
+        min-width: 280px;
+        margin-bottom: 15px;
+    }
+    .acta-info strong {
+        color: #0056b3;
+    }
+    .table-reportes {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+    .table-reportes th, .table-reportes td {
+        border: 1px solid #ddd;
+        padding: 12px;
+        text-align: left;
+        vertical-align: top;
+    }
+    .table-reportes th {
+        background-color: #f8f8f8;
+        color: #0056b3;
+        font-weight: bold;
+    }
+    .table-reportes tbody tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+    .table-reportes tbody tr:hover {
+        background-color: #f1f1f1;
+    }
+    .no-reportes {
+        text-align: center;
+        padding: 30px;
+        border: 1px dashed #ccc;
+        border-radius: 8px;
+        color: #777;
+        margin-top: 30px;
+    }
+    .acta-footer {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 2px solid #eee;
+        text-align: center;
+        font-size: 0.9rem;
+        color: #777;
+    }
+    .btn-back {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #6c757d;
+        color: white;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+    .btn-back:hover {
+        background-color: #5a6268;
+    }
+    .form-filtro-periodo {
+        display: flex;
+        align-items: flex-end;
+        gap: 15px;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid #eee;
+    }
+    .form-filtro-periodo label {
+        font-weight: bold;
+        margin-bottom: 5px;
+        display: block;
+    }
+    .form-filtro-periodo select {
+        padding: 8px 12px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 1rem;
+        flex-grow: 1;
+    }
+    .form-filtro-periodo button {
+        padding: 8px 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .form-filtro-periodo button:hover {
+        background-color: #0056b3;
+    }
+
+    @media (max-width: 768px) {
+        .acta-container {
+            padding: 20px;
+            margin: 15px auto;
+        }
+        .acta-info {
+            flex-direction: column;
+        }
+        .acta-info div {
+            min-width: unset;
+            width: 100%;
+        }
+        .form-filtro-periodo {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .form-filtro-periodo select, .form-filtro-periodo button {
+            width: 100%;
+            margin-top: 10px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block page_title %}Acta de Reporte Parcial{% endblock %}
+
+{% block content %}
+<div class="acta-container">
+    <div class="acta-header">
+        <h1>{{ colegio.nombre }}</h1>
+        <h2>Acta de Reporte Parcial de Desempeño</h2>
+        <p><strong>Estudiante:</strong> {{ estudiante.user.get_full_name|default:estudiante.user.username }}</p>
+        <p><strong>Curso:</strong> {{ estudiante.curso.nombre }}</p>
+    </div>
+
+    <div class="acta-info">
+        <div>
+            <strong>Fecha de Generación:</strong> {{ "now"|date:"d/m/Y H:i" }}
+        </div>
+        <div>
+            <strong>Identificación Estudiante:</strong> {{ estudiante.numero_identificacion }}
+        </div>
+        <div>
+            <strong>Acudiente:</strong> {{ estudiante.acudiente.user.get_full_name|default:"N/A" }}
+        </div>
+    </div>
+
+    {# Formulario de filtro por período #}
+    <form method="GET" action="{% url 'acta_reporte_parcial_estudiante' estudiante.id %}" class="form-filtro-periodo">
+        <div style="flex-grow: 1;">
+            <label for="periodo_id">Filtrar por Período:</label>
+            <select name="periodo_id" id="periodo_id">
+                <option value="">Todos los Períodos</option>
+                {% for periodo_opcion in todos_los_periodos %}
+                    <option value="{{ periodo_opcion.id }}" {% if periodo_seleccionado and periodo_opcion.id == periodo_seleccionado.id %}selected{% endif %}>
+                        {{ periodo_opcion }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit"><i class="fas fa-filter me-2"></i>Filtrar</button>
+    </form>
+
+    {% if periodo_seleccionado %}
+        <p class="text-center lead mb-4">Mostrando reportes para el período: <strong>{{ periodo_seleccionado }}</strong></p>
+    {% else %}
+        <p class="text-center lead mb-4">Mostrando reportes para <strong>Todos los Períodos</strong>.</p>
+    {% endif %}
+
+
+    {% if reportes_dificultades %}
+        <p>A continuación se detallan las asignaturas en las que el estudiante <strong>{{ estudiante.user.first_name }} {{ estudiante.user.last_name }}</strong> ha sido reportado con dificultades académicas:</p>
+
+        <table class="table-reportes">
+            <thead>
+                <tr>
+                    <th>Periodo</th>
+                    <th>Materia</th>
+                    <th>Docente</th>
+                    <th>Estado de Dificultad</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for reporte in reportes_dificultades %}
+                    <tr>
+                        <td>{{ reporte.periodo.get_nombre_display }} - {{ reporte.periodo.ano_lectivo }}</td>
+                        <td>{{ reporte.asignacion.materia.nombre }}</td>
+                        <td>{{ reporte.asignacion.docente.user.get_full_name|default:reporte.asignacion.docente.user.username }}</td>
+                        <td>
+                            {% if reporte.presenta_dificultades %}
+                                <span style="color: red; font-weight: bold;">Sí (Requiere Atención)</span>
+                            {% else %}
+                                No
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="no-reportes">
+            <p><i class="fas fa-check-circle fa-3x mb-3" style="color: #28a745;"></i></p>
+            <p>El estudiante <strong>{{ estudiante.user.first_name }} {{ estudiante.user.last_name }}</strong> no presenta reportes de dificultades académicas en ninguna asignatura {% if periodo_seleccionado %}en el período <strong>{{ periodo_seleccionado }}</strong>{% else %}hasta la fecha{% endif %}.</p>
+        </div>
+    {% endif %}
+
+    <div class="acta-footer">
+        <p>Este documento es un reporte interno de seguimiento académico y no constituye un boletín oficial de calificaciones.</p>
+        <p>&copy; {{ "now"|date:"Y" }} {{ colegio.nombre }}. Todos los derechos reservados.</p>
+    </div>
+
+    <div class="text-center">
+        <a href="javascript:history.back()" class="btn-back"><i class="fas fa-arrow-left me-2"></i>Volver</a>
+    </div>
+</div>
+{% endblock %}

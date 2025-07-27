@@ -2,7 +2,7 @@
 
 {% comment %}
 Este template muestra el detalle de una noticia para ser cargado con AJAX.
-Ahora incluye los estilos de periódico y las fuentes personalizadas.
+Ahora es dinámico y muestra la información del colegio correspondiente.
 {% endcomment %}
 
 <!-- Fuentes de Google para el estilo de periódico -->
@@ -12,14 +12,24 @@ Ahora incluye los estilos de periódico y las fuentes personalizadas.
 
 <div class="noticia-detalle-container">
 
-    <!-- Encabezado estilo periódico -->
+    <!-- ===== INICIO DE LA ACTUALIZACIÓN ===== -->
+    <!-- Encabezado ahora es dinámico -->
     <div class="noticia-header d-flex align-items-center justify-content-center border-bottom border-2 border-dark pb-3 mb-4">
         <div class="text-center">
-            <p class="text-uppercase small text-muted mb-1" style="letter-spacing: 2px;">El Diario La Cofradía</p>
+            {% if noticia.colegio %}
+                <p class="text-uppercase small text-muted mb-1" style="letter-spacing: 2px;">Noticias de {{ noticia.colegio.nombre }}</p>
+            {% else %}
+                 <p class="text-uppercase small text-muted mb-1" style="letter-spacing: 2px;">Noticias</p>
+            {% endif %}
             <h1 class="noticia-titulo d-inline-block align-middle me-3">{{ noticia.titulo }}</h1>
         </div>
-        <img src="{% static 'img/logo_colegio.png' %}" alt="Logo del Colegio" style="max-height: 80px; margin-left: 20px;">
+        
+        {# Se muestra el escudo del colegio si existe #}
+        {% if noticia.colegio and noticia.colegio.escudo %}
+            <img src="{{ noticia.colegio.escudo.url }}" alt="Escudo de {{ noticia.colegio.nombre }}" style="max-height: 80px; margin-left: 20px;">
+        {% endif %}
     </div>
+    <!-- ===== FIN DE LA ACTUALIZACIÓN ===== -->
 
     <p class="text-muted text-center mb-4">
         <i class="fas fa-user-edit me-1"></i> Publicado por <strong>{{ noticia.autor.get_full_name|default:"Administración" }}</strong>
@@ -66,6 +76,7 @@ Ahora incluye los estilos de periódico y las fuentes personalizadas.
         float: left;
         line-height: 1;
         margin-right: 0.5rem;
-        color: var(--color-vinotinto);
+        /* Se usa el color primario del colegio si está disponible */
+        color: var(--color-primario, #A62934); 
     }
 </style>

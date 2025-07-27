@@ -9,77 +9,85 @@
 
 {% block content %}
     <style>
-        .stats-container {
-            display: flex;
-            flex-direction: column;
-            gap: 30px;
-        }
-        .chart-grid {
-            display: grid;
-            grid-template-columns: 1fr; /* 1 columna por defecto para móviles */
-            gap: 30px;
-            align-items: start; /* Alinea los elementos al inicio de la celda del grid */
-        }
-        @media (min-width: 1200px) { /* Se activa en pantallas grandes */
-            .chart-grid {
-                grid-template-columns: 1fr 1fr; /* 2 columnas de igual tamaño */
-            }
-        }
-        .vertical-chart-stack {
-            display: flex;
-            flex-direction: column;
-            gap: 30px; /* Espacio entre los gráficos apilados */
-            min-width: 0; /* Evita que los contenedores flex/grid se estiren con su contenido */
-        }
-        .chart-card {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            height: 100%; /* Asegura que todas las tarjetas en una fila tengan la misma altura */
-        }
-        .chart-card h5 {
-            text-align: center;
-            margin-bottom: 1.5rem;
-            color: #495057;
-            font-weight: 600;
-        }
-        .chart-canvas-container {
-            position: relative;
-            flex-grow: 1; /* Permite que el contenedor del gráfico crezca */
-            min-height: 300px;
-        }
-        .apexcharts-canvas {
-            margin: 0 auto;
-        }
+        .stats-container { display: flex; flex-direction: column; gap: 30px; }
+        .chart-grid { display: grid; grid-template-columns: 1fr; gap: 30px; align-items: start; }
+        @media (min-width: 1200px) { .chart-grid { grid-template-columns: 1fr 1fr; } }
+        .vertical-chart-stack { display: flex; flex-direction: column; gap: 30px; min-width: 0; }
+        .chart-card { background-color: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column; height: 100%; }
+        .chart-card h5 { text-align: center; margin-bottom: 1.5rem; color: #495057; font-weight: 600; }
+        .chart-canvas-container { position: relative; flex-grow: 1; min-height: 300px; }
+        .conclusionesWrapper { margin-top: 25px; margin-bottom: 15px; }
+        .conclusiones-list { padding-left: 22px; }
+        .conclusiones-list li { margin-bottom: 8px; }
+
+        /* --- ESTILOS PARA EL ENCABEZADO DEL PDF (COPIADOS DE BOLETIN) --- */
+        .encabezado-tabla { width: 100%; border-collapse: collapse; border: 1px solid #000; }
+        .encabezado-tabla td { vertical-align: middle; text-align: center; padding: 5px; border: 1px solid #000; }
+        .escudo { max-width: 100px; max-height: 65px; height: auto; width: auto; }
+        .info-institucion { font-size: 11px; font-weight: bold; }
+        .info-institucion p { margin: 1px 0; }
+        .encabezado-sin-bordes, .encabezado-sin-bordes td { border: none !important; }
     </style>
     
+    <!-- =================================================================== -->
+    <!-- ENCABEZADO OCULTO QUE USAREMOS PARA GENERAR EL PDF -->
+    <!-- =================================================================== -->
+    <div id="pdfHeader" style="display: none; padding: 20px;">
+        {% include "notas/fragmentos/encabezado_pdf.html" %}
+        <h3 style="text-align: center; margin: 15px 0; font-family: sans-serif; font-size: 14px; font-weight: bold;">INFORME ESTADÍSTICO</h3>
+    </div>
+
     {% include 'notas/estadisticas/partials/_filtros.html' %}
 
     <div class="stats-container">
-        {% include 'notas/estadisticas/partials/_tarjetas_datos.html' %}
-        
-        <div id="statsTitleContainer" class="stats-title-container" style="display: none;">
-            <h3 id="statsTitle" class="stats-title"></h3>
-        </div>
-        
-        {# --- SECCIÓN DE CONCLUSIONES AÑADIDA --- #}
-        <div id="conclusionesWrapper" style="display: none;">
-             {% include 'notas/estadisticas/partials/_conclusiones.html' %}
+        <!-- Contenedor para las estadísticas generales -->
+        <div id="generalStatsContainer" style="display: none;">
+            {% include 'notas/estadisticas/partials/_tarjetas_datos.html' %}
+            <div id="statsTitleContainer" class="stats-title-container" style="display: none;">
+                <h3 id="statsTitle" class="stats-title"></h3>
+            </div>
+            <div id="conclusionesWrapperGeneral" class="conclusionesWrapper" style="display: none;">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light"><h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Conclusiones Automáticas</h5></div>
+                    <div class="card-body"><ul id="conclusionesListGeneral" class="conclusiones-list text-muted"></ul></div>
+                </div>
+            </div>
+            <div class="chart-grid">
+                <div class="vertical-chart-stack">
+                    {% include 'notas/estadisticas/partials/_grafico_dona.html' %}
+                    {% include 'notas/estadisticas/partials/_grafico_barras.html' %}
+                </div>
+                <div class="vertical-chart-stack">
+                    {% include 'notas/estadisticas/partials/_grafico_caja_bigotes.html' %}
+                    {% include 'notas/estadisticas/partials/_grafico_histograma.html' %}
+                </div>
+            </div>
         </div>
 
-        <div class="chart-grid">
-            <div class="vertical-chart-stack">
-                {% include 'notas/estadisticas/partials/_grafico_dona.html' %}
-                {% include 'notas/estadisticas/partials/_grafico_barras.html' %}
+        <!-- Contenedores para las otras vistas (sin cambios) -->
+        <div id="reprobadosDocenteContainer" class="chart-grid" style="display: none;">
+            <div id="conclusionesWrapperDocente" class="conclusionesWrapper" style="display: none;">
+                 <div class="card shadow-sm"><div class="card-header bg-light"><h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Conclusiones</h5></div><div class="card-body"><ul id="conclusionesListDocente" class="conclusiones-list text-muted"></ul></div></div>
             </div>
-
-            <div class="vertical-chart-stack">
-                {% include 'notas/estadisticas/partials/_grafico_caja_bigotes.html' %}
-                {% include 'notas/estadisticas/partials/_grafico_histograma.html' %}
+            {% include 'notas/estadisticas/partials/_grafico_reprobados_docente.html' %}
+        </div>
+        <div id="reprobadosMateriaContainer" class="chart-grid" style="display: none;">
+            <div id="conclusionesWrapperMateria" class="conclusionesWrapper" style="display: none;">
+                <div class="card shadow-sm"><div class="card-header bg-light"><h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Conclusiones</h5></div><div class="card-body"><ul id="conclusionesListMateria" class="conclusiones-list text-muted"></ul></div></div>
             </div>
+            {% include 'notas/estadisticas/partials/_grafico_materias_reprobadas.html' %}
+        </div>
+        <div id="reprobadosAreaContainer" class="chart-grid" style="display: none;">
+             <div id="conclusionesWrapperArea" class="conclusionesWrapper" style="display: none;">
+                <div class="card shadow-sm"><div class="card-header bg-light"><h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Conclusiones</h5></div><div class="card-body"><ul id="conclusionesListArea" class="conclusiones-list text-muted"></ul></div></div>
+            </div>
+            {% include 'notas/estadisticas/partials/_grafico_reprobados_area.html' %}
+        </div>
+        <div id="materiasReprobadasDocenteContainer" class="chart-grid" style="display: none;">
+            <div id="conclusionesWrapperMateriasDocente" class="conclusionesWrapper" style="display: none;">
+                <div class="card shadow-sm"><div class="card-header bg-light"><h5 class="mb-0"><i class="fas fa-comment-dots me-2"></i>Conclusiones</h5></div><div class="card-body"><ul id="conclusionesListMateriasDocente" class="conclusiones-list text-muted"></ul></div></div>
+            </div>
+            {% include 'notas/estadisticas/partials/_grafico_materias_reprobadas_docente.html' %}
         </div>
     </div>
 {% endblock %}

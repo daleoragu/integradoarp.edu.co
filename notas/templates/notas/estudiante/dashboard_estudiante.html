@@ -88,6 +88,8 @@
     .bg-est-boletin { background: linear-gradient(135deg, #0d6efd, #0a58ca); }
     .bg-est-mail { background: linear-gradient(135deg, #dc3545, #b02130); }
     .bg-est-portal { background: linear-gradient(135deg, #6c757d, #495057); }
+    /* Nuevo color para el reporte parcial del estudiante */
+    .bg-est-reporte-parcial { background: linear-gradient(135deg, #a0522d, #8b4513); }
 
 
     @media (max-width: 768px) {
@@ -136,6 +138,12 @@
             <div class="icon-container bg-est-portal"><i class="fas fa-globe"></i></div>
             <span class="app-label">Ir al Portal</span>
         </a>
+        {% if user.estudiante %} {# Asegurarse de que el usuario es un estudiante antes de mostrar el enlace #}
+            <a href="{% url 'acta_reporte_parcial_estudiante' user.estudiante.id %}" class="app-icon">
+                <div class="icon-container bg-est-reporte-parcial"><i class="fas fa-file-alt"></i></div>
+                <span class="app-label">Mi Reporte Parcial</span>
+            </a>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

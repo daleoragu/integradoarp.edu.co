@@ -6,6 +6,7 @@
     <title>mColegios - Plataforma de Gestión Educativa</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         body { font-family: 'Inter', sans-serif; }
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
@@ -19,6 +20,8 @@
             <a href="#" class="text-2xl font-bold text-indigo-600">mColegios</a>
             <div>
                 <a href="#servicios" class="text-gray-600 hover:text-indigo-600 px-3 py-2">Servicios</a>
+                <!-- Enlace nuevo a la sección de colegios -->
+                <a href="#colegios" class="text-gray-600 hover:text-indigo-600 px-3 py-2">Colegios</a>
                 <a href="#contacto" class="text-gray-600 hover:text-indigo-600 px-3 py-2">Contacto</a>
                 <a href="/admin" class="ml-4 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors">Acceso Admin</a>
             </div>
@@ -67,6 +70,38 @@
             </div>
         </div>
     </section>
+
+    <!-- ================================================== -->
+    <!-- === INICIO: NUEVA SECCIÓN DE COLEGIOS AFILIADOS === -->
+    <!-- ================================================== -->
+    {% if lista_colegios %}
+    <section id="colegios" class="bg-white py-20">
+        <div class="container mx-auto px-6">
+            <h2 class="text-3xl font-bold text-center mb-2">Accede al Portal de tu Institución</h2>
+            <p class="text-center text-gray-600 mb-12">Selecciona tu colegio para ingresar a su portal de noticias, documentos y acceso a la plataforma.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                
+                {% for colegio in lista_colegios %}
+                <a href="{% if colegio.domain %}//{{ colegio.domain }}{% else %}http://{{ colegio.slug }}.localhost:8010{% endif %}" target="_blank" class="block bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow p-6 text-center">
+                    <div class="h-24 w-24 mx-auto mb-4 flex items-center justify-center">
+                        {% if colegio.logo %}
+                            <img src="{{ colegio.logo.url }}" alt="Logo de {{ colegio.nombre }}" class="max-h-full max-w-full object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <div style="display:none;"><i class="fas fa-university text-4xl text-gray-400"></i></div>
+                        {% else %}
+                            <div><i class="fas fa-university text-4xl text-gray-400"></i></div>
+                        {% endif %}
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-800">{{ colegio.nombre }}</h3>
+                </a>
+                {% endfor %}
+
+            </div>
+        </div>
+    </section>
+    {% endif %}
+    <!-- ================================================== -->
+    <!-- === FIN: NUEVA SECCIÓN DE COLEGIOS AFILIADOS === -->
+    <!-- ================================================== -->
 
     <!-- Contact Section -->
     <section id="contacto" class="bg-gray-100 py-20">

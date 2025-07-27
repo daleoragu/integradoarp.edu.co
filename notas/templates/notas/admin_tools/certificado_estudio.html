@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Certificado de Estudio</title>
+    <style>
+        <style>
+        @page {
+            size: letter portrait;
+            margin: 1.5cm;
+            @bottom-right {
+                content: "Página " counter(page);
+                font-family: 'Helvetica', sans-serif;
+                font-size: 8px; color: #555;
+            }
+        }
+        body { font-family: 'Helvetica', Arial, sans-serif; font-size: 8px; color: #333; }
+       .encabezado { text-align: center; margin-bottom: 10px; }
+        .encabezado-tabla { width: 100%; border-collapse: collapse; border: 1px solid #000; }
+        .encabezado-tabla td { vertical-align: middle; text-align: center; padding: 5px; border: 1px solid #000; }
+        .escudo {max-width: 100px;  max-height: {{ colegio.alto_logos_pdf|default:100 }}px; height: auto; width: auto;}
+        .info-institucion { font-size: 11px; font-weight: bold; }
+        .info-institucion p { margin: 1px 0; }
+        
+        .title {
+            text-align: center;
+            font-weight: bold;
+            font-size: 16pt;
+            margin: 60px 0;
+            text-transform: uppercase;
+        }
+        .content {
+            text-align: justify;
+            font-size: 12px;
+        }
+        .signature {
+            margin-top: 120px;
+            text-align: center;
+        }
+        .signature-line {
+            border-bottom: 1px solid black;
+            width: 300px;
+            margin: 0 auto;
+        }
+        .signature-name {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header class="encabezado">
+        {% include "notas/fragmentos/encabezado_pdf.html" %}
+        <h2 class="title">CERTIFICADO DE ESTUDIO</h2>
+    </header>
+
+    <div class="content">
+    
+        <p>
+            El suscrito Rector del <strong>{{ colegio.nombre|upper }}</strong>,
+            debidamente aprobado según resolución No. {{ colegio.resolucion_aprobacion|default:'[N/A]' }},
+            hace constar que: <strong>{{ estudiante.user.get_full_name|upper }}</strong>
+        </p>
+       
+           
+        </p>
+        <p>
+            Identificado(a) con {{ estudiante.ficha.get_tipo_documento_display }} No. <strong>{{ estudiante.ficha.numero_documento|default:'[No registrado]' }}</strong>,
+            se encuentra legalmente matriculado(a) en esta institución educativa en el grado
+            <strong>{{ estudiante.curso.nombre|upper }}</strong>, para el año lectivo {{ "now"|date:"Y" }}.
+        </p>
+        <p>
+            Se expide el presente certificado en {{ colegio.ciudad|default:'la ciudad' }}, {{ fecha_larga }}.
+        </p>
+    </div>
+
+    <div class="signature">
+        <div class="signature-line"></div>
+        <p class="signature-name">
+            {{ colegio.admin_general.get_full_name|default:'[Nombre del Rector]'|upper }}
+        </p>
+        <p>Rector(a)</p>
+    </div>
+</body>
+</html>

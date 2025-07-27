@@ -1,21 +1,20 @@
-<!-- 
-  NOTA: Se ha eliminado el <div class="card"> y <div class="card-body"> 
-  exteriores para evitar anidamiento incorrecto. 
-  El contenido ahora se inyecta directamente.
--->
+<!-- notas/portal_components/_contenido_mision_vision.html -->
 <h2 class="card-title mb-4 border-bottom pb-3">Misión y Visión</h2>
-
 <div class="row">
     <div class="col-lg-6 mb-4 mb-lg-0">
-        <h3 style="color: var(--color-vinotinto);">Misión</h3>
-        <p>
-            Somos una institución educativa de carácter técnico que forma ciudadanos íntegros, con pensamiento crítico, competencias académicas y laborales, capaces de transformar su entorno y contribuir al desarrollo social y económico de la región, fundamentados en valores como el respeto, la responsabilidad y la honestidad.
-        </p>
+        <h3 style="color: var(--color-primario);">Misión</h3>
+        {% if colegio.mision %}
+            <p>{{ colegio.mision|linebreaks }}</p>
+        {% else %}
+            <p class="text-muted">La misión aún no ha sido configurada.</p>
+        {% endif %}
     </div>
     <div class="col-lg-6 border-start-lg">
-        <h3 style="color: var(--color-vinotinto);">Visión</h3>
-        <p>
-            Para el año 2028, la I.E.T. Alfonso Palacio Rudas será reconocida a nivel regional y nacional por su excelencia académica, su liderazgo en formación técnica y tecnológica, y por el impacto positivo de sus egresados en la sociedad, siendo un referente en innovación pedagógica y uso de nuevas tecnologías.
-        </p>
+        <h3 style="color: var(--color-primario);">Visión</h3>
+        {% if colegio.vision %}
+            <p>{{ colegio.vision|linebreaks }}</p>
+        {% else %}
+            <p class="text-muted">La visión aún no ha sido configurada.</p>
+        {% endif %}
     </div>
 </div>

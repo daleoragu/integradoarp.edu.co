@@ -16,7 +16,6 @@ except ImportError:
 from ..models import Curso, PeriodoAcademico, Docente, AsignacionDocente, Estudiante, FichaEstudiante
 from ..boletin.logic import get_datos_boletin_curso, get_datos_boletin_final
 
-
 @login_required
 def selector_boletin_vista(request):
     """
@@ -56,7 +55,6 @@ def selector_boletin_vista(request):
     
     return render(request, 'notas/admin_tools/selector_boletin.html', context)
 
-
 @login_required
 def generar_boletin_vista(request):
     """
@@ -92,47 +90,83 @@ def generar_boletin_vista(request):
 
     estudiante_especifico = user.estudiante if es_estudiante_del_curso and not user.is_superuser else None
 
-    if reporte_id.startswith('FINAL_'):
-        try:
-            ano_lectivo = int(reporte_id.split('_')[1])
-        except (ValueError, IndexError):
-            return HttpResponse("Error: Formato de reporte final no válido.", status=400)
-        
-        # La lógica de boletín final ahora recibe el colegio
-        boletines_data, nombres_periodos = get_datos_boletin_final(request.colegio, curso, ano_lectivo, estudiante_especifico)
-        if not boletines_data:
-            return HttpResponse("No se encontraron datos para generar el boletín final de este curso y año.")
+    # --- NUEVO: SELECCIÓN DE PLANTILLA SEGÚN NIVEL DEL CURSO ---
+    if curso.nivel == 'PRE':
+        # --- Boletín final ---
+        if reporte_id.startswith('FINAL_'):
+            try:
+                ano_lectivo = int(reporte_id.split('_')[1])
+            except (ValueError, IndexError):
+                return HttpResponse("Error: Formato de reporte final no válido.", status=400)
+            
+            boletines_data, nombres_periodos = get_datos_boletin_final(request.colegio, curso, ano_lectivo, estudiante_especifico)
+            if not boletines_data:
+                return HttpResponse("No se encontraron datos para generar el boletín final de este curso y año.")
 
-        template_path = 'notas/boletin/boletin_final_pdf.html'
-        pdf_filename = f'boletin_final_{curso.nombre}_{ano_lectivo}.pdf'
-        context = { "boletines": boletines_data, "nombres_periodos": nombres_periodos, "curso": curso, "ano_lectivo": ano_lectivo, "colegio": request.colegio }
+            template_path = 'notas/boletin/boletin_prescolar_final_pdf.html'
+            pdf_filename = f'boletin_final_pre_{curso.nombre}_{ano_lectivo}.pdf'
+            context = { "boletines": boletines_data, "nombres_periodos": nombres_periodos, "curso": curso, "ano_lectivo": ano_lectivo, "colegio": request.colegio }
 
+        # --- Boletín de periodo ---
+        else:
+            try:
+                periodo = get_object_or_404(PeriodoAcademico, id=reporte_id, colegio=request.colegio)
+            except (ValueError, PeriodoAcademico.DoesNotExist):
+                return HttpResponse("Error: El periodo seleccionado no es válido.", status=400)
+
+            boletines_data = get_datos_boletin_curso(request.colegio, curso, periodo, estudiante_especifico)
+            if not boletines_data:
+                return HttpResponse("No se encontraron datos para generar el boletín de este periodo.")
+
+            template_path = 'notas/boletin/boletin_prescolar_pdf.html'
+            pdf_filename = f'boletines_pre_{curso.nombre}_{periodo.get_nombre_display()}.pdf'
+            context = { "boletines": boletines_data, "curso": curso, "periodo": periodo, "colegio": request.colegio }
+
+    # --- Cursos normales (primaria, básica, media) ---
     else:
-        try:
-            # Filtra el periodo por el colegio actual
-            periodo = get_object_or_404(PeriodoAcademico, id=reporte_id, colegio=request.colegio)
-        except (ValueError, PeriodoAcademico.DoesNotExist):
-            return HttpResponse("Error: El periodo seleccionado no es válido.", status=400)
+        if reporte_id.startswith('FINAL_'):
+            try:
+                ano_lectivo = int(reporte_id.split('_')[1])
+            except (ValueError, IndexError):
+                return HttpResponse("Error: Formato de reporte final no válido.", status=400)
+            
+            boletines_data, nombres_periodos = get_datos_boletin_final(request.colegio, curso, ano_lectivo, estudiante_especifico)
+            if not boletines_data:
+                return HttpResponse("No se encontraron datos para generar el boletín final de este curso y año.")
 
-        # La lógica de boletín de curso ahora recibe el colegio
-        boletines_data = get_datos_boletin_curso(request.colegio, curso, periodo, estudiante_especifico)
-        if not boletines_data:
-            return HttpResponse("No se encontraron datos para generar el boletín de este periodo.")
+            template_path = 'notas/boletin/boletin_final_pdf.html'
+            pdf_filename = f'boletin_final_{curso.nombre}_{ano_lectivo}.pdf'
+            context = { "boletines": boletines_data, "nombres_periodos": nombres_periodos, "curso": curso, "ano_lectivo": ano_lectivo, "colegio": request.colegio }
 
-        template_path = 'notas/boletin/boletin_pdf.html'
-        pdf_filename = f'boletines_{curso.nombre}_{periodo.get_nombre_display()}.pdf'
-        context = { "boletines": boletines_data, "curso": curso, "periodo": periodo, "colegio": request.colegio }
+        else:
+            try:
+                periodo = get_object_or_404(PeriodoAcademico, id=reporte_id, colegio=request.colegio)
+            except (ValueError, PeriodoAcademico.DoesNotExist):
+                return HttpResponse("Error: El periodo seleccionado no es válido.", status=400)
 
-    # --- INICIO: CORRECCIÓN PARA NÚMERO DE IDENTIFICACIÓN ---
-    # Iteramos sobre los datos generados para asegurar que la identificación sea correcta.
+            boletines_data = get_datos_boletin_curso(request.colegio, curso, periodo, estudiante_especifico)
+            if not boletines_data:
+                return HttpResponse("No se encontraron datos para generar el boletín de este periodo.")
+
+            template_path = 'notas/boletin/boletin_pdf.html'
+            pdf_filename = f'boletines_{curso.nombre}_{periodo.get_nombre_display()}.pdf'
+            context = { "boletines": boletines_data, "curso": curso, "periodo": periodo, "colegio": request.colegio }
+
+    # --- INICIO: CORRECCIÓN PARA EVITAR EL KEYERROR ---
     for boletin in boletines_data:
+        # Se verifica si la llave 'estudiante' existe antes de usarla.
+        estudiante_obj = boletin.get('estudiante')
+        if not estudiante_obj:
+            # Si no hay estudiante en este registro, se le asigna una identificación
+            # genérica y se continúa con el siguiente para no detener la ejecución.
+            boletin['identificacion'] = "Estudiante no encontrado"
+            continue
+
         try:
-            # Intentamos obtener la ficha y el número de documento
-            ficha = FichaEstudiante.objects.get(estudiante=boletin['estudiante'])
-            boletin['identificacion'] = ficha.numero_documento or boletin['estudiante'].user.username
+            ficha = FichaEstudiante.objects.get(estudiante=estudiante_obj)
+            boletin['identificacion'] = ficha.numero_documento or estudiante_obj.user.username
         except FichaEstudiante.DoesNotExist:
-            # Si no tiene ficha, usamos el username como fallback
-            boletin['identificacion'] = boletin['estudiante'].user.username
+            boletin['identificacion'] = estudiante_obj.user.username
     # --- FIN: CORRECCIÓN ---
 
     html_string = render_to_string(template_path, context)

@@ -19,14 +19,13 @@ def es_personal_admin(user):
     return user.is_superuser
 
 # ===============================================================
-# VISTA PRINCIPAL DE ASIGNACIÓN ACADÉMICA
+# VISTA PRINCIPAL DE ASIGNACIÓN ACADÉMICA (Sin cambios)
 # ===============================================================
 @user_passes_test(es_personal_admin)
 def gestion_asignacion_academica_vista(request):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
 
-    # 👇 FILTRADO: Listar solo docentes y cursos del colegio actual
     docentes_list = Docente.objects.filter(colegio=request.colegio).select_related('user').prefetch_related(
         'asignaciondocente_set__materia',
         'asignaciondocente_set__curso',
@@ -39,7 +38,6 @@ def gestion_asignacion_academica_vista(request):
         total_ih=Sum('asignaciondocente__intensidad_horaria_semanal', default=0)
     ).order_by('nombre')
     
-    # Pasar el colegio al formulario para filtrar los desplegables
     form_asignacion = AsignacionDocenteForm(colegio=request.colegio)
     
     context = {
@@ -60,7 +58,6 @@ def crear_asignacion_vista(request):
     form = AsignacionDocenteForm(request.POST, colegio=request.colegio)
     if form.is_valid():
         try:
-            # 👇 ASOCIACIÓN: Añadir el colegio antes de guardar
             asignacion = form.save(commit=False)
             asignacion.colegio = request.colegio
             asignacion.save()
@@ -79,21 +76,19 @@ def eliminar_asignacion_vista(request, asignacion_id):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
         
-    # 👇 FILTRADO: Asegurar que la asignación pertenece al colegio actual
     asignacion = get_object_or_404(AsignacionDocente, id=asignacion_id, colegio=request.colegio)
     asignacion.delete()
     messages.success(request, 'Asignación eliminada correctamente.')
     return redirect('gestion_asignacion_academica')
 
 # ===============================================================
-# VISTAS PARA GESTIÓN DE CURSOS / GRADOS
+# VISTAS PARA GESTIÓN DE CURSOS / GRADOS (Sin cambios)
 # ===============================================================
 @user_passes_test(es_personal_admin)
 def gestion_cursos_vista(request):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
         
-    # 👇 FILTRADO: Listar solo cursos del colegio actual
     cursos = Curso.objects.filter(colegio=request.colegio).select_related('director_grado__user')
     context = {'cursos': cursos, 'titulo': 'Gestión de Cursos y Grados', 'colegio': request.colegio}
     return render(request, 'notas/admin_crud/gestion_cursos.html', context)
@@ -106,7 +101,6 @@ def crear_curso_vista(request):
     if request.method == 'POST':
         form = CursoForm(request.POST, colegio=request.colegio)
         if form.is_valid():
-            # 👇 ASOCIACIÓN: Añadir el colegio antes de guardar
             curso = form.save(commit=False)
             curso.colegio = request.colegio
             curso.save()
@@ -122,7 +116,6 @@ def editar_curso_vista(request, curso_id):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
         
-    # 👇 FILTRADO: Obtener curso solo si pertenece al colegio actual
     curso = get_object_or_404(Curso, id=curso_id, colegio=request.colegio)
     if request.method == 'POST':
         form = CursoForm(request.POST, instance=curso, colegio=request.colegio)
@@ -141,7 +134,6 @@ def eliminar_curso_vista(request, curso_id):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
         
-    # 👇 FILTRADO: Obtener curso solo si pertenece al colegio actual
     curso = get_object_or_404(Curso, id=curso_id, colegio=request.colegio)
     if curso.estudiante_set.exists():
         messages.error(request, f"No se puede eliminar '{curso.nombre}' porque tiene estudiantes asignados.")
@@ -152,13 +144,12 @@ def eliminar_curso_vista(request, curso_id):
     return redirect('gestion_cursos')
 
 # ===============================================================
-# VISTAS PARA GESTIÓN DE ÁREAS Y MATERIAS
+# VISTAS PARA GESTIÓN DE ÁREAS Y MATERIAS (Con cambios)
 # ===============================================================
 @user_passes_test(es_personal_admin)
 def gestion_materias_vista(request):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
-    # 👇 FILTRADO: Listar solo materias del colegio actual
     materias = Materia.objects.filter(colegio=request.colegio).order_by('nombre')
     context = {'materias': materias, 'titulo': 'Gestión de Materias', 'colegio': request.colegio}
     return render(request, 'notas/admin_crud/gestion_materias.html', context)
@@ -167,7 +158,6 @@ def gestion_materias_vista(request):
 def gestion_areas_vista(request):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
-    # 👇 FILTRADO: Listar solo áreas del colegio actual
     areas = AreaConocimiento.objects.filter(colegio=request.colegio).order_by('nombre')
     context = {'areas': areas, 'titulo': 'Gestión de Áreas', 'colegio': request.colegio}
     return render(request, 'notas/admin_crud/gestion_areas.html', context)
@@ -179,7 +169,6 @@ def crear_area_vista(request):
     if request.method == 'POST':
         form = AreaConocimientoForm(request.POST)
         if form.is_valid():
-            # 👇 ASOCIACIÓN: Añadir el colegio antes de guardar
             area = form.save(commit=False)
             area.colegio = request.colegio
             area.save()
@@ -194,7 +183,6 @@ def crear_area_vista(request):
 def editar_area_vista(request, area_id):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
-    # 👇 FILTRADO: Obtener área solo si pertenece al colegio actual
     area = get_object_or_404(AreaConocimiento, id=area_id, colegio=request.colegio)
     if request.method == 'POST':
         form = AreaConocimientoForm(request.POST, instance=area)
@@ -212,7 +200,6 @@ def editar_area_vista(request, area_id):
 def eliminar_area_vista(request, area_id):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
-    # 👇 FILTRADO: Obtener área solo si pertenece al colegio actual
     area = get_object_or_404(AreaConocimiento, id=area_id, colegio=request.colegio)
     if area.materias.filter(colegio=request.colegio).exists():
         messages.error(request, f"No se puede eliminar el área '{area.nombre}' porque contiene materias asociadas.")
@@ -222,49 +209,86 @@ def eliminar_area_vista(request, area_id):
         messages.success(request, f"Área '{nombre_area}' eliminada con éxito.")
     return redirect('gestion_areas')
 
+# --- 👇 VISTA MODIFICADA ---
 @user_passes_test(es_personal_admin)
 @transaction.atomic
-def crear_materia_vista(request):
+def crear_materia_vista(request, area_id=None): # 1. Acepta un area_id opcional
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
     if request.method == 'POST':
-        form = MateriaForm(request.POST)
+        form = MateriaForm(request.POST, colegio=request.colegio)
         if form.is_valid():
-            # 👇 ASOCIACIÓN: Añadir el colegio antes de guardar
             materia = form.save(commit=False)
             materia.colegio = request.colegio
             materia.save()
-            messages.success(request, f"Materia '{form.cleaned_data['nombre']}' creada con éxito.")
+
+            area_seleccionada = form.cleaned_data.get('area')
+            if area_seleccionada:
+                PonderacionAreaMateria.objects.get_or_create(
+                    colegio=request.colegio,
+                    area=area_seleccionada,
+                    materia=materia,
+                    defaults={'peso_porcentual': 0}
+                )
+
+            messages.success(request, f"Materia '{materia.nombre}' creada con éxito.")
             return redirect('gestion_materias')
     else:
-        form = MateriaForm()
+        # 2. Pre-selecciona el área si se pasa un area_id en la URL
+        initial_data = {}
+        if area_id:
+            initial_data['area'] = area_id
+        
+        form = MateriaForm(colegio=request.colegio, initial=initial_data)
+
     context = {'form': form, 'titulo': 'Añadir Nueva Materia', 'colegio': request.colegio}
     return render(request, 'notas/admin_crud/formulario_materia.html', context)
 
+# --- VISTA SIN CAMBIOS (YA ESTABA CORRECTA) ---
 @user_passes_test(es_personal_admin)
 @transaction.atomic
 def editar_materia_vista(request, materia_id):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
-    # 👇 FILTRADO: Obtener materia solo si pertenece al colegio actual
+    
     materia = get_object_or_404(Materia, id=materia_id, colegio=request.colegio)
+
     if request.method == 'POST':
-        form = MateriaForm(request.POST, instance=materia)
+        form = MateriaForm(request.POST, instance=materia, colegio=request.colegio)
         if form.is_valid():
             form.save()
+            area_seleccionada = form.cleaned_data.get('area')
+            
+            PonderacionAreaMateria.objects.filter(colegio=request.colegio, materia=materia).delete()
+
+            if area_seleccionada:
+                PonderacionAreaMateria.objects.create(
+                    colegio=request.colegio,
+                    area=area_seleccionada,
+                    materia=materia,
+                    peso_porcentual=0
+                )
+
             messages.success(request, f"Materia '{materia.nombre}' actualizada con éxito.")
             return redirect('gestion_materias')
     else:
-        form = MateriaForm(instance=materia)
+        ponderacion_actual = PonderacionAreaMateria.objects.filter(colegio=request.colegio, materia=materia).first()
+        initial_data = {}
+        if ponderacion_actual:
+            initial_data['area'] = ponderacion_actual.area
+        
+        form = MateriaForm(instance=materia, colegio=request.colegio, initial=initial_data)
+
     context = {'form': form, 'titulo': f"Editar Materia: {materia.nombre}", 'colegio': request.colegio}
     return render(request, 'notas/admin_crud/formulario_materia.html', context)
+
 
 @user_passes_test(es_personal_admin)
 @require_POST
 def eliminar_materia_vista(request, materia_id):
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
-    # 👇 FILTRADO: Obtener materia solo si pertenece al colegio actual
     materia = get_object_or_404(Materia, id=materia_id, colegio=request.colegio)
     nombre_materia = materia.nombre
     try:
@@ -288,7 +312,6 @@ def gestion_ponderacion_areas_vista(request):
                 try:
                     ponderacion_id = int(key.split('-')[1])
                     peso = float(value.replace(',', '.'))
-                    # 👇 FILTRADO: Asegurar que la ponderación pertenece al colegio actual
                     ponderacion = get_object_or_404(PonderacionAreaMateria, id=ponderacion_id, colegio=request.colegio)
                     ponderacion.peso_porcentual = peso
                     ponderacion.save()
@@ -303,7 +326,6 @@ def gestion_ponderacion_areas_vista(request):
         to_attr='ponderaciones'
     )
     
-    # 👇 FILTRADO: Listar solo áreas del colegio actual
     areas = AreaConocimiento.objects.filter(colegio=request.colegio).prefetch_related(ponderaciones_prefetch).order_by('nombre')
 
     context = {

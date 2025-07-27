@@ -2,10 +2,12 @@
 
 {% block page_title %}
     <h1>Configuración del Portal Público</h1>
+    <p class="text-muted">Administre desde aquí los diferentes contenidos dinámicos de su portal web.</p>
 {% endblock %}
 
 {% block content %}
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+    
     <div class="col">
         <div class="card h-100">
             <div class="card-body text-center d-flex flex-column">
@@ -42,10 +44,10 @@
     <div class="col">
         <div class="card h-100">
             <div class="card-body text-center d-flex flex-column">
-                <i class="fas fa-file-upload fa-3x text-primary mb-3"></i>
+                <i class="fas fa-file-upload fa-3x text-secondary mb-3"></i>
                 <h5 class="card-title">Gestionar Documentos</h5>
                 <p class="card-text text-muted small">Suba archivos como el manual de convivencia, formularios, etc.</p>
-                <a href="{% url 'gestion_documentos' %}" class="btn btn-primary mt-auto">Administrar</a>
+                <a href="{% url 'gestion_documentos' %}" class="btn btn-secondary mt-auto">Administrar</a>
             </div>
         </div>
     </div>

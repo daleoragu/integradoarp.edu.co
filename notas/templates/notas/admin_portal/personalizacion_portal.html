@@ -1,0 +1,115 @@
+{% extends "notas/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}
+    <h1>Personalizar Apariencia y Contenido del Portal</h1>
+    <p class="text-muted">Modifique aquí la identidad visual, los contenidos y datos de contacto de su portal público.</p>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="card shadow-sm">
+        <div class="card-body">
+            
+            <div class="accordion" id="accordionPersonalizacion">
+
+                <!-- Sección de Identidad Visual -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingVisual">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseVisual" aria-expanded="true" aria-controls="collapseVisual">
+                            <i class="fas fa-paint-brush me-2"></i> Identidad Visual y Diseño
+                        </button>
+                    </h2>
+                    <div id="collapseVisual" class="accordion-collapse collapse show" aria-labelledby="headingVisual" data-bs-parent="#accordionPersonalizacion">
+                        <div class="accordion-body">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">{{ form.escudo|as_crispy_field }}</div>
+                                <div class="col-md-6 mb-3">{{ form.favicon|as_crispy_field }}</div>
+                                <div class="col-md-6 mb-3">{{ form.layout_portal|as_crispy_field }}</div>
+                                <div class="col-md-6 mb-3 align-self-center">{{ form.portal_publico_activo|as_crispy_field }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección de Contenido Institucional -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingContenido">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseContenido" aria-expanded="false" aria-controls="collapseContenido">
+                            <i class="fas fa-university me-2"></i> Contenido Institucional
+                        </button>
+                    </h2>
+                    <div id="collapseContenido" class="accordion-collapse collapse" aria-labelledby="headingContenido" data-bs-parent="#accordionPersonalizacion">
+                        <div class="accordion-body">
+                            {{ form.lema|as_crispy_field }}
+                            <hr>
+                            {{ form.historia|as_crispy_field }}
+                            {{ form.mision|as_crispy_field }}
+                            {{ form.vision|as_crispy_field }}
+                            {{ form.modelo_pedagogico|as_crispy_field }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección de Paleta de Colores -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingColores">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseColores" aria-expanded="false" aria-controls="collapseColores">
+                            <i class="fas fa-palette me-2"></i> Paleta de Colores del Portal
+                        </button>
+                    </h2>
+                    <div id="collapseColores" class="accordion-collapse collapse" aria-labelledby="headingColores" data-bs-parent="#accordionPersonalizacion">
+                        <div class="accordion-body">
+                            <p class="text-muted small">Haga clic en los cuadros para seleccionar los colores que representarán a su institución.</p>
+                            <div class="row">
+                                <div class="col-md-3 mb-3">{{ form.color_primario|as_crispy_field }}</div>
+                                <div class="col-md-3 mb-3">{{ form.color_texto_primario|as_crispy_field }}</div>
+                                <div class="col-md-3 mb-3">{{ form.color_secundario|as_crispy_field }}</div>
+                                <div class="col-md-3 mb-3">{{ form.color_fondo|as_crispy_field }}</div>
+                                <hr class="my-3">
+                                <div class="col-md-4 mb-3">{{ form.color_topbar|as_crispy_field }}</div>
+                                <div class="col-md-4 mb-3">{{ form.color_topbar_texto|as_crispy_field }}</div>
+                                <hr class="my-3">
+                                <div class="col-md-4 mb-3">{{ form.color_footer|as_crispy_field }}</div>
+                                <div class="col-md-4 mb-3">{{ form.color_footer_texto|as_crispy_field }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección de Contacto y Redes Sociales -->
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingContacto">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseContacto" aria-expanded="false" aria-controls="collapseContacto">
+                            <i class="fas fa-address-book me-2"></i> Información de Contacto y Redes
+                        </button>
+                    </h2>
+                    <div id="collapseContacto" class="accordion-collapse collapse" aria-labelledby="headingContacto" data-bs-parent="#accordionPersonalizacion">
+                        <div class="accordion-body">
+                            <div class="row">
+                                <div class="col-md-4">{{ form.telefono|as_crispy_field }}</div>
+                                <div class="col-md-4">{{ form.email_contacto|as_crispy_field }}</div>
+                                <div class="col-md-4">{{ form.whatsapp_numero|as_crispy_field }}</div>
+                            </div>
+                            <hr>
+                             <div class="row">
+                                <div class="col-md-6">{{ form.url_facebook|as_crispy_field }}</div>
+                                <div class="col-md-6">{{ form.url_instagram|as_crispy_field }}</div>
+                                <div class="col-md-6">{{ form.url_twitter_x|as_crispy_field }}</div>
+                                <div class="col-md-6">{{ form.url_youtube|as_crispy_field }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="card-footer text-end">
+            <button type="submit" class="btn btn-primary btn-lg">
+                <i class="fas fa-save me-2"></i> Guardar Cambios de Personalización
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}

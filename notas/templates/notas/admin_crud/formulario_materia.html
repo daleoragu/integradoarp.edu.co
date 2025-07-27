@@ -33,10 +33,16 @@
                                 {{ form.abreviatura }}
                             </div>
                         </div>
+                        
+                        <!-- 👇 INICIO: CAMPO NUEVO PARA ASIGNAR ÁREA -->
                         <div class="mb-3">
                             {{ form.area.label_tag }}
                             {{ form.area }}
+                            {% if form.area.help_text %}
+                                <small class="form-text text-muted">{{ form.area.help_text }}</small>
+                            {% endif %}
                         </div>
+                        <!-- 👆 FIN: CAMPO NUEVO -->
 
                         <hr class="my-4">
 

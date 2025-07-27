@@ -1,0 +1,172 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Carnet Estudiantil - {{ estudiante.user.get_full_name }}{% endblock %}
+
+{% block content %}
+<style>
+    body {
+        /* Corregido: Asegura un color de fondo consistente */
+        background-color: #e9ecef;
+    }
+    .carnet-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 40px 20px;
+    }
+    .carnet {
+        background: white;
+        border: 1px solid #ccc;
+        border-radius: 15px;
+        /* Corregido: Sintaxis de box-shadow correcta */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        width: 320px;
+        font-family: 'Helvetica', sans-serif;
+        overflow: hidden;
+    }
+    .carnet-header {
+        /* Corregido: Se usan los colores del objeto 'colegio' con valores por defecto seguros */
+        background-color: {{ colegio.color_primario|default:'#0D6EFD' }};
+        color: {{ colegio.color_texto_primario|default:'#FFFFFF' }};
+        padding: 10px;
+        text-align: center;
+        position: relative;
+    }
+    .carnet-header .logo-escudo {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: white;
+        padding: 5px;
+        object-fit: contain;
+    }
+    .carnet-header h3 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: bold;
+        /* Ajuste para que no se monte sobre el logo */
+        padding-left: 55px;
+    }
+    .carnet-body {
+        padding: 20px;
+        text-align: center;
+    }
+    .carnet-foto {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 4px solid #eee;
+        margin: 0 auto 15px auto;
+        object-fit: cover;
+        background-color: #f8f9fa;
+    }
+    .carnet-nombre {
+        font-size: 18px;
+        font-weight: bold;
+        margin: 0;
+        color: #333;
+    }
+    .carnet-documento {
+        font-size: 12px;
+        color: #666;
+        margin-bottom: 10px;
+    }
+    .carnet-curso {
+        font-size: 14px;
+        color: {{ colegio.color_primario|default:'#0D6EFD' }};
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+    .carnet-qr {
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+    }
+    .carnet-qr img {
+        width: 100%;
+        max-width: 200px;
+        display: block;
+        margin: 0 auto;
+    }
+    .carnet-footer {
+        background-color: #f1f1f1;
+        text-align: center;
+        padding: 8px;
+        font-size: 10px;
+        color: #888;
+    }
+    .print-button-container {
+        text-align: center;
+        margin-top: 20px;
+    }
+    /* Estilos para la impresión */
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        .carnet-container, .carnet-container * {
+            visibility: visible;
+        }
+        .carnet-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        .print-button-container {
+            display: none;
+        }
+        .carnet {
+            box-shadow: none;
+            border: 1px solid #000;
+        }
+    }
+</style>
+
+<div class="container">
+    <div class="carnet-container">
+        <div class="carnet">
+            <div class="carnet-header">
+                {% if colegio.escudo %}
+                    <img src="{{ colegio.escudo.url }}" alt="Escudo del Colegio" class="logo-escudo">
+                {% endif %}
+                <h3>{{ colegio.nombre|upper }}</h3>
+            </div>
+            <div class="carnet-body">
+                <img src="{% if estudiante.ficha.foto %}{{ estudiante.ficha.foto.url }}{% else %}{% static 'img/default-user.png' %}{% endif %}" alt="Foto del Estudiante" class="carnet-foto">
+                
+                <h4 class="carnet-nombre">{{ estudiante.user.get_full_name }}</h4>
+                <p class="carnet-documento">
+                    {{ estudiante.ficha.get_tipo_documento_display|default:'Documento' }}: {{ estudiante.ficha.numero_documento|default:'No registrado' }}
+                </p>
+                <p class="carnet-curso">
+                    Curso: {{ estudiante.curso.nombre|default:'No asignado' }}
+                </p>
+
+                <div class="carnet-qr">
+                    <img src="data:image/png;base64,{{ qr_image }}" alt="Código QR de Asistencia">
+                </div>
+            </div>
+            <div class="carnet-footer">
+                CARNET ESTUDIANTIL - AÑO {% now "Y" %}
+            </div>
+        </div>
+    </div>
+
+    <div class="print-button-container">
+        <button onclick="window.print();" class="btn btn-primary">
+            <i class="fas fa-print"></i> Imprimir Carnet
+        </button>
+        <a href="{% url 'admin:notas_estudiante_changelist' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Volver a la lista
+        </a>
+    </div>
+</div>
+{% endblock %}

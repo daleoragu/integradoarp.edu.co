@@ -27,9 +27,13 @@
 </style>
 
 <div class="container-plan">
+    <!-- INICIO: Texto modificado para ser dinámico -->
     <p class="lead text-muted mb-4" style="text-align: center; font-size: 1.1rem;">
-        Seleccione la asignación y el periodo para ver los estudiantes que requieren un Plan de Mejoramiento (aquellos con un promedio de periodo inferior a 3.0).
+        Seleccione la asignación y el periodo para ver los estudiantes que requieren un Plan de Mejoramiento (aquellos con un desempeño BAJO en el periodo).
+        <br>
+        <small>Según la configuración actual, la nota mínima para aprobar es <strong>{{ nota_minima_aprobatoria|coma_decimal }}</strong>.</small>
     </p>
+    <!-- FIN: Texto modificado -->
 
     <form method="GET" action="{% url 'plan_mejoramiento' %}" class="form-filtros">
         
@@ -99,9 +103,7 @@
                         <tr>
                             <td>
                                 <input type="hidden" name="estudiante_id" value="{{ data.estudiante.id }}">
-                                <!-- INICIO: Corrección del formato del nombre -->
                                 {{ data.estudiante.user.last_name }}, {{ data.estudiante.user.first_name }}
-                                <!-- FIN: Corrección del formato del nombre -->
                             </td>
                             <td class="promedio-bajo">{{ data.promedio_original|coma_decimal }}</td>
                             <td>

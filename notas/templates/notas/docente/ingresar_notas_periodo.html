@@ -14,10 +14,21 @@
             color: #fff;
             transition: background-color 0.3s ease;
         }
+        /* Colores antiguos (se dejan como fallback) */
         .def-celda.nota-roja { background-color: #dc3545; }
         .def-celda.nota-amarilla { background-color: #ffc107; color: #212529; }
         .def-celda.nota-verde { background-color: #28a745; }
         .def-celda.nota-azul { background-color: #0d6efd; }
+
+        /* --- INICIO: NUEVOS ESTILOS BASADOS EN LA ESCALA --- */
+        /* Puedes personalizar estos colores como desees */
+        .def-celda.desempeno-bajo { background-color: #dc3545; /* Rojo */ }
+        .def-celda.desempeno-basico { background-color: #ffc107; color: #212529; /* Amarillo */ }
+        .def-celda.desempeno-alto { background-color: #28a745; /* Verde */ }
+        .def-celda.desempeno-superior { background-color: #0d6efd; /* Azul */ }
+        .def-celda.desempeno-default { background-color: #6c757d; /* Gris (si no encuentra escala) */ }
+        /* --- FIN: NUEVOS ESTILOS --- */
+
 
         .th-nota {
             cursor: pointer;
@@ -58,13 +69,11 @@
 
         {% include 'notas/partials/_filtros_notas.html' %}
         
-        {# --- INICIO: BOTÓN DE EXPORTACIÓN POR DOCENTE --- #}
         <div class="d-flex justify-content-end my-3">
             <a href="#" id="exportarPlanillasBtn" class="btn btn-success disabled" title="Seleccione un docente y un periodo para activar">
                 <i class="fas fa-file-excel me-2"></i>Exportar Planillas del Docente
             </a>
         </div>
-        {# --- FIN: BOTÓN --- #}
 
         <hr class="separador">
         {% include 'notas/partials/_gestion_indicadores.html' %}
@@ -76,7 +85,6 @@
 {% block extra_js %}
     <script src="{% static 'js/ingresar_notas.js' %}"></script>
 
-    {# --- SCRIPT PARA HABILITAR EL BOTÓN DE EXPORTACIÓN --- #}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const docenteSelect = document.getElementById('docente_id');
@@ -84,12 +92,10 @@
         const exportBtn = document.getElementById('exportarPlanillasBtn');
 
         function checkAndSetExportUrl() {
-            // Si el usuario es superusuario, toma el valor del selector. Si no, usa el ID del docente logueado.
             const docenteId = docenteSelect ? docenteSelect.value : '{{ request.user.docente.id }}';
-            const periodoId = periodoSelect.value;
+            const periodoId = periodoSelect ? periodoSelect.value : null;
 
             if (docenteId && periodoId) {
-                // Construye la URL dinámicamente
                 let url = `/docente/exportar-planillas/${docenteId}/${periodoId}/`;
                 exportBtn.href = url;
                 exportBtn.classList.remove('disabled');
@@ -101,12 +107,29 @@
             }
         }
 
-        // Añadir listeners a los selectores para que actualicen la URL al cambiar
         if(docenteSelect) docenteSelect.addEventListener('change', checkAndSetExportUrl);
         if(periodoSelect) periodoSelect.addEventListener('change', checkAndSetExportUrl);
-
-        // Comprobar al cargar la página por si los valores ya están seleccionados
         checkAndSetExportUrl();
+    });
+    </script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const editarIndicadorModal = document.getElementById('editarIndicadorModal');
+        
+        if (editarIndicadorModal) {
+            const form = editarIndicadorModal.querySelector('#editarIndicadorForm');
+            const textarea = editarIndicadorModal.querySelector('#descripcionIndicadorTextarea');
+            
+            editarIndicadorModal.addEventListener('show.bs.modal', function(event) {
+                const button = event.relatedTarget;
+                const indicadorId = button.getAttribute('data-indicador-id');
+                const descripcion = button.getAttribute('data-descripcion');
+                const actionUrl = `/indicador/${indicadorId}/editar/`;
+                form.setAttribute('action', actionUrl);
+                textarea.value = descripcion;
+            });
+        }
     });
     </script>
 {% endblock %}

@@ -8,83 +8,127 @@
 
     <style>
         :root {
-            --color-vinotinto: #56070c;
-            --color-vinotinto-oscuro: #45060A;
-            --color-oro: #DAA520;
-            --color-oro-claro: #FFD700;
-            --color-fondo: #f8f9fa;
-            --color-texto-principal: #343a40;
-            --color-verde-escudo: #01573A;
+            /* Colores personalizables desde el admin del colegio */
+            --color-primario: {{ colegio.color_primario|default:'#0D6EFD' }};
+            --color-secundario: {{ colegio.color_secundario|default:'#6C757D' }};
+            --color-texto-primario: {{ colegio.color_texto_primario|default:'#FFFFFF' }};
+            --color-fondo: {{ colegio.color_fondo|default:'#F8F9FA' }};
+            --color-topbar-fondo: {{ colegio.color_topbar|default:'#343A40' }};
+            --color-topbar-texto: {{ colegio.color_topbar_texto|default:'#FFFFFF' }};
+            --color-footer-fondo: {{ colegio.color_footer|default:'#212529' }};
+            --color-footer-texto: {{ colegio.color_footer_texto|default:'#FFFFFF' }};
         }
 
         body {
             display: block !important;
             background-color: var(--color-fondo);
-            color: var(--color-texto-principal);
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
-        /* Estilos del Encabezado */
-        .top-bar { background-color: #f1f1f1; padding: 0.3rem 1rem; font-size: 0.85rem; }
-        .top-bar .social-icons a { color: #777; margin: 0 8px; transition: color 0.3s ease; }
-        .top-bar .social-icons a:hover { color: var(--color-vinotinto); }
-        .main-header { padding: 1rem 1.5rem; background-color: white; border-bottom: 1px solid #eee; }
-        .main-header .navbar-brand { font-size: 1.5rem; font-weight: 700; color: var(--color-vinotinto); }
-        .header-nav { background-color: var(--color-vinotinto); color: white; padding: 0; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .header-nav .navbar-nav .nav-link { color: white; font-weight: 600; padding: 1rem 1.2rem; text-transform: uppercase; font-size: 0.9rem; transition: background-color 0.3s ease, color 0.3s ease; }
-        .header-nav .navbar-nav .nav-link:hover, .header-nav .navbar-nav .nav-item.dropdown:hover .nav-link { background-color: var(--color-vinotinto-oscuro); color: var(--color-oro-claro); }
-        .header-nav .dropdown-menu { background-color: var(--color-vinotinto); border: none; border-top: 3px solid var(--color-oro); border-radius: 0; margin-top: 0; }
-        .header-nav .dropdown-item { color: white; padding: 0.7rem 1.2rem; transition: background-color 0.3s ease, color 0.3s ease; }
-        .header-nav .dropdown-item:hover { background-color: var(--color-vinotinto-oscuro); color: var(--color-oro-claro); }
-        .login-btn { background-color: var(--color-oro); color: var(--color-vinotinto); font-weight: bold; border-radius: 20px; border: none; }
-        .dropdown-menu-login { width: 280px; border: 1px solid #ddd; }
+        .portal-wrapper.sidebar-layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            min-height: 100vh;
+        }
+        
+        @media (max-width: 991.98px) {
+            .portal-wrapper.sidebar-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        .header-nav { background-color: var(--color-topbar-fondo); }
+        .sidebar-container { background-color: var(--color-topbar-fondo); color: var(--color-topbar-texto); }
+        .portal-footer { background-color: var(--color-footer-fondo); color: var(--color-footer-texto); }
+        .login-btn { background-color: var(--color-primario); color: var(--color-texto-primario); }
 
-        /* Pie de página */
-        .portal-footer { background-color: var(--color-verde-escudo); color: white; }
-
-        /* Botones Flotantes */
-         /* --- BOTONES FLOTANTES --- */
-        .floating-action-buttons { position: fixed; bottom: 40px; right: 40px; z-index: 1030; display: flex; flex-direction: column; align-items: center; }
-        .floating-action-buttons a { display: flex; justify-content: center; align-items: center; width: 60px; height: 60px; margin-top: 10px; color: #FFF; border-radius: 50%; font-size: 30px; text-decoration: none; box-shadow: 2px 2px 8px rgba(0,0,0,0.25); transition: transform 0.3s ease; }
-        .floating-action-buttons a:hover { transform: scale(1.1); color: white; }
+        .floating-action-buttons {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1030;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .floating-action-buttons a {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 55px;
+            height: 55px;
+            color: #FFF;
+            border-radius: 50%;
+            font-size: 24px;
+            text-decoration: none;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .floating-action-buttons a:hover {
+            transform: scale(1.1);
+            box-shadow: 2px 2px 15px rgba(0,0,0,0.3);
+            color: white;
+        }
         .whatsapp-float { background-color: #25d366; }
-        .messenger-float { background-color: #00B2FF; }
         .facebook-float { background-color: #1877F2; }
         .instagram-float { background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%,#d6249f 60%,#285AEB 90%); }
-        .documents-float { background-color: #6c757d; }
-        /* INICIO CORRECCIÓN: Estilo para el nuevo botón de correo */
+        .twitter-float { background-color: #1DA1F2; }
+        .youtube-float { background-color: #FF0000; }
         .email-float { background-color: #B23121; }
-        /* FIN CORRECCIÓN */
+        .documents-float { background-color: #6c757d; }
 
-        /* Ajustes para Móviles */
-        .navbar-toggler { border: 2px solid white; padding: .25rem .75rem; }
-        .navbar-toggler:focus { box-shadow: none; }
-        .menu-text { color: white; font-weight: bold; font-size: 0.9rem; }
-
-        @media (max-width: 991.98px) {
-            .navbar-collapse { background-color: var(--color-vinotinto); border-top: 2px solid var(--color-oro); margin-top: 10px; padding: 10px; }
-            .header-nav .navbar-nav .nav-link { padding: 0.8rem 1rem; border-bottom: 1px solid var(--color-vinotinto-oscuro); }
-            .header-nav .dropdown-menu { border-top: none; background-color: var(--color-vinotinto-oscuro); }
-            .header-nav .dropdown-item { padding-left: 2rem; }
-            .floating-action-buttons { bottom: 20px; right: 20px; }
-            .floating-action-buttons a { width: 50px; height: 50px; font-size: 24px; }
+        /* ===== INICIO DE LA CORRECCIÓN ===== */
+        /* Esta regla asegura que las imágenes del carrusel se vean completas */
+        .carousel-item img {
+            object-fit: contain !important; /* Muestra la imagen completa */
+            object-position: center;
+            overflow: hidden;
+            background-color: rgba(0, 0, 0, 0.7); /* Fondo oscuro para el espacio sobrante */
+            height: 60vh; /* Altura del carrusel, puedes ajustarla */
+            min-height: 400px;
         }
+        /* ===== FIN DE LA CORRECCIÓN ===== */
+
     </style>
 </head>
 <body>
 
-    {% block portal_content %}{% endblock portal_content %}
+    <div class="portal-wrapper {% if colegio.layout_portal == 'sidebar' %}sidebar-layout{% endif %}">
+        
+        {% if colegio.layout_portal == 'sidebar' %}
+            <div class="d-none d-lg-block">
+                {% include "notas/portal_components/_portal_sidebar.html" %}
+            </div>
+        {% endif %}
 
-    <!-- BOTONES FLOTANTES DE ACCIONES -->
-    <div class="floating-action-buttons">
-        <a href="https://www.facebook.com/iet.alfonso.palacio.rudas.honda" target="_blank" class="facebook-float" title="Síguenos en Facebook"><i class="fab fa-facebook-f"></i></a>
-        <a href="https://www.instagram.com/tu-usuario-de-instagram" target="_blank" class="instagram-float" title="Síguenos en Instagram"><i class="fab fa-instagram"></i></a>
-        <a href="mailto:honda.ietalfonsopalaciorudas@sedtolima.edu.co" class="email-float" title="Contáctanos por Correo"><i class="fas fa-envelope"></i></a>
-        <a href="https://api.whatsapp.com/send?phone=573058618450&text=Hola,%20quisiera%20más%20información sobre la institucion educatica." class="whatsapp-float" target="_blank" title="Contáctanos por WhatsApp"><i class="fab fa-whatsapp"></i></a>
-        <a href="#" id="documentosFloatBtn" class="documents-float" title="Ver Documentos Públicos"><i class="fas fa-file-alt"></i></a>
+        <div class="main-content-wrapper d-flex flex-column min-vh-100">
+            {% block portal_content %}{% endblock portal_content %}
+        </div>
     </div>
 
-   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <div class="floating-action-buttons">
+        {% if colegio.whatsapp_numero %}
+            <a href="https://api.whatsapp.com/send?phone={{ colegio.whatsapp_numero }}&text=Hola,%20quisiera%20más%20información." class="whatsapp-float" target="_blank" title="Contáctanos por WhatsApp"><i class="fab fa-whatsapp"></i></a>
+        {% endif %}
+        {% if colegio.url_facebook %}
+            <a href="{{ colegio.url_facebook }}" target="_blank" class="facebook-float" title="Síguenos en Facebook"><i class="fab fa-facebook-f"></i></a>
+        {% endif %}
+        {% if colegio.url_instagram %}
+            <a href="{{ colegio.url_instagram }}" target="_blank" class="instagram-float" title="Síguenos en Instagram"><i class="fab fa-instagram"></i></a>
+        {% endif %}
+        {% if colegio.url_twitter_x %}
+            <a href="{{ colegio.url_twitter_x }}" target="_blank" class="twitter-float" title="Síguenos en Twitter/X"><i class="fab fa-twitter"></i></a>
+        {% endif %}
+         {% if colegio.url_youtube %}
+            <a href="{{ colegio.url_youtube }}" target="_blank" class="youtube-float" title="Síguenos en YouTube"><i class="fab fa-youtube"></i></a>
+        {% endif %}
+        {% if colegio.email_contacto %}
+            <a href="mailto:{{ colegio.email_contacto }}" class="email-float" title="Contáctanos por Correo"><i class="fas fa-envelope"></i></a>
+        {% endif %}
+        
+        <a href="#" data-action="documentos" class="documents-float" title="Ver Documentos Públicos"><i class="fas fa-file-alt"></i></a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const DJANGO_URLS = {
             directorio: "{% url 'ajax_directorio_docentes' %}",
@@ -100,72 +144,6 @@
             noticia_detalle: "{% url 'ajax_noticia_detalle' 0 %}",
         };
     </script>
-    
-    <!-- SCRIPT PARA EL DIRECTORIO DOCENTE -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // CORRECCIÓN: Se busca el botón por el atributo 'data-action'
-        const directorioBtn = document.querySelector('[data-action="show-directorio"]');
-
-        if (directorioBtn) {
-            directorioBtn.addEventListener('click', function(e) {
-                e.preventDefault(); 
-                
-                fetch(DJANGO_URLS.directorio)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('Error en la respuesta del servidor');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        let htmlContent = '<h2>Directorio Docente</h2>';
-                        htmlContent += '<div class="table-responsive">';
-                        htmlContent += '<table class="table table-striped table-hover">';
-                        htmlContent += `
-                            <thead class="table-dark">
-                                <tr>
-                                    <th>Nombre Completo</th>
-                                    <th>Director de Grupo</th>
-                                    <th>Asignaturas que Orienta</th>
-                                </tr>
-                            </thead>`;
-                        htmlContent += '<tbody>';
-
-                        data.forEach(docente => {
-                            htmlContent += `
-                                <tr>
-                                    <td>${docente.nombre_completo}</td>
-                                    <td>${docente.direccion_grupo}</td>
-                                    <td>${docente.asignaturas}</td>
-                                </tr>`;
-                        });
-
-                        htmlContent += '</tbody></table></div>';
-
-                        const dynamicContentContainer = document.querySelector('#dynamicMainContent .card-body');
-                        const defaultContent = document.getElementById('defaultMainContent');
-                        const dynamicContent = document.getElementById('dynamicMainContent');
-
-                        if (dynamicContentContainer && defaultContent && dynamicContent) {
-                            dynamicContentContainer.innerHTML = htmlContent;
-                            defaultContent.classList.add('d-none');
-                            dynamicContent.classList.remove('d-none');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error al cargar el directorio:', error);
-                        const dynamicContentContainer = document.querySelector('#dynamicMainContent .card-body');
-                        if(dynamicContentContainer) {
-                            dynamicContentContainer.innerHTML = '<p class="text-danger">No se pudo cargar el directorio de docentes. Por favor, intente más tarde.</p>';
-                        }
-                    });
-            });
-        }
-    });
-    </script>
-    
-    <!-- Tu script original del portal -->
     <script src="{% static 'js/portal_scripts.js' %}"></script>
 
 </body>

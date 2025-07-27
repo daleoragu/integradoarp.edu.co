@@ -1,11 +1,11 @@
 # notas/middleware.py
 from .models import Colegio
-# Probando el commit
+
 class ColegioMiddleware:
     """
-    Middleware que identifica el colegio activo basándose en el dominio.
-    Esta versión es más robusta para manejar errores de base de datos durante
-    el despliegue y para seleccionar un colegio principal por defecto.
+    Middleware que identifica el colegio activo basándose en el dominio o subdominio.
+    Esta versión corregida maneja tanto dominios personalizados (producción)
+    como subdominios de localhost (desarrollo).
     """
     def __init__(self, get_response):
         self.get_response = get_response
@@ -15,37 +15,42 @@ class ColegioMiddleware:
         if request.path.startswith('/admin'):
             return self.get_response(request)
 
-        # Limpia el host para obtener el dominio base
         host = request.get_host().split(':')[0].lower()
-        if host.startswith('www.'):
-            host = host[4:]
         
-        # Inicializamos request.colegio como None para evitar errores
         request.colegio = None
         
         try:
-            # --- LÓGICA MEJORADA ---
-            # 1. Intenta encontrar el colegio por el dominio exacto.
-            #    Ej: 'integradoapr.edu.co' o 'colegio2.mcolegio.com.co'
-            request.colegio = Colegio.objects.get(domain=host)
+            # --- LÓGICA CORREGIDA Y MEJORADA ---
 
-        except Colegio.DoesNotExist:
-            # Si no hay un dominio exacto, buscamos un colegio "principal"
+            # 1. Intenta encontrar el colegio por el dominio personalizado (para producción).
+            #    Ej: 'www.colegiobilinguesansebastian.com'
             try:
-                # 2. Busca el colegio que tenga marcada la casilla "Es el colegio principal".
-                request.colegio = Colegio.objects.get(es_principal=True)
+                request.colegio = Colegio.objects.get(domain=host)
             except Colegio.DoesNotExist:
-                # 3. Si tampoco hay un principal, toma el primero que encuentre como último recurso.
-                request.colegio = Colegio.objects.first()
-            except Exception:
-                # Si hay cualquier otro error de base de datos, no hace nada y deja request.colegio como None.
-                pass
-                
+                # 2. Si no lo encuentra y estamos en desarrollo (localhost),
+                #    intenta encontrarlo por el subdominio (slug).
+                if host.endswith('.localhost'):
+                    # Extraemos el slug de 'colegio-bilingue-san-sebastian.localhost' -> 'colegio-bilingue-san-sebastian'
+                    slug = host.split('.')[0]
+                    try:
+                        request.colegio = Colegio.objects.get(slug=slug)
+                    except Colegio.DoesNotExist:
+                        # Si el slug tampoco existe, se pasará a la lógica de fallback.
+                        pass
+            
+            # 3. Lógica de Fallback: Si después de las búsquedas anteriores no se encontró un colegio.
+            if not request.colegio:
+                # Intenta encontrar un colegio marcado como principal.
+                # (Necesitarías añadir un campo booleano 'es_principal' a tu modelo Colegio para que esto funcione).
+                try:
+                    request.colegio = Colegio.objects.get(es_principal=True)
+                except (Colegio.DoesNotExist, AttributeError):
+                    # Si no hay principal, no hace nada y deja que la vista decida.
+                    pass
+
         except Exception:
-            # 4. ¡ESTA ES LA PARTE CLAVE!
-            # Si ocurre CUALQUIER error de base de datos (como que la tabla o la columna no existan
-            # durante el despliegue), simplemente ignora el error y deja request.colegio como None.
-            # Esto permite que el proceso de migración de Render se complete sin que la app se rompa.
+            # Si ocurre cualquier otro error de base de datos (ej. durante migraciones),
+            # se ignora para no romper el sitio. request.colegio seguirá siendo None.
             pass
         
         response = self.get_response(request)

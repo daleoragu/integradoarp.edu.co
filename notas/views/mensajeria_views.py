@@ -10,11 +10,10 @@ from django.db.models import Q
 from django.utils.html import strip_tags
 from django.http import HttpResponseNotFound
 
-# Se importa el formulario corregido (asumiendo que está en mensajeria_forms.py)
 from ..forms import MensajeForm
 from ..models import Mensaje
-# Se asume que crear_notificacion será adaptado para recibir el colegio
-from ..utils import crear_notificacion
+# Se importa la función desde su nueva ubicación en la carpeta utils/
+from ..utils.notificaciones import crear_notificacion
 
 @login_required
 def componer_mensaje_vista(request):
@@ -55,12 +54,19 @@ def componer_mensaje_vista(request):
             else:
                 nuevo_mensaje.estado = 'ENVIADO'
                 nuevo_mensaje.save()
+                
+                # --- INICIO: CORRECCIÓN EN LA LLAMADA A LA FUNCIÓN ---
+                # Se pasan los argumentos de la URL como un diccionario en 'kwargs'.
                 crear_notificacion(
                     destinatario=nuevo_mensaje.destinatario,
                     mensaje=f"Tienes un nuevo mensaje de {request.user.get_full_name()}",
-                    tipo='MENSAJE', url_name='ver_mensaje', mensaje_id=nuevo_mensaje.id,
-                    colegio=request.colegio
+                    tipo='MENSAJE',
+                    colegio=request.colegio,
+                    url_name='ver_mensaje',
+                    kwargs={'mensaje_id': nuevo_mensaje.id}
                 )
+                # --- FIN: CORRECCIÓN ---
+                
                 messages.success(request, '¡Mensaje enviado correctamente!')
                 return redirect('mensajes_enviados')
     else:

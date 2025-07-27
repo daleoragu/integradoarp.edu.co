@@ -1,0 +1,117 @@
+{% extends 'notas/base.html' %}
+{% load static %}
+
+{% block title %}Kiosko de Asistencia QR{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <!-- Cabecera -->
+    <div class="card text-center mb-4">
+        <div class="card-header">
+            <h1 class="h3">Kiosko de Asistencia por QR</h1>
+        </div>
+        <div class="card-body">
+            <p class="lead">
+                Active una clase para empezar a registrar la asistencia de los estudiantes escaneando su carnet.
+            </p>
+        </div>
+    </div>
+
+    <!-- Mensajes de Alerta -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Contenido Principal -->
+    <div class="row">
+        <!-- Columna de Control (Izquierda) -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Panel de Control</h5>
+                </div>
+                <div class="card-body">
+                    {% if asignacion_activa %}
+                        <!-- MODO ACTIVO -->
+                        <h6 class="card-title">Modo de Asistencia Activo</h6>
+                        <div class="alert alert-success">
+                            <p class="mb-1"><strong>Clase:</strong> {{ asignacion_activa.materia.nombre }}</p>
+                            <p class="mb-0"><strong>Curso:</strong> {{ asignacion_activa.curso.nombre }}</p>
+                        </div>
+                        <p class="text-muted small">El sistema está listo para recibir escaneos de QR para esta clase.</p>
+                        <form method="post" action="{% url 'vista_kiosko_asistencia' %}">
+                            {% csrf_token %}
+                            <button type="submit" name="finalizar" value="1" class="btn btn-danger w-100">
+                                <i class="fas fa-stop-circle"></i> Finalizar Modo Kiosko
+                            </button>
+                        </form>
+                    {% else %}
+                        <!-- MODO INACTIVO -->
+                        <h6 class="card-title">Seleccionar Clase</h6>
+                        <p class="text-muted small">Elija la clase para la cual desea registrar la asistencia.</p>
+                        <form method="post" action="{% url 'vista_kiosko_asistencia' %}">
+                            {% csrf_token %}
+                            <div class="mb-3">
+                                <label for="asignacion_id" class="form-label">Clase y Curso:</label>
+                                <select name="asignacion_id" id="asignacion_id" class="form-select" required>
+                                    <option value="">-- Seleccione una opción --</option>
+                                    {% for asignacion in asignaciones %}
+                                        <option value="{{ asignacion.id }}">
+                                            {{ asignacion.materia.nombre }} - {{ asignacion.curso.nombre }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="fas fa-play-circle"></i> Iniciar Modo Kiosko
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna de Registros (Derecha) -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-clipboard-check"></i> Registros Recientes (Hoy)</h5>
+                </div>
+                <div class="card-body">
+                    {% if asignacion_activa %}
+                        {% if asistencias_recientes %}
+                            <ul class="list-group">
+                                {% for asistencia in asistencias_recientes %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <i class="fas fa-user-check text-success me-2"></i>
+                                        <strong>{{ asistencia.estudiante.user.get_full_name }}</strong>
+                                    </div>
+                                    <span class="badge bg-secondary rounded-pill">{{ asistencia.fecha|date:"h:i A" }}</span>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <div class="text-center text-muted p-4">
+                                <i class="fas fa-qrcode fa-3x mb-2"></i>
+                                <p>Aún no hay registros. Escanee el primer carnet para comenzar.</p>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center text-muted p-4">
+                            <i class="fas fa-power-off fa-3x mb-2"></i>
+                            <p>Seleccione una clase en el Panel de Control para activar el registro.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -4,19 +4,18 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from decimal import Decimal
-# Se añade HttpResponseNotFound para manejar el caso de un colegio no identificado
 from django.http import HttpResponseNotFound
 
 from ..models import (
     Docente, AsignacionDocente, PeriodoAcademico, Estudiante,
-    Calificacion, PlanDeMejoramiento, Observacion
+    Calificacion, PlanDeMejoramiento, Observacion, EscalaValoracion
 )
 
 @login_required
 def plan_mejoramiento_vista(request):
     """
-    Gestiona la interfaz para planes de mejoramiento, asegurando que todos
-    los datos correspondan al colegio actual.
+    Gestiona la interfaz para planes de mejoramiento, utilizando escalas de
+    valoración dinámicas definidas por el colegio.
     """
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
@@ -27,9 +26,41 @@ def plan_mejoramiento_vista(request):
     asignacion_seleccionada_id_str = request.GET.get('asignacion_id')
     periodo_seleccionado_id_str = request.GET.get('periodo_id')
 
-    # Lógica para determinar qué asignaciones mostrar
+    # --- INICIO: Lógica MEJORADA para obtener umbrales de calificación dinámicos ---
+    nota_maxima_desempeno_bajo = Decimal('2.9')
+    nota_minima_aprobatoria = Decimal('3.0')
+    
+    escala_bajo_encontrada = False
+    escala_basico_encontrada = False
+
+    # Obtenemos todas las escalas del colegio de una vez para optimizar
+    escalas_colegio = EscalaValoracion.objects.filter(colegio=request.colegio)
+
+    for escala in escalas_colegio:
+        # Limpiamos y normalizamos el nombre del desempeño para una comparación segura
+        nombre_desempeno_limpio = escala.nombre_desempeno.strip().upper()
+        
+        if nombre_desempeno_limpio == 'BAJO':
+            nota_maxima_desempeno_bajo = escala.valor_maximo
+            escala_bajo_encontrada = True
+        
+        if nombre_desempeno_limpio == 'BÁSICO' or nombre_desempeno_limpio == 'BASICO':
+            nota_minima_aprobatoria = escala.valor_minimo
+            escala_basico_encontrada = True
+
+    # Si después de revisar todas las escalas, alguna no se encontró, mostramos el mensaje.
+    if not escala_bajo_encontrada or not escala_basico_encontrada:
+        if user.is_staff:
+            nombres_faltantes = []
+            if not escala_bajo_encontrada: nombres_faltantes.append("'BAJO'")
+            if not escala_basico_encontrada: nombres_faltantes.append("'BÁSICO'")
+            
+            messages.warning(request, f"No se encontró la escala de valoración { ' y '.join(nombres_faltantes) }. Se usarán valores por defecto. Por favor, revise la configuración de escalas del colegio.")
+
+    context['nota_minima_aprobatoria'] = nota_minima_aprobatoria
+    # --- FIN: Lógica MEJORADA ---
+
     if user.is_superuser:
-        # CORRECCIÓN: Filtrar docentes y asignaciones por el colegio actual.
         context['todos_los_docentes'] = Docente.objects.filter(colegio=request.colegio).order_by('user__last_name', 'user__first_name')
         if docente_seleccionado_id:
             asignaciones_docente = AsignacionDocente.objects.filter(docente_id=docente_seleccionado_id, colegio=request.colegio)
@@ -37,7 +68,6 @@ def plan_mejoramiento_vista(request):
             asignaciones_docente = AsignacionDocente.objects.filter(colegio=request.colegio)
     else:
         try:
-            # CORRECCIÓN: Asegurar que se obtiene el docente del colegio actual.
             docente_actual = Docente.objects.get(user=user, colegio=request.colegio)
             asignaciones_docente = AsignacionDocente.objects.filter(docente=docente_actual, colegio=request.colegio)
             context['docente_actual'] = docente_actual
@@ -46,7 +76,6 @@ def plan_mejoramiento_vista(request):
             return redirect('dashboard')
 
     context['asignaciones'] = asignaciones_docente.select_related('curso', 'materia').order_by('curso__nombre', 'materia__nombre')
-    # CORRECCIÓN: Filtrar periodos por el colegio actual.
     context['periodos'] = PeriodoAcademico.objects.filter(colegio=request.colegio).order_by('-ano_lectivo', 'nombre')
     context['docente_seleccionado_id'] = docente_seleccionado_id
     context['asignacion_seleccionada_id'] = asignacion_seleccionada_id_str
@@ -54,13 +83,11 @@ def plan_mejoramiento_vista(request):
     context['estudiantes_para_nivelar_data'] = []
     context['plazo_nivelaciones_cerrado'] = False
 
-    # Lógica para procesar el guardado de datos (POST)
     if request.method == 'POST':
         docente_que_reporta = Docente.objects.filter(user=request.user, colegio=request.colegio).first()
         asignacion_id = request.POST.get('asignacion_id')
         periodo_id = request.POST.get('periodo_id')
         
-        # CORRECCIÓN: Filtrar periodo y asignación por colegio.
         periodo = get_object_or_404(PeriodoAcademico, id=periodo_id, colegio=request.colegio)
 
         if not periodo.nivelaciones_activas:
@@ -76,7 +103,6 @@ def plan_mejoramiento_vista(request):
             estudiantes_en_formulario = request.POST.getlist('estudiante_id')
 
             for est_id in estudiantes_en_formulario:
-                # CORRECCIÓN: Filtrar estudiante por colegio.
                 estudiante = get_object_or_404(Estudiante, id=est_id, colegio=request.colegio)
                 nota_str = request.POST.get(f'nota_nivelacion_{est_id}', '').strip()
                 desc_plan = request.POST.get(f'descripcion_plan_{est_id}', '').strip()
@@ -88,7 +114,6 @@ def plan_mejoramiento_vista(request):
                         messages.warning(request, f"Nota para {estudiante} ({nota_nivelacion}) está fuera de rango y no fue guardada.")
                         continue
 
-                    # CORRECCIÓN: Asociar el plan de mejoramiento al colegio.
                     PlanDeMejoramiento.objects.update_or_create(
                         colegio=request.colegio,
                         estudiante=estudiante,
@@ -97,7 +122,6 @@ def plan_mejoramiento_vista(request):
                         defaults={'nota_recuperacion': nota_nivelacion, 'descripcion_plan': desc_plan}
                     )
                     
-                    # CORRECCIÓN: Asociar la calificación al colegio.
                     Calificacion.objects.update_or_create(
                         colegio=request.colegio,
                         estudiante=estudiante,
@@ -113,16 +137,15 @@ def plan_mejoramiento_vista(request):
                     ).first()
 
                     if calificacion_original:
-                        calificacion_original.es_recuperada = (nota_nivelacion >= Decimal('3.0'))
+                        calificacion_original.es_recuperada = (nota_nivelacion >= nota_minima_aprobatoria)
                         calificacion_original.save()
                     
-                    resultado = "aprobó" if nota_nivelacion >= Decimal('3.0') else "no aprobó"
+                    resultado = "aprobó" if nota_nivelacion >= nota_minima_aprobatoria else "no aprobó"
                     descripcion_obs = (
                         f"En el plan de mejoramiento para la materia de {asignacion.materia.nombre} "
                         f"correspondiente al {periodo}, el estudiante {resultado} "
                         f"con una nota final de {nota_nivelacion}."
                     )
-                    # CORRECCIÓN: Asociar la observación al colegio.
                     Observacion.objects.update_or_create(
                         colegio=request.colegio,
                         estudiante=estudiante, periodo=periodo, tipo_observacion='ACADEMICA',
@@ -130,7 +153,6 @@ def plan_mejoramiento_vista(request):
                         defaults={'descripcion': descripcion_obs, 'docente_reporta': docente_que_reporta or docente_asignado}
                     )
                 else:
-                    # CORRECCIÓN: Filtrar por colegio al eliminar.
                     PlanDeMejoramiento.objects.filter(colegio=request.colegio, estudiante_id=est_id, asignacion_id=asignacion_id, periodo_recuperado_id=periodo_id).delete()
                     Calificacion.objects.filter(colegio=request.colegio, estudiante_id=est_id, materia_id=asignacion.materia.id, periodo_id=periodo_id, tipo_nota='NIVELACION').delete()
                     
@@ -148,27 +170,25 @@ def plan_mejoramiento_vista(request):
         
         return redirect(request.get_full_path())
 
-    # Lógica para mostrar los datos (GET)
     if asignacion_seleccionada_id_str and periodo_seleccionado_id_str:
         try:
-            # CORRECCIÓN: Filtrar por colegio.
             asignacion_actual = get_object_or_404(AsignacionDocente, id=asignacion_seleccionada_id_str, colegio=request.colegio)
             periodo_obj = get_object_or_404(PeriodoAcademico, id=periodo_seleccionado_id_str, colegio=request.colegio)
             
             context['plazo_nivelaciones_cerrado'] = not periodo_obj.nivelaciones_activas
 
-            # CORRECCIÓN: Filtrar por colegio.
             calificaciones_bajas = Calificacion.objects.filter(
                 colegio=request.colegio,
-                materia=asignacion_actual.materia, periodo=periodo_obj,
-                tipo_nota='PROM_PERIODO', valor_nota__lt=3.0,
+                materia=asignacion_actual.materia, 
+                periodo=periodo_obj,
+                tipo_nota='PROM_PERIODO', 
+                valor_nota__lte=nota_maxima_desempeno_bajo,
                 estudiante__curso=asignacion_actual.curso,
                 estudiante__is_active=True
             ).select_related('estudiante__user').order_by('estudiante__user__last_name', 'estudiante__user__first_name')
             
             for cal in calificaciones_bajas:
                 estudiante = cal.estudiante
-                # CORRECCIÓN: Filtrar por colegio.
                 plan_existente = PlanDeMejoramiento.objects.filter(
                     colegio=request.colegio, estudiante=estudiante, asignacion=asignacion_actual, periodo_recuperado=periodo_obj
                 ).first()

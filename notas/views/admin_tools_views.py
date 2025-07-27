@@ -11,27 +11,31 @@ from django.http import HttpResponse, HttpResponseNotFound
 from django.contrib.auth import get_user_model
 from django import forms
 from django.forms import modelformset_factory
-# --- INICIO: Importaciones para la nueva vista ---
 from django.views.generic.edit import UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
-from django.core.exceptions import ImproperlyConfigured
-from ..models import Colegio, Docente
-from ..forms import ColegioPersonalizacionForm
-# --- FIN: Importaciones para la nueva vista ---
+from django.core.exceptions import ImproperlyConfigured, ValidationError
+from django.views.decorators.http import require_POST
+from django.db import IntegrityError, transaction
 
-from ..models import (
-    Curso, Materia, Estudiante, AsignacionDocente, PeriodoAcademico,
-    ReporteParcial, Observacion, ConfiguracionSistema, Notificacion
+# --- INICIO: CORRECCIÓN DE IMPORTACIONES ---
+from ..models.perfiles import Colegio, Docente, Curso, Estudiante
+from ..models.academicos import (
+    Materia, AsignacionDocente, PeriodoAcademico, ReporteParcial, 
+    Observacion, ConfiguracionSistema, ConfiguracionCalificaciones,
+    EscalaValoracion
 )
-from ..models.academicos import ConfiguracionCalificaciones
+from ..models.comunicaciones import Notificacion
+from ..forms import ColegioPersonalizacionForm, EscalaValoracionForm
+# --- FIN: CORRECCIÓN DE IMPORTACIONES ---
 
 
-# --- TUS VISTAS EXISTENTES (SIN CAMBIOS) ---
+# --- FUNCIÓN DE TEST PARA SUPERUSUARIO ---
+def es_superusuario(user):
+    return user.is_superuser
+
+
+# --- VISTAS EXISTENTES (CÓDIGO ORIGINAL) ---
 def enviar_notificacion_consolidada(request, estudiante, periodo, forzar_envio=False):
-    """
-    Verifica si un estudiante tiene todos los reportes de un periodo (o si se fuerza el envío),
-    y de ser así, genera una observación consolidada y envía un único correo resumen.
-    """
     colegio = request.colegio
     if not colegio:
         return False
@@ -87,17 +91,9 @@ def enviar_notificacion_consolidada(request, estudiante, periodo, forzar_envio=F
         print(f"ERROR al enviar correo para {estudiante}: {e}")
         return False
 
-
-def es_superusuario(user):
-    return user.is_superuser
-
 @login_required
 @user_passes_test(es_superusuario)
 def panel_control_periodos_vista(request):
-    """
-    Panel de control para que el administrador gestione los plazos de cada periodo
-    del colegio actual.
-    """
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
 
@@ -138,8 +134,8 @@ def panel_control_periodos_vista(request):
             periodo.save()
             
             if mensaje_notificacion:
-                docentes = User.objects.filter(docente__colegio=request.colegio)
-                for docente_user in docentes:
+                docentes_user = User.objects.filter(docente__colegio=request.colegio)
+                for docente_user in docentes_user:
                     Notificacion.objects.create(
                         destinatario=docente_user,
                         mensaje=mensaje_notificacion,
@@ -163,37 +159,42 @@ def panel_control_periodos_vista(request):
     
     return render(request, 'notas/admin_tools/panel_control_periodos.html', context)
 
+
+# --- INICIO: FUNCIÓN CORREGIDA Y ACTUALIZADA ---
 @login_required
 @user_passes_test(es_superusuario)
 def panel_control_promocion_vista(request):
     """
-    Permite al administrador ver y modificar la regla de promoción del colegio actual.
+    Gestiona la configuración de la regla de promoción basada en áreas.
     """
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
 
+    # Usamos get_or_create para asegurar que siempre haya una instancia de configuración.
     config, created = ConfiguracionSistema.objects.get_or_create(colegio=request.colegio)
 
     if request.method == 'POST':
-        nuevo_valor_str = request.POST.get('max_materias_reprobadas')
-        try:
-            nuevo_valor = int(nuevo_valor_str)
-            if nuevo_valor >= 0:
-                config.max_materias_reprobadas = nuevo_valor
-                config.save()
-                messages.success(request, "La regla de promoción ha sido actualizada correctamente.")
-            else:
-                messages.error(request, "El valor debe ser un número entero positivo.")
-        except (ValueError, TypeError):
-            messages.error(request, "Por favor, ingrese un número válido.")
+        # Obtenemos el valor del campo 'max_areas_reprobadas' del formulario.
+        # El 'name' en el <input> del HTML debe coincidir con esta cadena.
+        max_reprobadas_str = request.POST.get('max_areas_reprobadas')
         
-        return redirect('panel_control_promocion')
+        # Validamos que el valor recibido sea un número.
+        if max_reprobadas_str is not None and max_reprobadas_str.isdigit():
+            # Actualizamos el campo en el objeto de configuración.
+            config.max_areas_reprobadas = int(max_reprobadas_str)
+            # Guardamos el objeto en la base de datos.
+            config.save()
+            messages.success(request, "La regla de promoción ha sido actualizada correctamente.")
+            return redirect('panel_control_promocion')
+        else:
+            messages.error(request, "Por favor, ingrese un número válido.")
 
     context = {
         'config': config,
         'colegio': request.colegio,
     }
     return render(request, 'notas/admin_tools/panel_control_promocion.html', context)
+# --- FIN: FUNCIÓN CORREGIDA ---
 
 
 class MateriaPorcentajeForm(forms.ModelForm):
@@ -214,10 +215,6 @@ class ConfiguracionGlobalForm(forms.ModelForm):
 
 @user_passes_test(lambda u: u.is_superuser)
 def configuracion_calificaciones_vista(request):
-    """
-    Vista para que el admin gestione los porcentajes por defecto de las materias
-    y el permiso global para el COLEGIO ACTUAL.
-    """
     if not request.colegio:
         return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
 
@@ -251,58 +248,173 @@ def configuracion_calificaciones_vista(request):
     return render(request, 'notas/admin_tools/configuracion_calificaciones.html', context)
 
 
-# --- INICIO: VISTA DE PERSONALIZACIÓN MEJORADA ---
-# Se reemplaza la antigua vista 'configuracion_colegio_vista' por esta vista basada en clases,
-# que es más segura, robusta y se encarga de la lógica de guardado automáticamente.
+@login_required
+@user_passes_test(es_superusuario)
+def configuracion_escala_valoracion_vista(request):
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+
+    colegio = request.colegio
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'create':
+            form = EscalaValoracionForm(request.POST)
+            form.instance.colegio = colegio
+            if form.is_valid():
+                try:
+                    form.save()
+                    messages.success(request, f"Nivel '{form.cleaned_data['nombre_desempeno']}' creado exitosamente.")
+                except Exception as e:
+                    messages.error(request, f"Ocurrió un error inesperado al guardar el nivel: {e}")
+            else:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"Error en el campo '{field}': {error}")
+
+        elif action == 'delete':
+            escala_id = request.POST.get('escala_id')
+            escala_a_eliminar = get_object_or_404(EscalaValoracion, id=escala_id, colegio=colegio)
+            try:
+                nombre_escala = escala_a_eliminar.nombre_desempeno
+                escala_a_eliminar.delete()
+                messages.warning(request, f"El nivel '{nombre_escala}' ha sido eliminado.")
+            except Exception as e:
+                messages.error(request, f"No se pudo eliminar el nivel: {e}")
+        
+        return redirect('configuracion_escala_valoracion')
+
+    escalas = EscalaValoracion.objects.filter(colegio=colegio).order_by('valor_minimo')
+    form = EscalaValoracionForm()
+
+    context = {
+        'titulo': 'Configurar Escala de Valoración',
+        'escalas': escalas,
+        'form': form,
+        'colegio': colegio,
+    }
+    return render(request, 'notas/admin_tools/configuracion_escala.html', context)
+
+@login_required
+@user_passes_test(es_superusuario)
+@require_POST
+def editar_escala_valoracion_vista(request, escala_id):
+    """
+    Procesa la edición de un nivel de la escala de valoración desde un modal.
+    """
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+    
+    escala_a_editar = get_object_or_404(EscalaValoracion, id=escala_id, colegio=request.colegio)
+    form = EscalaValoracionForm(request.POST, instance=escala_a_editar)
+    
+    form.instance.colegio = request.colegio
+
+    if form.is_valid():
+        try:
+            form.save()
+            messages.success(request, f"Nivel '{escala_a_editar.nombre_desempeno}' actualizado correctamente.")
+        except Exception as e:
+            messages.error(request, f"Ocurrió un error al actualizar el nivel: {e}")
+    else:
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages.error(request, f"Error al editar '{escala_a_editar.nombre_desempeno}': {error}")
+    
+    return redirect('configuracion_escala_valoracion')
+
+
 class ColegioPersonalizacionUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    """
-    Permite a un usuario administrador de un colegio editar su información y personalización.
-    """
     model = Colegio
     form_class = ColegioPersonalizacionForm
-    template_name = 'notas/admin_tools/configuracion_colegio.html' # Debes crear esta plantilla
-    success_url = reverse_lazy('configuracion_colegio') # Redirige a la misma página
+    template_name = 'notas/admin_tools/configuracion_colegio.html'
+    success_url = reverse_lazy('configuracion_colegio')
 
     def get_object(self, queryset=None):
-        """
-        Asegura que el usuario solo pueda editar el colegio al que pertenece.
-        """
-        # Primero, intenta obtener el colegio a través del objeto request, si existe.
         if hasattr(self.request, 'colegio') and self.request.colegio:
             return self.request.colegio
-        
-        # Si no, intenta a través del perfil del usuario (Docente)
         try:
             if hasattr(self.request.user, 'docente'):
                 return self.request.user.docente.colegio
         except Docente.DoesNotExist:
             pass
-        
-        # Como fallback, si es superusuario, puede editar el primer colegio.
         if self.request.user.is_superuser:
             return Colegio.objects.first()
-
         raise ImproperlyConfigured("El usuario no está asociado a ningún colegio para poder editarlo.")
 
     def test_func(self):
-        """
-        Verifica que el usuario sea un administrador del colegio o un superusuario.
-        """
-        # Asume que tienes un grupo 'AdminColegio'. Si no, puedes basarte solo en is_superuser.
         es_admin_colegio = self.request.user.groups.filter(name='AdminColegio').exists()
         es_superusuario = self.request.user.is_superuser
         return es_admin_colegio or es_superusuario
 
     def form_valid(self, form):
-        """
-        Añade un mensaje de éxito antes de redirigir.
-        """
         messages.success(self.request, '¡La configuración de tu colegio ha sido actualizada!')
         return super().form_valid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['titulo_pagina'] = f"Personalizar la Apariencia de {self.object.nombre}"
-        context['colegio'] = self.object # Asegura que la variable 'colegio' esté en el contexto
+        context['colegio'] = self.object
         return context
-# --- FIN: VISTA DE PERSONALIZACIÓN MEJORADA ---
+
+
+@user_passes_test(es_superusuario)
+@require_POST
+def crear_periodo_vista(request):
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+    try:
+        PeriodoAcademico.objects.create(
+            colegio=request.colegio,
+            nombre=request.POST.get('nombre'),
+            ano_lectivo=int(request.POST.get('ano_lectivo')),
+            fecha_inicio=request.POST.get('fecha_inicio'),
+            fecha_fin=request.POST.get('fecha_fin'),
+            esta_activo=request.POST.get('esta_activo') == 'on',
+            reporte_parcial_activo=request.POST.get('reporte_parcial_activo') == 'on',
+            nivelaciones_activas=request.POST.get('nivelaciones_activas') == 'on'
+        )
+        messages.success(request, 'Período académico creado exitosamente.')
+    except (ValueError, IntegrityError) as e:
+        messages.error(request, f"Error al crear el período: {e}")
+    except Exception as e:
+        messages.error(request, f"Ocurrió un error inesperado: {e}")
+    return redirect('panel_control_periodos')
+
+
+@user_passes_test(es_superusuario)
+@require_POST
+def editar_periodo_vista(request, periodo_id):
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+    periodo = get_object_or_404(PeriodoAcademico, id=periodo_id, colegio=request.colegio)
+    try:
+        periodo.nombre = request.POST.get('nombre')
+        periodo.ano_lectivo = int(request.POST.get('ano_lectivo'))
+        periodo.fecha_inicio = request.POST.get('fecha_inicio')
+        periodo.fecha_fin = request.POST.get('fecha_fin')
+        periodo.esta_activo = request.POST.get('esta_activo') == 'on'
+        periodo.reporte_parcial_activo = request.POST.get('reporte_parcial_activo') == 'on'
+        periodo.nivelaciones_activas = request.POST.get('nivelaciones_activas') == 'on'
+        periodo.save()
+        messages.success(request, 'Período académico actualizado exitosamente.')
+    except (ValueError, IntegrityError) as e:
+        messages.error(request, f"Error al actualizar el período: {e}")
+    except Exception as e:
+        messages.error(request, f"Ocurrió un error inesperado: {e}")
+    return redirect('panel_control_periodos')
+
+
+@user_passes_test(es_superusuario)
+@require_POST
+def eliminar_periodo_vista(request, periodo_id):
+    if not request.colegio:
+        return HttpResponseNotFound("<h1>Colegio no configurado</h1>")
+    periodo = get_object_or_404(PeriodoAcademico, id=periodo_id, colegio=request.colegio)
+    try:
+        periodo.delete()
+        messages.success(request, 'Período eliminado exitosamente.')
+    except Exception as e:
+        messages.error(request, f'Error al eliminar el período: {e}')
+    return redirect('panel_control_periodos')

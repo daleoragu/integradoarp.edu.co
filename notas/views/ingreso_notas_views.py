@@ -10,11 +10,12 @@ from django.http import JsonResponse, HttpResponseNotFound
 from django.shortcuts import get_object_or_404, render
 from django.views import View
 from django.core.exceptions import ValidationError
+from django.core.serializers.json import DjangoJSONEncoder # Importación necesaria
 
 from ..models.academicos import (
     AsignacionDocente, PeriodoAcademico, Estudiante, Calificacion,
     NotaDetallada, InasistenciasManualesPeriodo, Asistencia, IndicadorLogroPeriodo,
-    ConfiguracionCalificaciones
+    ConfiguracionCalificaciones, EscalaValoracion # Importación necesaria
 )
 from ..models.perfiles import Docente
 
@@ -65,7 +66,7 @@ class IngresoNotasView(LoginRequiredMixin, View):
         context.update(context_admin)
 
         if asignacion_id and periodo_id:
-            asignacion_seleccionada = get_object_or_404(asignaciones_a_mostrar, id=asignacion_id)
+            asignacion_seleccionada = get_object_or_404(AsignacionDocente, id=asignacion_id, colegio=request.colegio)
             periodo_seleccionado = get_object_or_404(PeriodoAcademico, id=periodo_id, colegio=request.colegio)
             
             estudiantes_del_curso = Estudiante.objects.filter(curso=asignacion_seleccionada.curso, colegio=request.colegio, is_active=True).select_related('user').order_by('user__last_name', 'user__first_name')
@@ -89,6 +90,19 @@ class IngresoNotasView(LoginRequiredMixin, View):
             indicadores = IndicadorLogroPeriodo.objects.filter(asignacion=asignacion_seleccionada, periodo=periodo_seleccionado, colegio=request.colegio).order_by('id')
             
             context.update({'asignacion_seleccionada': asignacion_seleccionada, 'periodo_seleccionado': periodo_seleccionado, 'estudiantes_data_json': json.dumps(estudiantes_data), 'periodo_cerrado': not periodo_seleccionado.esta_activo, 'indicadores': indicadores, 'hay_indicadores': indicadores.exists()})
+
+        # --- INICIO: CÓDIGO AÑADIDO PARA LA ESCALA DE VALORACIÓN ---
+        # Obtiene la escala de valoración del colegio actual
+        escala_valoracion = EscalaValoracion.objects.filter(colegio=request.colegio).values(
+            'nombre_desempeno', 'valor_minimo', 'valor_maximo'
+        ).order_by('valor_minimo')
+
+        # Convierte la escala a una cadena JSON para que JavaScript pueda leerla
+        context['escala_valoracion_json'] = json.dumps(
+            list(escala_valoracion), 
+            cls=DjangoJSONEncoder
+        )
+        # --- FIN: CÓDIGO AÑADIDO ---
 
         return render(request, self.template_name, context)
 
@@ -133,12 +147,10 @@ class IngresoNotasView(LoginRequiredMixin, View):
                     return JsonResponse({'status': 'error', 'message': f"Error en porcentajes: {mensaje_error}"}, status=400)
             
             pesos = {
-                'ser': Decimal(asignacion.porcentaje_ser) / 100,
-                'saber': Decimal(asignacion.porcentaje_saber) / 100,
-                'hacer': Decimal(asignacion.porcentaje_hacer) / 100,
+                'ser': asignacion.ser_calc / Decimal(100),
+                'saber': asignacion.saber_calc / Decimal(100),
+                'hacer': asignacion.hacer_calc / Decimal(100),
             }
-            if asignacion.usar_ponderacion_equitativa:
-                pesos = {'ser': Decimal('33.33')/100, 'saber': Decimal('33.33')/100, 'hacer': Decimal('33.34')/100}
 
             for est_data in estudiantes_data:
                 estudiante = get_object_or_404(Estudiante, id=est_data['id'], colegio=request.colegio)
@@ -176,11 +188,12 @@ class IngresoNotasView(LoginRequiredMixin, View):
         
         for nota_det_data in notas_data:
             try:
-                valor = Decimal(nota_det_data['valor'])
-                notas_detalladas_list.append(NotaDetallada(
-                    colegio=colegio, calificacion_promedio=cal_prom, descripcion=nota_det_data['descripcion'], valor_nota=valor
-                ))
-                total_notas += valor
+                valor = Decimal(str(nota_det_data['valor']).replace(',', '.'))
+                if valor >= 1 and valor <= 5:
+                    notas_detalladas_list.append(NotaDetallada(
+                        colegio=colegio, calificacion_promedio=cal_prom, descripcion=nota_det_data['descripcion'], valor_nota=valor
+                    ))
+                    total_notas += valor
             except (ValueError, TypeError):
                 continue
 
